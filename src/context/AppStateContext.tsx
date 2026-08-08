@@ -114,25 +114,71 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [staff, setStaff] = useState(demoStaff);
   const [channels, setChannels] = useState(otaChannels);
   const [nightAudits, setNightAudits] = useState(nightAuditHistory);
-  const [currentUser, setCurrentUser] = useState<{ name: string; role: string; email: string; staffId: string } | null>({
-    name: "Ninaad Khera",
-    role: "Property Owner & GM",
-    email: "Ninaad.khera@gmail.com",
-    staffId: "OWNER-001",
-  });
+  const [currentUser, setCurrentUser] = useState<{ name: string; role: string; email: string; staffId: string } | null>(null);
+
+  // ─── LocalStorage Hydration & Persistence (Zero Data Loss) ───
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("staysphere_app_state_v1");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.rooms?.length) setRooms(parsed.rooms);
+        if (parsed.reservations?.length) setReservations(parsed.reservations);
+        if (parsed.guests?.length) setGuests(parsed.guests);
+        if (parsed.housekeepingTasks) setHousekeepingTasks(parsed.housekeepingTasks);
+        if (parsed.guestRequests) setGuestRequests(parsed.guestRequests);
+        if (parsed.payments) setPayments(parsed.payments);
+        if (parsed.expenses) setExpenses(parsed.expenses);
+        if (parsed.activity) setActivity(parsed.activity);
+        if (parsed.staff?.length) setStaff(parsed.staff);
+        if (parsed.currentUser) setCurrentUser(parsed.currentUser);
+      } else {
+        // Default Owner session for initial access
+        setCurrentUser({
+          name: "Ninaad Khera",
+          role: "Property Owner & GM",
+          email: "Ninaad.khera@gmail.com",
+          staffId: "OWNER-001",
+        });
+      }
+    } catch (e) {
+      console.warn("LocalStorage state hydration failed:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const stateToSave = {
+        rooms,
+        reservations,
+        guests,
+        housekeepingTasks,
+        guestRequests,
+        payments,
+        expenses,
+        activity,
+        staff,
+        currentUser,
+      };
+      localStorage.setItem("staysphere_app_state_v1", JSON.stringify(stateToSave));
+    } catch (e) {
+      console.warn("LocalStorage state save failed:", e);
+    }
+  }, [rooms, reservations, guests, housekeepingTasks, guestRequests, payments, expenses, activity, staff, currentUser]);
 
   const loginUser = (emailOrId: string, pass: string) => {
     const isOwner = emailOrId.toLowerCase() === "ninaad.khera@gmail.com" || emailOrId.toLowerCase().includes("owner");
     const found = staff.find((s) => s.email.toLowerCase() === emailOrId.toLowerCase() || s.id.toLowerCase() === emailOrId.toLowerCase());
 
     if (isOwner || found || emailOrId.toLowerCase().includes("emp")) {
-      setCurrentUser({
+      const userObj = {
         name: isOwner ? "Ninaad Khera" : found ? `${found.firstName} ${found.lastName}` : "Staff Member",
         role: isOwner ? "Property Owner & GM" : found ? found.role : "Hotel Staff",
         email: isOwner ? "Ninaad.khera@gmail.com" : found ? found.email : emailOrId,
         staffId: isOwner ? "OWNER-001" : found ? found.id : "EMP-100",
-      });
-      addActivity("User Logged In", "auth", isOwner ? "OWNER-001" : found ? found.id : "EMP-100", `${isOwner ? "Owner (Ninaad Khera)" : found ? `${found.firstName} ${found.lastName}` : "Staff"} authenticated via Supabase / System`);
+      };
+      setCurrentUser(userObj);
+      addActivity("User Logged In", "auth", userObj.staffId, `${userObj.name} authenticated via Supabase / System`);
       return true;
     }
     return false;
@@ -140,6 +186,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
   const logoutUser = () => {
     setCurrentUser(null);
+    try {
+      localStorage.removeItem("staysphere_app_state_v1");
+    } catch (e) {}
   };
 
   const addStaffMember = (member: { staffId: string; name: string; email: string; role: string; phone: string; password: string }) => {
