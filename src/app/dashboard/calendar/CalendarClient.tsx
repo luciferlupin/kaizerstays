@@ -142,21 +142,22 @@ export default function CalendarClient() {
         <table className="calendar-grid-table">
           <thead>
             <tr>
-              <th className="room-col">Room</th>
+              <th className="room-col">Room Inventory</th>
               {dateColumns.map((date, idx) => (
                 <th key={idx} className="date-col">
-                  <div>{formatDate(date, "EEE")}</div>
+                  <div className="text-xs text-secondary">{formatDate(date, "EEE")}</div>
                   <div style={{ fontSize: "14px", fontWeight: 800 }}>{formatDate(date, "dd")}</div>
+                  <div className="text-xs text-tertiary" style={{ fontSize: "10px" }}>{formatDate(date, "MMM")}</div>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {filteredRooms.slice(0, 30).map((room) => (
+            {filteredRooms.map((room) => (
               <tr key={room.id}>
                 <td className="room-cell-info">
                   <div style={{ fontWeight: 700 }}>#{room.number}</div>
-                  <div className="text-xs text-tertiary">{room.typeCode}</div>
+                  <div className="text-xs text-secondary">{room.typeName}</div>
                 </td>
                 {dateColumns.map((date, dateIdx) => {
                   const dateStr = date.toISOString().split("T")[0];
@@ -189,7 +190,15 @@ export default function CalendarClient() {
                     );
                   }
 
-                  return <td key={dateIdx} className="grid-cell empty-cell" />;
+                  return (
+                    <td key={dateIdx} className="grid-cell empty-cell">
+                      <Link
+                        href={`/dashboard/reservations/new?room=${room.number}&date=${dateStr}`}
+                        style={{ display: "block", width: "100%", height: "100%" }}
+                        title={`Click to book Room #${room.number} on ${formatDate(date, "dd MMM yyyy")}`}
+                      />
+                    </td>
+                  );
                 })}
               </tr>
             ))}
