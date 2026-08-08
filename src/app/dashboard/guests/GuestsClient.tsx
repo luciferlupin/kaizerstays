@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { demoGuests } from "@/lib/demo-data";
+import { useAppState } from "@/context/AppStateContext";
 import { formatCurrency, getInitials, getAvatarColor } from "@/lib/utils";
 import { Search, Users, UserCheck, Star, ArrowUpRight } from "lucide-react";
 
 export default function GuestsClient() {
+  const { guests } = useAppState();
   const [search, setSearch] = useState("");
-  const [selectedGuest, setSelectedGuest] = useState<typeof demoGuests[0] | null>(null);
+  const [selectedGuest, setSelectedGuest] = useState<typeof guests[0] | null>(null);
 
-  const filtered = demoGuests.filter((g) => {
+  const filtered = guests.filter((g) => {
     if (search) {
       const q = search.toLowerCase();
       return (
@@ -60,9 +61,8 @@ export default function GuestsClient() {
                 <th>City & Country</th>
                 <th>Total Stays</th>
                 <th>Total Nights</th>
-                <th>Lifetime Spend</th>
-                <th>Status</th>
-                <th className="text-right">Action</th>
+                <th className="text-right">Lifetime Spend</th>
+                <th className="text-right">Profile</th>
               </tr>
             </thead>
             <tbody>
@@ -71,31 +71,39 @@ export default function GuestsClient() {
                   <td>
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                       <div
-                        className="avatar avatar-md"
+                        className="avatar avatar-sm"
                         style={{ background: getAvatarColor(g.firstName), color: "white" }}
                       >
                         {getInitials(g.firstName, g.lastName)}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600 }}>{g.firstName} {g.lastName}</div>
-                        {g.isVip && <span className="badge badge-purple">VIP Guest</span>}
+                        <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
+                          {g.firstName} {g.lastName}
+                          {g.isVip && (
+                            <span className="badge badge-warning" style={{ fontSize: "10px" }}>
+                              <Star size={10} style={{ marginRight: "2px" }} /> VIP
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </td>
                   <td>
-                    <div className="text-sm">{g.phone}</div>
-                    <div className="text-xs text-tertiary">{g.email}</div>
+                    <div className="text-sm">{g.email}</div>
+                    <div className="text-xs text-tertiary">{g.phone}</div>
                   </td>
                   <td>{g.city}, {g.country}</td>
                   <td className="font-semibold">{g.totalStays} Stays</td>
-                  <td>{g.totalNights} Nights</td>
-                  <td className="mono font-bold text-primary">{formatCurrency(g.totalSpent)}</td>
-                  <td>
-                    <span className="badge badge-success">Active</span>
+                  <td className="text-secondary">{g.totalNights} Nights</td>
+                  <td className="text-right mono font-bold text-success">
+                    {formatCurrency(g.totalSpent)}
                   </td>
                   <td className="text-right">
-                    <button className="btn btn-secondary btn-sm" onClick={() => setSelectedGuest(g)}>
-                      View Profile
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setSelectedGuest(g)}
+                    >
+                      View CRM <ArrowUpRight size={12} />
                     </button>
                   </td>
                 </tr>
@@ -105,54 +113,34 @@ export default function GuestsClient() {
         </div>
       </div>
 
-      {/* Guest Profile Drawer / Modal */}
+      {/* Guest Drawer */}
       {selectedGuest && (
         <div className="modal-backdrop" onClick={() => setSelectedGuest(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">Guest Profile: {selectedGuest.firstName} {selectedGuest.lastName}</h3>
+              <h3 className="modal-title">Guest Profile — {selectedGuest.firstName} {selectedGuest.lastName}</h3>
+              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setSelectedGuest(null)}>✕</button>
             </div>
             <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                <div
-                  className="avatar avatar-xl"
-                  style={{ background: getAvatarColor(selectedGuest.firstName), color: "white" }}
-                >
-                  {getInitials(selectedGuest.firstName, selectedGuest.lastName)}
+              <div style={{ background: "var(--color-bg-tertiary)", padding: "16px", borderRadius: "var(--radius-md)" }}>
+                <div style={{ fontSize: "13px", color: "var(--color-text-tertiary)" }}>Lifetime Value</div>
+                <div className="mono text-success font-bold" style={{ fontSize: "22px" }}>
+                  {formatCurrency(selectedGuest.totalSpent)}
                 </div>
-                <div>
-                  <h2 style={{ fontSize: "20px" }}>{selectedGuest.firstName} {selectedGuest.lastName}</h2>
-                  <div className="text-sm text-secondary">{selectedGuest.email}</div>
-                  <div className="text-sm text-secondary">{selectedGuest.phone}</div>
+                <div className="text-xs text-secondary" style={{ marginTop: "4px" }}>
+                  {selectedGuest.totalStays} stays across {selectedGuest.totalNights} nights
                 </div>
               </div>
 
-              <div className="stats-grid stats-grid-compact" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
-                <div className="stat-card">
-                  <span className="stat-card-label">Stays</span>
-                  <div className="stat-card-value">{selectedGuest.totalStays}</div>
-                </div>
-                <div className="stat-card">
-                  <span className="stat-card-label">Nights</span>
-                  <div className="stat-card-value">{selectedGuest.totalNights}</div>
-                </div>
-                <div className="stat-card">
-                  <span className="stat-card-label">Spend</span>
-                  <div className="stat-card-value text-primary" style={{ fontSize: "16px" }}>
-                    {formatCurrency(selectedGuest.totalSpent)}
-                  </div>
-                </div>
+              <div>
+                <label className="form-label">Email Address</label>
+                <div className="form-input" style={{ background: "var(--color-bg-tertiary)" }}>{selectedGuest.email}</div>
               </div>
 
-              <div className="card" style={{ padding: "12px", background: "var(--gray-50)" }}>
-                <div style={{ fontWeight: 600, marginBottom: "4px" }}>Preferences:</div>
-                <div className="text-sm text-secondary">Non-smoking room • High floor preferred • Vegetarian breakfast</div>
+              <div>
+                <label className="form-label">Phone Number</label>
+                <div className="form-input" style={{ background: "var(--color-bg-tertiary)" }}>{selectedGuest.phone}</div>
               </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setSelectedGuest(null)}>
-                Close
-              </button>
             </div>
           </div>
         </div>

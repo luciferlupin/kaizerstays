@@ -20,6 +20,8 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+import { useAppState } from "@/context/AppStateContext";
+
 interface AuditStep {
   id: number;
   name: string;
@@ -29,7 +31,8 @@ interface AuditStep {
 }
 
 export default function NightAuditClient() {
-  const [history, setHistory] = useState(nightAuditHistory);
+  const { nightAudits, runNightAudit } = useAppState();
+  const [history, setHistory] = useState(nightAudits);
   const [isRunning, setIsRunning] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(-1);
   const [auditCompleted, setAuditCompleted] = useState(false);
@@ -60,24 +63,13 @@ export default function NightAuditClient() {
       if (index >= initialSteps.length) {
         setIsRunning(false);
         setAuditCompleted(true);
-        const newRecord = {
-          id: `na_${Date.now()}`,
-          date: new Date(),
-          status: "COMPLETED" as const,
-          roomsCharged: 33,
-          revenuePosted: 142800,
-          taxCollected: 17136,
-          openFolios: 0,
-          discrepancies: 0,
-          runBy: "Sunil Manager",
-          completedAt: new Date(),
-        };
-        setHistory([newRecord, ...history]);
+        const record = runNightAudit();
+        setHistory([record, ...nightAudits]);
         setAuditResult({
-          roomsCharged: 33,
-          revenuePosted: 142800,
-          taxCollected: 17136,
-          openFolios: 0,
+          roomsCharged: record.roomsCharged,
+          revenuePosted: record.revenuePosted,
+          taxCollected: record.taxCollected,
+          openFolios: record.openFolios,
         });
         return;
       }

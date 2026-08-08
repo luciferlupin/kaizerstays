@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { demoRooms, demoReservations, demoRoomTypes } from "@/lib/demo-data";
+import { useAppState } from "@/context/AppStateContext";
 import { formatDate, getToday } from "@/lib/utils";
 import {
   Calendar as CalendarIcon,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 export default function CalendarClient() {
+  const { rooms, reservations, roomTypes } = useAppState();
   const [viewDays, setViewDays] = useState<7 | 14 | 30>(14);
   const [selectedRoomType, setSelectedRoomType] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -46,7 +47,7 @@ export default function CalendarClient() {
   };
 
   // Filter rooms
-  const filteredRooms = demoRooms.filter((room) => {
+  const filteredRooms = rooms.filter((room) => {
     if (selectedRoomType !== "ALL" && room.roomTypeId !== selectedRoomType) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -60,12 +61,12 @@ export default function CalendarClient() {
 
   return (
     <div className="page-content">
-      {/* Page Header */}
+      {/* Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Reservation Calendar</h1>
+          <h1 className="page-title">Reservation Calendar & Tape Chart</h1>
           <p className="page-description">
-            Visual room occupancy timeline and booking allocation.
+            Interactive room allocation grid across all 50 rooms at Hotel Shemron.
           </p>
         </div>
         <div className="page-actions">
@@ -76,180 +77,124 @@ export default function CalendarClient() {
       </div>
 
       {/* Controls Bar */}
-      <div className="card" style={{ padding: "12px 16px" }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "12px",
-          }}
-        >
-          {/* Navigation & Today */}
+      <div className="card" style={{ padding: "16px 20px", marginBottom: "20px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+          {/* Navigation Controls */}
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <button className="btn btn-secondary btn-sm" onClick={handleToday}>
               Today
             </button>
-            <div style={{ display: "flex", gap: "4px" }}>
-              <button className="btn btn-ghost btn-icon btn-sm" onClick={handlePrev}>
-                <ChevronLeft size={16} />
-              </button>
-              <button className="btn btn-ghost btn-icon btn-sm" onClick={handleNext}>
-                <ChevronRight size={16} />
-              </button>
-            </div>
-            <span style={{ fontSize: "14px", fontWeight: 600 }}>
-              {formatDate(dateColumns[0], "dd MMM yyyy")} –{" "}
-              {formatDate(dateColumns[dateColumns.length - 1], "dd MMM yyyy")}
+            <button className="btn btn-secondary btn-icon btn-sm" onClick={handlePrev}>
+              <ChevronLeft size={16} />
+            </button>
+            <button className="btn btn-secondary btn-icon btn-sm" onClick={handleNext}>
+              <ChevronRight size={16} />
+            </button>
+            <span style={{ fontSize: "14px", fontWeight: 700, marginLeft: "8px" }}>
+              {formatDate(startDate, "dd MMM yyyy")} — {formatDate(dateColumns[dateColumns.length - 1], "dd MMM yyyy")}
             </span>
           </div>
 
-          {/* Filters & View Switches */}
+          {/* Filters */}
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            {/* Search */}
             <div className="search-input-wrapper" style={{ width: "180px" }}>
               <Search className="search-icon" size={14} />
               <input
                 type="text"
                 className="form-input"
-                style={{ height: "32px", fontSize: "12px" }}
-                placeholder="Filter room..."
+                placeholder="Search room..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
-            {/* Room Type Filter */}
             <select
               className="form-select"
-              style={{ height: "32px", fontSize: "12px", width: "160px" }}
+              style={{ width: "160px" }}
               value={selectedRoomType}
               onChange={(e) => setSelectedRoomType(e.target.value)}
             >
               <option value="ALL">All Room Types</option>
-              {demoRoomTypes.map((rt) => (
+              {roomTypes.map((rt) => (
                 <option key={rt.id} value={rt.id}>
-                  {rt.name} ({rt.code})
+                  {rt.name}
                 </option>
               ))}
             </select>
 
-            {/* View Days Toggle */}
-            <div className="tabs" style={{ borderBottom: "none" }}>
-              <button
-                className={`tab ${viewDays === 7 ? "active" : ""}`}
-                style={{ padding: "4px 8px", fontSize: "12px" }}
-                onClick={() => setViewDays(7)}
-              >
-                7 Days
-              </button>
-              <button
-                className={`tab ${viewDays === 14 ? "active" : ""}`}
-                style={{ padding: "4px 8px", fontSize: "12px" }}
-                onClick={() => setViewDays(14)}
-              >
-                14 Days
-              </button>
-              <button
-                className={`tab ${viewDays === 30 ? "active" : ""}`}
-                style={{ padding: "4px 8px", fontSize: "12px" }}
-                onClick={() => setViewDays(30)}
-              >
-                30 Days
-              </button>
+            <div className="tabs" style={{ margin: 0 }}>
+              {[7, 14, 30].map((days) => (
+                <button
+                  key={days}
+                  className={`tab ${viewDays === days ? "active" : ""}`}
+                  onClick={() => setViewDays(days as any)}
+                >
+                  {days}D
+                </button>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Reservation Status Legend */}
-      <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", fontSize: "12px", alignItems: "center" }}>
-        <span style={{ fontWeight: 600, color: "var(--color-text-secondary)" }}>Legend:</span>
-        <span className="badge badge-primary">Confirmed</span>
-        <span className="badge badge-success">Checked In</span>
-        <span className="badge badge-default">Checked Out</span>
-        <span className="badge badge-warning">Pending</span>
-        <span className="badge badge-danger">Cancelled</span>
-        <span className="badge badge-purple">Blocked/Maintenance</span>
-      </div>
+      {/* Tape Chart Grid */}
+      <div className="card" style={{ padding: 0, overflowX: "auto" }}>
+        <table className="calendar-grid-table">
+          <thead>
+            <tr>
+              <th className="room-col">Room</th>
+              {dateColumns.map((date, idx) => (
+                <th key={idx} className="date-col">
+                  <div>{formatDate(date, "EEE")}</div>
+                  <div style={{ fontSize: "14px", fontWeight: 800 }}>{formatDate(date, "dd")}</div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filteredRooms.slice(0, 30).map((room) => (
+              <tr key={room.id}>
+                <td className="room-cell-info">
+                  <div style={{ fontWeight: 700 }}>#{room.number}</div>
+                  <div className="text-xs text-tertiary">{room.typeCode}</div>
+                </td>
+                {dateColumns.map((date, dateIdx) => {
+                  const dateStr = date.toISOString().split("T")[0];
 
-      {/* Timeline Calendar Grid */}
-      <div className="card" style={{ overflowX: "auto" }}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: `140px repeat(${viewDays}, minmax(${viewDays === 30 ? "40px" : "60px"}, 1fr))`,
-            minWidth: viewDays === 30 ? "1300px" : "900px",
-          }}
-        >
-          {/* Header Row */}
-          <div className="calendar-room-cell" style={{ background: "var(--color-bg-secondary)", fontWeight: 700 }}>
-            Room
-          </div>
-          {dateColumns.map((d, i) => {
-            const isToday = formatDate(d, "yyyy-MM-dd") === formatDate(getToday(), "yyyy-MM-dd");
-            return (
-              <div
-                key={i}
-                className="calendar-header-cell"
-                style={isToday ? { background: "var(--blue-50)", color: "var(--blue-700)", fontWeight: 700 } : {}}
-              >
-                <div>{formatDate(d, "EEE")}</div>
-                <div style={{ fontSize: "13px", fontWeight: 700 }}>{formatDate(d, "dd")}</div>
-              </div>
-            );
-          })}
+                  // Find reservation matching this room and date
+                  const res = reservations.find((r) => {
+                    if (r.roomNumber !== room.number) return false;
+                    const cIn = new Date(r.checkIn).toISOString().split("T")[0];
+                    const cOut = new Date(r.checkOut).toISOString().split("T")[0];
+                    return dateStr >= cIn && dateStr < cOut;
+                  });
 
-          {/* Room Rows */}
-          {filteredRooms.slice(0, 20).map((room) => (
-            <div key={room.id} style={{ display: "contents" }}>
-              {/* Room Header Cell */}
-              <div className="calendar-room-cell">
-                <span style={{ fontWeight: 700 }}>#{room.number}</span>
-                <span style={{ fontSize: "10px", color: "var(--color-text-tertiary)", marginLeft: "6px" }}>
-                  {room.typeCode}
-                </span>
-              </div>
+                  if (res) {
+                    return (
+                      <td key={dateIdx} className="grid-cell occupied-cell">
+                        <Link
+                          href={`/dashboard/reservations/${res.id}`}
+                          className={`res-block ${
+                            res.status === "CHECKED_IN"
+                              ? "status-checked-in"
+                              : res.status === "CONFIRMED"
+                              ? "status-confirmed"
+                              : "status-other"
+                          }`}
+                          title={`${res.guestName} (${res.confirmationNumber})`}
+                        >
+                          <span className="res-name">{res.guestName}</span>
+                        </Link>
+                      </td>
+                    );
+                  }
 
-              {/* Day Cells */}
-              {dateColumns.map((date, dayIdx) => {
-                const dateStr = formatDate(date, "yyyy-MM-dd");
-                
-                // Find matching reservation for this room & date
-                const matchingRes = demoReservations.find((r) => {
-                  if (r.roomNumber !== room.number) return false;
-                  const ci = formatDate(r.checkIn, "yyyy-MM-dd");
-                  const co = formatDate(r.checkOut, "yyyy-MM-dd");
-                  return dateStr >= ci && dateStr < co;
-                });
-
-                return (
-                  <div key={dayIdx} className="calendar-day-cell">
-                    {matchingRes && (
-                      <Link
-                        href={`/dashboard/reservations/${matchingRes.id}`}
-                        className={`calendar-booking ${
-                          matchingRes.status === "CONFIRMED"
-                            ? "confirmed"
-                            : matchingRes.status === "CHECKED_IN"
-                            ? "checked-in"
-                            : matchingRes.status === "CHECKED_OUT"
-                            ? "checked-out"
-                            : "pending"
-                        }`}
-                        title={`${matchingRes.guestName} (${matchingRes.status}) - ${matchingRes.roomType}`}
-                        style={{ width: "94%", left: "3%" }}
-                      >
-                        {matchingRes.guestName.split(" ")[0]}
-                      </Link>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
+                  return <td key={dateIdx} className="grid-cell empty-cell" />;
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

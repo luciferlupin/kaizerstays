@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { demoRooms, demoRoomTypes } from "@/lib/demo-data";
+import { useAppState } from "@/context/AppStateContext";
 import { formatCurrency } from "@/lib/utils";
 import { DoorOpen, Plus, Search, X, Check } from "lucide-react";
 
 export default function RoomsClient() {
+  const { rooms, roomTypes, updateRoomStatus, addRoom } = useAppState();
   const [activeTab, setActiveTab] = useState<"rooms" | "room_types">("rooms");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [showAddRoom, setShowAddRoom] = useState(false);
-  const [rooms, setRooms] = useState(demoRooms);
 
   // Add Room form state
   const [newRoomNumber, setNewRoomNumber] = useState("");
@@ -27,9 +27,9 @@ export default function RoomsClient() {
     return true;
   });
 
-  const handleAddRoom = () => {
+  const handleAddRoomSubmit = () => {
     if (!newRoomNumber.trim()) return;
-    const roomType = demoRoomTypes.find((rt) => rt.id === newRoomTypeId) || demoRoomTypes[0];
+    const roomType = roomTypes.find((rt) => rt.id === newRoomTypeId) || roomTypes[0];
     const newRoom = {
       id: `room_${newRoomNumber}`,
       propertyId: "prop_demo_001",
@@ -43,7 +43,7 @@ export default function RoomsClient() {
       typeName: roomType.name,
       typeCode: roomType.code,
     };
-    setRooms([...rooms, newRoom]);
+    addRoom(newRoom);
     setRoomAdded(true);
     setTimeout(() => {
       setShowAddRoom(false);
@@ -52,21 +52,18 @@ export default function RoomsClient() {
     }, 1500);
   };
 
-  const handleToggleStatus = (roomId: string) => {
-    setRooms(rooms.map((r) => {
-      if (r.id !== roomId) return r;
-      const statusCycle: Record<string, string> = {
-        AVAILABLE: "OCCUPIED",
-        OCCUPIED: "DIRTY",
-        DIRTY: "CLEANING",
-        CLEANING: "INSPECTED",
-        INSPECTED: "AVAILABLE",
-        MAINTENANCE: "AVAILABLE",
-        RESERVED: "AVAILABLE",
-      };
-      const newStatus = statusCycle[r.status] || "AVAILABLE";
-      return { ...r, status: newStatus, housekeepingStatus: newStatus === "DIRTY" ? "DIRTY" : newStatus === "CLEANING" ? "CLEANING" : "CLEAN" };
-    }));
+  const handleToggleStatus = (roomId: string, currentStatus: string) => {
+    const statusCycle: Record<string, string> = {
+      AVAILABLE: "OCCUPIED",
+      OCCUPIED: "DIRTY",
+      DIRTY: "CLEANING",
+      CLEANING: "INSPECTED",
+      INSPECTED: "AVAILABLE",
+      MAINTENANCE: "AVAILABLE",
+      RESERVED: "AVAILABLE",
+    };
+    const nextStatus = statusCycle[currentStatus] || "AVAILABLE";
+    updateRoomStatus(roomId, nextStatus);
   };
 
   return (
@@ -91,7 +88,7 @@ export default function RoomsClient() {
           Individual Rooms ({rooms.length})
         </button>
         <button className={`tab ${activeTab === "room_types" ? "active" : ""}`} onClick={() => setActiveTab("room_types")}>
-          Room Types ({demoRoomTypes.length})
+          Room Types ({roomTypes.length})
         </button>
       </div>
 
@@ -146,7 +143,7 @@ export default function RoomsClient() {
                     ? "room-cleaning"
                     : "room-maintenance"
                 }`}
-                onClick={() => handleToggleStatus(room.id)}
+                onClick={() => handleToggleStatus(room.id, room.status)}
                 title="Click to cycle room status"
               >
                 <div className="room-cell-number">#{room.number}</div>
@@ -159,7 +156,7 @@ export default function RoomsClient() {
       ) : (
         /* Room Types View */
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
-          {demoRoomTypes.map((rt) => (
+          {roomTypes.map((rt) => (
             <div key={rt.id} className="card" style={{ padding: "20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
@@ -213,7 +210,7 @@ export default function RoomsClient() {
                   <div className="form-group">
                     <label className="form-label">Room Type</label>
                     <select className="form-select" value={newRoomTypeId} onChange={(e) => setNewRoomTypeId(e.target.value)}>
-                      {demoRoomTypes.map((rt) => (
+                      {roomTypes.map((rt) => (
                         <option key={rt.id} value={rt.id}>{rt.name} ({rt.code}) — {formatCurrency(rt.baseRate)}/night</option>
                       ))}
                     </select>
@@ -232,7 +229,7 @@ export default function RoomsClient() {
             {!roomAdded && (
               <div className="modal-footer">
                 <button className="btn btn-secondary" onClick={() => setShowAddRoom(false)}>Cancel</button>
-                <button className="btn btn-primary" onClick={handleAddRoom} disabled={!newRoomNumber.trim()}>
+                <button className="btn btn-primary" onClick={handleAddRoomSubmit} disabled={!newRoomNumber.trim()}>
                   <Plus size={16} /> Add Room
                 </button>
               </div>

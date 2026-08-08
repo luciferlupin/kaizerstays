@@ -1,16 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { demoGuestRequests } from "@/lib/demo-data";
-import { formatDate } from "@/lib/utils";
+import { useAppState } from "@/context/AppStateContext";
 import { MessageSquare, CheckCircle2, Clock, Play } from "lucide-react";
 
 export default function RequestsClient() {
-  const [requests, setRequests] = useState(demoGuestRequests);
-
-  const handleUpdateStatus = (id: string, status: string) => {
-    setRequests(requests.map((r) => (r.id === id ? { ...r, status } : r)));
-  };
+  const { guestRequests, updateGuestRequestStatus } = useAppState();
 
   return (
     <div className="page-content">
@@ -24,7 +18,7 @@ export default function RequestsClient() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "16px" }}>
-        {requests.map((req) => (
+        {guestRequests.map((req) => (
           <div key={req.id} className="card" style={{ padding: "20px" }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <div style={{ fontSize: "18px", fontWeight: 800 }}>Room #{req.roomNumber}</div>
@@ -42,13 +36,13 @@ export default function RequestsClient() {
 
             <div style={{ marginTop: "16px" }}>
               {req.status === "REQUESTED" && (
-                <button className="btn btn-primary w-full" onClick={() => handleUpdateStatus(req.id, "ON_THE_WAY")}>
+                <button className="btn btn-primary w-full" onClick={() => updateGuestRequestStatus(req.id, "ON_THE_WAY")}>
                   Accept & Mark On The Way
                 </button>
               )}
 
               {req.status === "ON_THE_WAY" && (
-                <button className="btn btn-success w-full" onClick={() => handleUpdateStatus(req.id, "COMPLETED")}>
+                <button className="btn btn-success w-full" onClick={() => updateGuestRequestStatus(req.id, "COMPLETED")}>
                   Mark Completed
                 </button>
               )}

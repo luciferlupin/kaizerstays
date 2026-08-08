@@ -30,6 +30,7 @@ import {
   Send,
   Trash2,
 } from "lucide-react";
+import { useAppState } from "@/context/AppStateContext";
 
 interface CartItem {
   menuItem: MenuItem;
@@ -38,6 +39,7 @@ interface CartItem {
 }
 
 export default function POSClient() {
+  const { reservations, addPOSOrder } = useAppState();
   const [activeTab, setActiveTab] = useState<"tables" | "menu" | "kots" | "qr">("tables");
   const [tables, setTables] = useState<POSTable[]>(posTables);
   const [kots, setKots] = useState<KitchenOrder[]>(activeKOTs);
@@ -130,6 +132,27 @@ export default function POSClient() {
 
   const handleSettleOrder = () => {
     if (!selectedTable) return;
+    const kotOrder: KitchenOrder = {
+      id: `kot_${Date.now()}`,
+      kotNumber: `KOT-00${Math.floor(Math.random() * 90 + 10)}`,
+      tableNumber: selectedTable.number,
+      items: cart.map((ci) => ({
+        menuItemId: ci.menuItem.id,
+        name: ci.menuItem.name,
+        quantity: ci.quantity,
+        price: ci.menuItem.price,
+        notes: ci.notes,
+      })),
+      status: "BILLED",
+      createdAt: new Date(),
+      total: cartTotal,
+      guestName: selectedTable.guestName,
+      roomNumber: paymentType === "ROOM_FOLIO" ? selectedRoomNumber : null,
+      paymentMethod: paymentType,
+    };
+
+    addPOSOrder(kotOrder, paymentType === "ROOM_FOLIO" ? selectedRoomNumber : undefined);
+
     setOrderBilled(true);
     setTimeout(() => {
       setTables(

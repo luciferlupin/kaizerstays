@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { demoReservations } from "@/lib/demo-data";
+import { useAppState } from "@/context/AppStateContext";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   Search,
@@ -16,11 +16,12 @@ import {
 } from "lucide-react";
 
 export default function ReservationsClient() {
+  const { reservations, cancelReservation } = useAppState();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [sourceFilter, setSourceFilter] = useState("ALL");
 
-  const filtered = demoReservations.filter((res) => {
+  const filtered = reservations.filter((res) => {
     if (statusFilter !== "ALL" && res.status !== statusFilter) return false;
     if (sourceFilter !== "ALL" && res.bookingSource !== sourceFilter) return false;
     if (search) {
@@ -62,19 +63,18 @@ export default function ReservationsClient() {
             gap: "12px",
           }}
         >
-          <div className="search-input-wrapper" style={{ minWidth: "260px" }}>
+          <div className="search-input-wrapper" style={{ minWidth: "240px", flex: 1 }}>
             <Search className="search-icon" size={14} />
             <input
               type="text"
               className="form-input"
-              placeholder="Search by guest, ID, or room..."
+              placeholder="Search guest name, confirmation #, room..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
 
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            {/* Status Filter */}
+          <div style={{ display: "flex", gap: "10px" }}>
             <select
               className="form-select"
               style={{ width: "160px" }}
@@ -88,100 +88,94 @@ export default function ReservationsClient() {
               <option value="CANCELLED">Cancelled</option>
             </select>
 
-            {/* Source Filter */}
             <select
               className="form-select"
               style={{ width: "160px" }}
               value={sourceFilter}
               onChange={(e) => setSourceFilter(e.target.value)}
             >
-              <option value="ALL">All Sources</option>
+              <option value="ALL">All Channels</option>
               <option value="DIRECT">Direct</option>
               <option value="WALK_IN">Walk-In</option>
               <option value="WEBSITE">Website</option>
               <option value="BOOKING_COM">Booking.com</option>
-              <option value="AGODA">Agoda</option>
               <option value="MAKEMYTRIP">MakeMyTrip</option>
-              <option value="EXPEDIA">Expedia</option>
-              <option value="CORPORATE">Corporate</option>
+              <option value="AGODA">Agoda</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Reservations Table */}
+      {/* Data Table */}
       <div className="card">
-        <div className="data-table-wrapper" style={{ border: "none" }}>
+        <div className="card-body" style={{ padding: 0 }}>
           <table className="data-table">
             <thead>
               <tr>
-                <th>Reservation ID</th>
-                <th>Guest</th>
+                <th>Guest & Confirmation</th>
+                <th>Room Type / No</th>
                 <th>Dates & Nights</th>
-                <th>Room</th>
-                <th>Source</th>
-                <th>Total</th>
-                <th>Balance</th>
+                <th>Channel</th>
                 <th>Status</th>
-                <th className="text-right">Actions</th>
+                <th className="text-right">Total</th>
+                <th className="text-right">Balance</th>
+                <th className="text-right">Action</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((res) => (
                 <tr key={res.id}>
-                  <td className="mono" style={{ fontWeight: 600, fontSize: "12px" }}>
-                    <Link href={`/dashboard/reservations/${res.id}`} className="text-primary">
-                      {res.confirmationNumber}
-                    </Link>
+                  <td>
+                    <div className="font-semibold">{res.guestName}</div>
+                    <div className="mono text-tertiary text-xs">{res.confirmationNumber}</div>
                   </td>
                   <td>
-                    <div style={{ fontWeight: 600 }}>{res.guestName}</div>
-                    <div className="text-xs text-tertiary">{res.adults} Adults, {res.children} Children</div>
-                  </td>
-                  <td>
-                    <div style={{ fontSize: "13px" }}>
-                      {formatDate(res.checkIn, "dd MMM")} – {formatDate(res.checkOut, "dd MMM yyyy")}
+                    <div>{res.roomType}</div>
+                    <div className="text-xs text-primary font-semibold">
+                      {res.roomNumber ? `Room #${res.roomNumber}` : "Unassigned"}
                     </div>
-                    <div className="text-xs text-tertiary">{res.nights} {res.nights === 1 ? "night" : "nights"}</div>
                   </td>
                   <td>
-                    {res.roomNumber ? (
-                      <span className="badge badge-primary">#{res.roomNumber} ({res.roomType})</span>
-                    ) : (
-                      <span className="badge badge-default">Unassigned ({res.roomType})</span>
-                    )}
+                    <div>{formatDate(res.checkIn, "dd MMM")} → {formatDate(res.checkOut, "dd MMM")}</div>
+                    <div className="text-xs text-tertiary">{res.nights} Nights • {res.adults} Adults</div>
                   </td>
                   <td>
                     <span className="badge badge-default">{res.bookingSource}</span>
                   </td>
-                  <td className="mono font-medium">{formatCurrency(res.totalAmount)}</td>
-                  <td className="mono">
-                    {res.balanceAmount > 0 ? (
-                      <span className="text-danger font-medium">{formatCurrency(res.balanceAmount)}</span>
-                    ) : (
-                      <span className="text-success font-medium">Paid</span>
-                    )}
-                  </td>
                   <td>
                     <span
                       className={`badge ${
-                        res.status === "CONFIRMED"
-                          ? "badge-primary"
-                          : res.status === "CHECKED_IN"
+                        res.status === "CHECKED_IN"
                           ? "badge-success"
-                          : res.status === "CHECKED_OUT"
-                          ? "badge-default"
-                          : "badge-danger"
+                          : res.status === "CONFIRMED"
+                          ? "badge-primary"
+                          : res.status === "CANCELLED"
+                          ? "badge-danger"
+                          : "badge-default"
                       }`}
                     >
-                      <span className="badge-dot" />
-                      {res.status.replace("_", " ")}
+                      {res.status}
                     </span>
                   </td>
+                  <td className="text-right mono font-semibold">{formatCurrency(res.totalAmount)}</td>
+                  <td className="text-right mono font-semibold">
+                    {res.balanceAmount === 0 ? (
+                      <span className="text-success font-bold">Paid</span>
+                    ) : (
+                      <span className="text-warning">{formatCurrency(res.balanceAmount)}</span>
+                    )}
+                  </td>
                   <td className="text-right">
-                    <Link href={`/dashboard/reservations/${res.id}`} className="btn btn-secondary btn-sm">
-                      View <ArrowUpRight size={14} />
-                    </Link>
+                    <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
+                      <Link href={`/dashboard/reservations/${res.id}`} className="btn btn-secondary btn-sm">
+                        View Folio <ArrowUpRight size={12} />
+                      </Link>
+                      {res.status === "CONFIRMED" && (
+                        <button className="btn btn-ghost btn-sm text-danger" onClick={() => cancelReservation(res.id)}>
+                          Cancel
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

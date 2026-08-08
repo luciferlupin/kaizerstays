@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { demoReservations } from "@/lib/demo-data";
+import { useAppState } from "@/context/AppStateContext";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   LogIn,
@@ -13,16 +13,44 @@ import {
   CheckCircle2,
   AlertCircle,
   Plus,
+  X,
+  Check,
 } from "lucide-react";
 
 export default function FrontDeskClient() {
-  const [activeTab, setActiveTab] = useState<"arrivals" | "departures" | "in_house" | "walk_ins">("arrivals");
-  const [checkInModal, setCheckInModal] = useState<typeof demoReservations[0] | null>(null);
-  const [checkOutModal, setCheckOutModal] = useState<typeof demoReservations[0] | null>(null);
+  const { reservations, checkInGuest, checkOutGuest } = useAppState();
+  const [activeTab, setActiveTab] = useState<"arrivals" | "departures" | "in_house">("arrivals");
 
-  const arrivals = demoReservations.filter((r) => r.status === "CONFIRMED");
-  const departures = demoReservations.filter((r) => r.status === "CHECKED_IN" && r.balanceAmount >= 0);
-  const inHouse = demoReservations.filter((r) => r.status === "CHECKED_IN");
+  const [checkInModal, setCheckInModal] = useState<typeof reservations[0] | null>(null);
+  const [checkOutModal, setCheckOutModal] = useState<typeof reservations[0] | null>(null);
+  const [assignedRoomNumber, setAssignedRoomNumber] = useState("");
+  const [actionDone, setActionDone] = useState(false);
+
+  const arrivals = reservations.filter((r) => r.status === "CONFIRMED");
+  const departures = reservations.filter((r) => r.status === "CHECKED_IN" && r.balanceAmount >= 0);
+  const inHouse = reservations.filter((r) => r.status === "CHECKED_IN");
+
+  const handleConfirmCheckIn = () => {
+    if (!checkInModal) return;
+    const roomToAssign = assignedRoomNumber || checkInModal.roomNumber || "301";
+    checkInGuest(checkInModal.id, roomToAssign);
+    setActionDone(true);
+    setTimeout(() => {
+      setCheckInModal(null);
+      setActionDone(false);
+      setAssignedRoomNumber("");
+    }, 1200);
+  };
+
+  const handleConfirmCheckOut = () => {
+    if (!checkOutModal) return;
+    checkOutGuest(checkOutModal.id);
+    setActionDone(true);
+    setTimeout(() => {
+      setCheckOutModal(null);
+      setActionDone(false);
+    }, 1200);
+  };
 
   return (
     <div className="page-content">
@@ -63,13 +91,12 @@ export default function FrontDeskClient() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Reservation Ref</th>
                 <th>Guest Name</th>
-                <th>Room</th>
-                <th>Room Type</th>
-                <th>Dates</th>
-                <th>Payment Balance</th>
-                <th>Status</th>
+                <th>Confirmation #</th>
+                <th>Room Type & Number</th>
+                <th>Stay Dates</th>
+                <th>Source</th>
+                <th>Payment Status</th>
                 <th className="text-right">Action</th>
               </tr>
             </thead>
@@ -79,56 +106,49 @@ export default function FrontDeskClient() {
                 : activeTab === "departures"
                 ? departures
                 : inHouse
-              ).map((res) => (
-                <tr key={res.id}>
-                  <td className="mono" style={{ fontWeight: 600, fontSize: "12px" }}>
-                    <Link href={`/dashboard/reservations/${res.id}`} className="text-primary">
-                      {res.confirmationNumber}
-                    </Link>
+              ).map((r) => (
+                <tr key={r.id}>
+                  <td className="font-semibold">{r.guestName}</td>
+                  <td className="mono text-xs">{r.confirmationNumber}</td>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{r.roomType}</div>
+                    <div className="text-xs text-primary" style={{ fontWeight: 700 }}>
+                      {r.roomNumber ? `Room #${r.roomNumber}` : "Unassigned"}
+                    </div>
+                  </td>
+                  <td className="text-sm">
+                    {formatDate(r.checkIn, "dd MMM")} → {formatDate(r.checkOut, "dd MMM")} ({r.nights}n)
                   </td>
                   <td>
-                    <div style={{ fontWeight: 600 }}>{res.guestName}</div>
-                    <div className="text-xs text-tertiary">{res.adults} Adults</div>
+                    <span className="badge badge-default">{r.bookingSource}</span>
                   </td>
                   <td>
-                    {res.roomNumber ? (
-                      <span className="badge badge-primary">#{res.roomNumber}</span>
+                    {r.balanceAmount === 0 ? (
+                      <span className="badge badge-success">Paid</span>
                     ) : (
-                      <span className="badge badge-warning">Unassigned</span>
+                      <span className="badge badge-warning">
+                        Due: {formatCurrency(r.balanceAmount)}
+                      </span>
                     )}
-                  </td>
-                  <td className="text-sm">{res.roomType}</td>
-                  <td className="text-xs">
-                    {formatDate(res.checkIn, "dd MMM")} - {formatDate(res.checkOut, "dd MMM")}
-                  </td>
-                  <td className="mono">
-                    {res.balanceAmount > 0 ? (
-                      <span className="text-danger font-medium">{formatCurrency(res.balanceAmount)}</span>
-                    ) : (
-                      <span className="text-success font-medium">Fully Paid</span>
-                    )}
-                  </td>
-                  <td>
-                    <span
-                      className={`badge ${
-                        res.status === "CONFIRMED"
-                          ? "badge-primary"
-                          : res.status === "CHECKED_IN"
-                          ? "badge-success"
-                          : "badge-default"
-                      }`}
-                    >
-                      <span className="badge-dot" />
-                      {res.status.replace("_", " ")}
-                    </span>
                   </td>
                   <td className="text-right">
-                    {res.status === "CONFIRMED" ? (
-                      <button className="btn btn-primary btn-sm" onClick={() => setCheckInModal(res)}>
+                    {activeTab === "arrivals" && (
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => {
+                          setCheckInModal(r);
+                          setAssignedRoomNumber(r.roomNumber || "301");
+                        }}
+                      >
                         <LogIn size={14} /> Check In
                       </button>
-                    ) : (
-                      <button className="btn btn-secondary btn-sm" onClick={() => setCheckOutModal(res)}>
+                    )}
+
+                    {(activeTab === "departures" || activeTab === "in_house") && (
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => setCheckOutModal(r)}
+                      >
                         <LogOut size={14} /> Check Out
                       </button>
                     )}
@@ -140,91 +160,110 @@ export default function FrontDeskClient() {
         </div>
       </div>
 
-      {/* CHECK-IN WORKFLOW MODAL */}
+      {/* Check In Modal */}
       {checkInModal && (
-        <div className="modal-backdrop">
-          <div className="modal">
+        <div className="modal-backdrop" onClick={() => setCheckInModal(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">Check-In Wizard: {checkInModal.guestName}</h3>
+              <h3 className="modal-title">Confirm Guest Check-In</h3>
+              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setCheckInModal(null)}>
+                <X size={16} />
+              </button>
             </div>
             <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div className="card" style={{ padding: "12px", background: "var(--gray-50)" }}>
-                <div><strong>Reservation:</strong> {checkInModal.confirmationNumber}</div>
-                <div><strong>Room Assigned:</strong> #{checkInModal.roomNumber || "301"} ({checkInModal.roomType})</div>
-                <div><strong>Nights:</strong> {checkInModal.nights} nights ({formatDate(checkInModal.checkIn, "dd MMM")} - {formatDate(checkInModal.checkOut, "dd MMM")})</div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Verify Government ID Upload</label>
-                <div style={{ padding: "12px", border: "1px dashed var(--color-border)", borderRadius: "var(--radius-md)", textAlign: "center" }}>
-                  <UserCheck size={24} color="var(--color-primary)" style={{ margin: "0 auto 4px" }} />
-                  <div className="text-xs text-secondary">Aadhaar Card uploaded & verified</div>
+              {actionDone ? (
+                <div style={{ textAlign: "center", padding: "20px" }}>
+                  <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "var(--green-50)", color: "var(--green-600)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: "12px" }}>
+                    <Check size={24} />
+                  </div>
+                  <h3>{checkInModal.guestName} Checked In!</h3>
+                  <p className="text-sm text-secondary" style={{ marginTop: "8px" }}>
+                    Room #{assignedRoomNumber || checkInModal.roomNumber || "301"} status changed to OCCUPIED.
+                  </p>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div style={{ background: "var(--color-bg-tertiary)", padding: "16px", borderRadius: "var(--radius-md)" }}>
+                    <div style={{ fontSize: "16px", fontWeight: 700 }}>{checkInModal.guestName}</div>
+                    <div className="text-xs text-secondary">{checkInModal.confirmationNumber} • {checkInModal.roomType}</div>
+                  </div>
 
-              <div className="form-group">
-                <label className="form-label">Outstanding Balance Settlement</label>
-                <div className="mono font-bold text-danger" style={{ fontSize: "16px" }}>
-                  {formatCurrency(checkInModal.balanceAmount)}
-                </div>
+                  <div className="form-group">
+                    <label className="form-label">Assign Room Number</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={assignedRoomNumber}
+                      onChange={(e) => setAssignedRoomNumber(e.target.value)}
+                      placeholder="e.g. 301"
+                    />
+                  </div>
+
+                  {checkInModal.balanceAmount > 0 && (
+                    <div style={{ background: "var(--amber-50)", padding: "12px", borderRadius: "var(--radius-md)", color: "var(--amber-800)", fontSize: "13px" }}>
+                      ⚠️ Outstanding Balance: {formatCurrency(checkInModal.balanceAmount)}. Collect at desk or charge to card.
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            {!actionDone && (
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setCheckInModal(null)}>Cancel</button>
+                <button className="btn btn-primary" onClick={handleConfirmCheckIn}>
+                  Confirm Check-In
+                </button>
               </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setCheckInModal(null)}>
-                Cancel
-              </button>
-              <button
-                className="btn btn-success"
-                onClick={() => {
-                  alert(`Guest ${checkInModal.guestName} successfully checked into Room #${checkInModal.roomNumber || '301'}!`);
-                  setCheckInModal(null);
-                }}
-              >
-                Confirm Check In <CheckCircle2 size={16} />
-              </button>
-            </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* CHECK-OUT WORKFLOW MODAL */}
+      {/* Check Out Modal */}
       {checkOutModal && (
-        <div className="modal-backdrop">
-          <div className="modal">
+        <div className="modal-backdrop" onClick={() => setCheckOutModal(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">Check-Out Settlement: {checkOutModal.guestName}</h3>
+              <h3 className="modal-title">Confirm Guest Check-Out</h3>
+              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setCheckOutModal(null)}>
+                <X size={16} />
+              </button>
             </div>
             <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div className="card" style={{ padding: "12px", background: "var(--gray-50)" }}>
-                <div><strong>Room:</strong> #{checkOutModal.roomNumber} ({checkOutModal.roomType})</div>
-                <div><strong>Folio Balance:</strong> {formatCurrency(checkOutModal.balanceAmount)}</div>
-              </div>
+              {actionDone ? (
+                <div style={{ textAlign: "center", padding: "20px" }}>
+                  <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "var(--green-50)", color: "var(--green-600)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: "12px" }}>
+                    <Check size={24} />
+                  </div>
+                  <h3>Check-Out Completed!</h3>
+                  <p className="text-sm text-secondary" style={{ marginTop: "8px" }}>
+                    Room #{checkOutModal.roomNumber} marked DIRTY. Housekeeping task generated automatically.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div style={{ background: "var(--color-bg-tertiary)", padding: "16px", borderRadius: "var(--radius-md)" }}>
+                    <div style={{ fontSize: "16px", fontWeight: 700 }}>{checkOutModal.guestName}</div>
+                    <div className="text-xs text-secondary">Room #{checkOutModal.roomNumber} • {checkOutModal.roomType}</div>
+                  </div>
 
-              <p className="text-sm text-secondary">
-                Checking out will automatically:
-                <br />1. Mark Room #{checkOutModal.roomNumber} as <strong>DIRTY</strong>.
-                <br />2. Automatically generate a <strong>Checkout Housekeeping Task</strong> for housekeeping staff.
-                <br />3. Generate tax invoice PDF.
-              </p>
+                  <div style={{ background: "var(--green-50)", padding: "12px", borderRadius: "var(--radius-md)", color: "var(--green-800)", fontSize: "13px" }}>
+                    ✓ All room charges and F&B folios settled. Balance is zero.
+                  </div>
+                </>
+              )}
             </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setCheckOutModal(null)}>
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={() => {
-                  alert(`Guest ${checkOutModal.guestName} checked out! Room #${checkOutModal.roomNumber} is now marked DIRTY and assigned to housekeeping.`);
-                  setCheckOutModal(null);
-                }}
-              >
-                Complete Check Out & Print Invoice
-              </button>
-            </div>
+            {!actionDone && (
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setCheckOutModal(null)}>Cancel</button>
+                <button className="btn btn-success" onClick={handleConfirmCheckOut}>
+                  Complete Check-Out
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
-
     </div>
   );
 }

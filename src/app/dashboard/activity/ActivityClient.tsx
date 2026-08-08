@@ -1,10 +1,12 @@
 "use client";
 
-import { demoActivity } from "@/lib/demo-data";
+import { useAppState } from "@/context/AppStateContext";
 import { formatDate } from "@/lib/utils";
 import { Activity, ShieldCheck, CheckCircle2 } from "lucide-react";
 
 export default function ActivityClient() {
+  const { activity } = useAppState();
+
   return (
     <div className="page-content">
       <div className="page-header">
@@ -19,7 +21,7 @@ export default function ActivityClient() {
       <div className="card">
         <div className="card-body">
           <div className="activity-feed">
-            {demoActivity.map((act) => (
+            {activity.map((act) => (
               <div key={act.id} className="activity-item">
                 <div className="activity-icon" style={{ background: "var(--blue-50)", color: "var(--blue-600)" }}>
                   <ShieldCheck size={16} />
