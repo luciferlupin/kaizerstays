@@ -1,7 +1,7 @@
 import InvoicesClient from "./InvoicesClient";
 
 export const metadata = {
-  title: "Invoices — KaizerStay",
+  title: "Invoices — StaySphere",
 };
 
 export default function InvoicesPage() {

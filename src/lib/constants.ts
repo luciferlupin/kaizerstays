@@ -1,8 +1,9 @@
 // ═══════════════════════════════════════════════════
-// KaizerStay — Application Constants
+// StaySphere — Application Constants
+// Hotel Operating System for Hotel Shemron, Neemrana
 // ═══════════════════════════════════════════════════
 
-export const APP_NAME = "KaizerStay";
+export const APP_NAME = "StaySphere";
 export const APP_DESCRIPTION = "Run your entire hotel from one intelligent operating system";
 export const DEFAULT_CURRENCY = "INR";
 export const DEFAULT_TIMEZONE = "Asia/Kolkata";
@@ -158,51 +159,28 @@ export const MEAL_PLANS = [
 // ─── Permissions ───
 
 export const PERMISSIONS = {
-  // Reservations
   VIEW_RESERVATIONS: "view_reservations",
   CREATE_RESERVATIONS: "create_reservations",
   EDIT_RESERVATIONS: "edit_reservations",
   CANCEL_RESERVATIONS: "cancel_reservations",
   CHECK_IN_GUEST: "check_in_guest",
   CHECK_OUT_GUEST: "check_out_guest",
-
-  // Payments
   VIEW_PAYMENTS: "view_payments",
   RECORD_PAYMENT: "record_payment",
   REFUND_PAYMENT: "refund_payment",
-
-  // Guests
   VIEW_GUESTS: "view_guests",
   EDIT_GUESTS: "edit_guests",
-
-  // Rooms
   MANAGE_ROOMS: "manage_rooms",
-
-  // Housekeeping
   MANAGE_HOUSEKEEPING: "manage_housekeeping",
   UPDATE_ROOM_STATUS: "update_room_status",
-
-  // Reports
   VIEW_REPORTS: "view_reports",
   VIEW_ANALYTICS: "view_analytics",
-
-  // Rates
   EDIT_RATES: "edit_rates",
-
-  // Staff
   MANAGE_STAFF: "manage_staff",
-
-  // Settings
   MANAGE_PROPERTY_SETTINGS: "manage_property_settings",
-
-  // POS
   ACCESS_POS: "access_pos",
-
-  // Expenses
   VIEW_EXPENSES: "view_expenses",
   CREATE_EXPENSES: "create_expenses",
-
-  // Invoices
   VIEW_INVOICES: "view_invoices",
   CREATE_INVOICES: "create_invoices",
 } as const;

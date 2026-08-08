@@ -87,8 +87,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     <aside className={classNames("sidebar", isOpen && "open")}>
       {/* Logo & Mobile Close */}
       <div className="sidebar-logo">
-        <div className="sidebar-logo-icon">K</div>
-        <span>KaizerStay</span>
+        <div className="sidebar-logo-icon">S</div>
+        <span>StaySphere</span>
 
         {/* Mobile close button */}
         {onClose && (
@@ -106,7 +106,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <button className="sidebar-property-name">
           <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <Hotel size={14} />
-            The Imperial Residency
+            Hotel Shemron
           </span>
           <ChevronDown size={14} />
         </button>

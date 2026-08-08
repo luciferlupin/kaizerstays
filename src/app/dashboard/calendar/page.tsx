@@ -1,7 +1,7 @@
 import CalendarClient from "./CalendarClient";
 
 export const metadata = {
-  title: "Reservation Calendar — KaizerStay",
+  title: "Reservation Calendar — StaySphere",
 };
 
 export default function CalendarPage() {

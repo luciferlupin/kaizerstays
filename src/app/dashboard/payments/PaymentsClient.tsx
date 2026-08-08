@@ -198,7 +198,7 @@ export default function PaymentsClient() {
               <button className="btn btn-secondary" onClick={() => setShowModal(false)}>
                 Cancel
               </button>
-              <button className="btn btn-success" onClick={handleCompletePayment => handleRecordPayment()}>
+              <button className="btn btn-success" onClick={handleRecordPayment}>
                 Record Transaction
               </button>
             </div>

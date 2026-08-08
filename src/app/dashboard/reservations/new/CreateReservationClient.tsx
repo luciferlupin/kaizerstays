@@ -422,7 +422,7 @@ export default function CreateReservationClient() {
 
             <h2>Reservation Created Successfully!</h2>
             <div className="mono" style={{ fontSize: "18px", fontWeight: 700, color: "var(--blue-600)", margin: "8px 0 16px" }}>
-              KS-IMP-20260808-00130
+              SS-SHM-20260808-00130
             </div>
 
             <p className="text-secondary" style={{ maxWidth: "420px", margin: "0 auto 24px" }}>

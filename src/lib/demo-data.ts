@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════
-// KaizerStay — Demo Data for Development
+// StaySphere — Production Data for Hotel Shemron, Neemrana
 // Provides realistic hotel data without requiring a database
 // ═══════════════════════════════════════════════════
 
@@ -20,8 +20,8 @@ function daysFromNow(days: number): Date {
 // ─── Organization ───
 export const demoOrganization = {
   id: "org_demo_001",
-  name: "Kaizer Hotels Group",
-  slug: "kaizer-hotels",
+  name: "Shemron Hotels",
+  slug: "shemron-hotels",
   currency: "INR",
   timezone: "Asia/Kolkata",
 };
@@ -30,17 +30,17 @@ export const demoOrganization = {
 export const demoProperty = {
   id: "prop_demo_001",
   organizationId: "org_demo_001",
-  name: "The Imperial Residency",
-  slug: "imperial-residency-delhi",
+  name: "Hotel Shemron",
+  slug: "hotel-shemron-neemrana",
   type: "HOTEL" as const,
-  email: "frontdesk@imperialresidency.in",
-  phone: "+91 11 4200 8800",
-  address: "23, Aurangzeb Road, Lutyens' Delhi",
-  city: "New Delhi",
-  state: "Delhi",
+  email: "frontdesk@hotelshemron.com",
+  phone: "+91 1494 228 800",
+  address: "NH-48, Delhi-Jaipur Highway, Neemrana",
+  city: "Neemrana",
+  state: "Rajasthan",
   country: "IN",
-  zipCode: "110011",
-  gstin: "07AABCT1332L1ZD",
+  zipCode: "301705",
+  gstin: "08AABCT1332L1ZR",
   starRating: 4,
   totalRooms: 50,
   currency: "INR",
@@ -203,27 +203,27 @@ export const demoGuests = [
 // ─── Reservations ───
 export const demoReservations = [
   // Today's arrivals
-  { id: "res_001", confirmationNumber: "KS-IMP-20260808-00124", guestId: "guest_001", guestName: "Rajesh Sharma", status: "CONFIRMED", checkIn: today, checkOut: daysFromNow(3), nights: 3, roomNumber: "301", roomType: "Deluxe Room", adults: 2, children: 0, bookingSource: "DIRECT", roomRate: 5500, totalAmount: 18480, taxAmount: 1980, paidAmount: 5500, balanceAmount: 12980 },
-  { id: "res_002", confirmationNumber: "KS-IMP-20260808-00125", guestId: "guest_002", guestName: "Priya Patel", status: "CONFIRMED", checkIn: today, checkOut: daysFromNow(2), nights: 2, roomNumber: "205", roomType: "Standard Room", adults: 1, children: 0, bookingSource: "BOOKING_COM", roomRate: 3500, totalAmount: 7840, taxAmount: 840, paidAmount: 7840, balanceAmount: 0 },
-  { id: "res_003", confirmationNumber: "KS-IMP-20260808-00126", guestId: "guest_003", guestName: "Amit Kumar", status: "CONFIRMED", checkIn: today, checkOut: tomorrow, nights: 1, roomNumber: "102", roomType: "Standard Room", adults: 2, children: 1, bookingSource: "WALK_IN", roomRate: 3500, totalAmount: 3920, taxAmount: 420, paidAmount: 0, balanceAmount: 3920 },
-  { id: "res_004", confirmationNumber: "KS-IMP-20260808-00127", guestId: "guest_006", guestName: "Ananya Gupta", status: "CONFIRMED", checkIn: today, checkOut: daysFromNow(4), nights: 4, roomNumber: "402", roomType: "Premium Room", adults: 2, children: 0, bookingSource: "WEBSITE", roomRate: 8000, totalAmount: 35840, taxAmount: 3840, paidAmount: 8000, balanceAmount: 27840 },
+  { id: "res_001", confirmationNumber: "SS-SHM-20260808-00124", guestId: "guest_001", guestName: "Rajesh Sharma", status: "CONFIRMED", checkIn: today, checkOut: daysFromNow(3), nights: 3, roomNumber: "301", roomType: "Deluxe Room", adults: 2, children: 0, bookingSource: "DIRECT", roomRate: 5500, totalAmount: 18480, taxAmount: 1980, paidAmount: 5500, balanceAmount: 12980 },
+  { id: "res_002", confirmationNumber: "SS-SHM-20260808-00125", guestId: "guest_002", guestName: "Priya Patel", status: "CONFIRMED", checkIn: today, checkOut: daysFromNow(2), nights: 2, roomNumber: "205", roomType: "Standard Room", adults: 1, children: 0, bookingSource: "BOOKING_COM", roomRate: 3500, totalAmount: 7840, taxAmount: 840, paidAmount: 7840, balanceAmount: 0 },
+  { id: "res_003", confirmationNumber: "SS-SHM-20260808-00126", guestId: "guest_003", guestName: "Amit Kumar", status: "CONFIRMED", checkIn: today, checkOut: tomorrow, nights: 1, roomNumber: "102", roomType: "Standard Room", adults: 2, children: 1, bookingSource: "WALK_IN", roomRate: 3500, totalAmount: 3920, taxAmount: 420, paidAmount: 0, balanceAmount: 3920 },
+  { id: "res_004", confirmationNumber: "SS-SHM-20260808-00127", guestId: "guest_006", guestName: "Ananya Gupta", status: "CONFIRMED", checkIn: today, checkOut: daysFromNow(4), nights: 4, roomNumber: "402", roomType: "Premium Room", adults: 2, children: 0, bookingSource: "WEBSITE", roomRate: 8000, totalAmount: 35840, taxAmount: 3840, paidAmount: 8000, balanceAmount: 27840 },
 
   // Currently in-house
-  { id: "res_005", confirmationNumber: "KS-IMP-20260806-00120", guestId: "guest_004", guestName: "Sneha Reddy", status: "CHECKED_IN", checkIn: daysFromNow(-2), checkOut: tomorrow, nights: 3, roomNumber: "501", roomType: "Royal Suite", adults: 2, children: 1, bookingSource: "DIRECT", roomRate: 15000, totalAmount: 50400, taxAmount: 5400, paidAmount: 15000, balanceAmount: 35400 },
-  { id: "res_006", confirmationNumber: "KS-IMP-20260807-00121", guestId: "guest_005", guestName: "Vikram Singh", status: "CHECKED_IN", checkIn: yesterday, checkOut: daysFromNow(2), nights: 3, roomNumber: "303", roomType: "Deluxe Room", adults: 1, children: 0, bookingSource: "MAKEMYTRIP", roomRate: 5500, totalAmount: 18480, taxAmount: 1980, paidAmount: 18480, balanceAmount: 0 },
-  { id: "res_007", confirmationNumber: "KS-IMP-20260805-00118", guestId: "guest_007", guestName: "Mohammed Ali", status: "CHECKED_IN", checkIn: daysFromNow(-3), checkOut: today, nights: 3, roomNumber: "210", roomType: "Standard Room", adults: 2, children: 0, bookingSource: "AGODA", roomRate: 3500, totalAmount: 11760, taxAmount: 1260, paidAmount: 11760, balanceAmount: 0 },
-  { id: "res_008", confirmationNumber: "KS-IMP-20260806-00119", guestId: "guest_008", guestName: "Kavitha Nair", status: "CHECKED_IN", checkIn: daysFromNow(-2), checkOut: daysFromNow(1), nights: 3, roomNumber: "405", roomType: "Premium Room", adults: 2, children: 0, bookingSource: "DIRECT", roomRate: 8000, totalAmount: 26880, taxAmount: 2880, paidAmount: 26880, balanceAmount: 0 },
-  { id: "res_009", confirmationNumber: "KS-IMP-20260807-00122", guestId: "guest_012", guestName: "Lakshmi Menon", status: "CHECKED_IN", checkIn: yesterday, checkOut: daysFromNow(3), nights: 4, roomNumber: "504", roomType: "Royal Suite", adults: 2, children: 1, bookingSource: "CORPORATE", roomRate: 12000, totalAmount: 53760, taxAmount: 5760, paidAmount: 53760, balanceAmount: 0 },
+  { id: "res_005", confirmationNumber: "SS-SHM-20260806-00120", guestId: "guest_004", guestName: "Sneha Reddy", status: "CHECKED_IN", checkIn: daysFromNow(-2), checkOut: tomorrow, nights: 3, roomNumber: "501", roomType: "Royal Suite", adults: 2, children: 1, bookingSource: "DIRECT", roomRate: 15000, totalAmount: 50400, taxAmount: 5400, paidAmount: 15000, balanceAmount: 35400 },
+  { id: "res_006", confirmationNumber: "SS-SHM-20260807-00121", guestId: "guest_005", guestName: "Vikram Singh", status: "CHECKED_IN", checkIn: yesterday, checkOut: daysFromNow(2), nights: 3, roomNumber: "303", roomType: "Deluxe Room", adults: 1, children: 0, bookingSource: "MAKEMYTRIP", roomRate: 5500, totalAmount: 18480, taxAmount: 1980, paidAmount: 18480, balanceAmount: 0 },
+  { id: "res_007", confirmationNumber: "SS-SHM-20260805-00118", guestId: "guest_007", guestName: "Mohammed Ali", status: "CHECKED_IN", checkIn: daysFromNow(-3), checkOut: today, nights: 3, roomNumber: "210", roomType: "Standard Room", adults: 2, children: 0, bookingSource: "AGODA", roomRate: 3500, totalAmount: 11760, taxAmount: 1260, paidAmount: 11760, balanceAmount: 0 },
+  { id: "res_008", confirmationNumber: "SS-SHM-20260806-00119", guestId: "guest_008", guestName: "Kavitha Nair", status: "CHECKED_IN", checkIn: daysFromNow(-2), checkOut: daysFromNow(1), nights: 3, roomNumber: "405", roomType: "Premium Room", adults: 2, children: 0, bookingSource: "DIRECT", roomRate: 8000, totalAmount: 26880, taxAmount: 2880, paidAmount: 26880, balanceAmount: 0 },
+  { id: "res_009", confirmationNumber: "SS-SHM-20260807-00122", guestId: "guest_012", guestName: "Lakshmi Menon", status: "CHECKED_IN", checkIn: yesterday, checkOut: daysFromNow(3), nights: 4, roomNumber: "504", roomType: "Royal Suite", adults: 2, children: 1, bookingSource: "CORPORATE", roomRate: 12000, totalAmount: 53760, taxAmount: 5760, paidAmount: 53760, balanceAmount: 0 },
 
   // Today's departures
-  { id: "res_010", confirmationNumber: "KS-IMP-20260805-00115", guestId: "guest_009", guestName: "Arjun Mehta", status: "CHECKED_IN", checkIn: daysFromNow(-3), checkOut: today, nights: 3, roomNumber: "104", roomType: "Standard Room", adults: 1, children: 0, bookingSource: "GOIBIBO", roomRate: 3500, totalAmount: 11760, taxAmount: 1260, paidAmount: 10000, balanceAmount: 1760 },
-  { id: "res_011", confirmationNumber: "KS-IMP-20260806-00116", guestId: "guest_010", guestName: "Deepika Joshi", status: "CHECKED_IN", checkIn: daysFromNow(-2), checkOut: today, nights: 2, roomNumber: "306", roomType: "Deluxe Room", adults: 2, children: 0, bookingSource: "EXPEDIA", roomRate: 5500, totalAmount: 12320, taxAmount: 1320, paidAmount: 12320, balanceAmount: 0 },
+  { id: "res_010", confirmationNumber: "SS-SHM-20260805-00115", guestId: "guest_009", guestName: "Arjun Mehta", status: "CHECKED_IN", checkIn: daysFromNow(-3), checkOut: today, nights: 3, roomNumber: "104", roomType: "Standard Room", adults: 1, children: 0, bookingSource: "GOIBIBO", roomRate: 3500, totalAmount: 11760, taxAmount: 1260, paidAmount: 10000, balanceAmount: 1760 },
+  { id: "res_011", confirmationNumber: "SS-SHM-20260806-00116", guestId: "guest_010", guestName: "Deepika Joshi", status: "CHECKED_IN", checkIn: daysFromNow(-2), checkOut: today, nights: 2, roomNumber: "306", roomType: "Deluxe Room", adults: 2, children: 0, bookingSource: "EXPEDIA", roomRate: 5500, totalAmount: 12320, taxAmount: 1320, paidAmount: 12320, balanceAmount: 0 },
 
   // Upcoming
-  { id: "res_012", confirmationNumber: "KS-IMP-20260809-00128", guestId: "guest_011", guestName: "Suresh Iyer", status: "CONFIRMED", checkIn: daysFromNow(1), checkOut: daysFromNow(4), nights: 3, roomNumber: "202", roomType: "Standard Room", adults: 2, children: 0, bookingSource: "DIRECT", roomRate: 3500, totalAmount: 11760, taxAmount: 1260, paidAmount: 11760, balanceAmount: 0 },
+  { id: "res_012", confirmationNumber: "SS-SHM-20260809-00128", guestId: "guest_011", guestName: "Suresh Iyer", status: "CONFIRMED", checkIn: daysFromNow(1), checkOut: daysFromNow(4), nights: 3, roomNumber: "202", roomType: "Standard Room", adults: 2, children: 0, bookingSource: "DIRECT", roomRate: 3500, totalAmount: 11760, taxAmount: 1260, paidAmount: 11760, balanceAmount: 0 },
 
   // Cancelled
-  { id: "res_013", confirmationNumber: "KS-IMP-20260808-00129", guestId: "guest_003", guestName: "Amit Kumar", status: "CANCELLED", checkIn: daysFromNow(5), checkOut: daysFromNow(7), nights: 2, roomNumber: "", roomType: "Deluxe Room", adults: 2, children: 0, bookingSource: "BOOKING_COM", roomRate: 5500, totalAmount: 12320, taxAmount: 1320, paidAmount: 0, balanceAmount: 0 },
+  { id: "res_013", confirmationNumber: "SS-SHM-20260808-00129", guestId: "guest_003", guestName: "Amit Kumar", status: "CANCELLED", checkIn: daysFromNow(5), checkOut: daysFromNow(7), nights: 2, roomNumber: "", roomType: "Deluxe Room", adults: 2, children: 0, bookingSource: "BOOKING_COM", roomRate: 5500, totalAmount: 12320, taxAmount: 1320, paidAmount: 0, balanceAmount: 0 },
 ];
 
 // ─── Today's Stats ───
@@ -301,23 +301,23 @@ export const demoActivity = [
 
 // ─── Expenses ───
 export const demoExpenses = [
-  { id: "exp_001", date: today, vendor: "Delhi Electricity Board", category: "UTILITIES", description: "Monthly electricity bill", amount: 85000, method: "BANK_TRANSFER" },
-  { id: "exp_002", date: today, vendor: "Fresh Farms Produce", category: "FOOD", description: "Daily vegetable and fruit supply", amount: 12500, method: "UPI" },
+  { id: "exp_001", date: today, vendor: "Rajasthan Electricity Board (RVUNL)", category: "UTILITIES", description: "Monthly electricity bill", amount: 85000, method: "BANK_TRANSFER" },
+  { id: "exp_002", date: today, vendor: "Fresh Farms Neemrana", category: "FOOD", description: "Daily vegetable and fruit supply", amount: 12500, method: "UPI" },
   { id: "exp_003", date: yesterday, vendor: "CleanPro Supplies", category: "SUPPLIES", description: "Housekeeping cleaning supplies", amount: 8900, method: "UPI" },
-  { id: "exp_004", date: yesterday, vendor: "TechFix Services", category: "MAINTENANCE", description: "AC servicing - 5 units", amount: 15000, method: "CASH" },
+  { id: "exp_004", date: yesterday, vendor: "TechFix Services Neemrana", category: "MAINTENANCE", description: "AC servicing - 5 units", amount: 15000, method: "CASH" },
   { id: "exp_005", date: daysFromNow(-2), vendor: "Staff Salaries", category: "SALARY", description: "July 2026 salary disbursement", amount: 450000, method: "BANK_TRANSFER" },
 ];
 
 // ─── Staff ───
 export const demoStaff = [
-  { id: "staff_001", firstName: "Sunil", lastName: "Manager", email: "sunil@imperialresidency.in", role: "General Manager", department: "MANAGEMENT", isActive: true },
-  { id: "staff_002", firstName: "Pooja", lastName: "Verma", email: "pooja@imperialresidency.in", role: "Front Desk Manager", department: "FRONT_DESK", isActive: true },
-  { id: "staff_003", firstName: "Rahul", lastName: "Kapoor", email: "rahul@imperialresidency.in", role: "Receptionist", department: "FRONT_DESK", isActive: true },
-  { id: "staff_004", firstName: "Meena", lastName: "Kumari", email: "meena@imperialresidency.in", role: "Housekeeping Manager", department: "HOUSEKEEPING", isActive: true },
-  { id: "staff_005", firstName: "Ramu", lastName: "Prasad", email: "ramu@imperialresidency.in", role: "Housekeeping Staff", department: "HOUSEKEEPING", isActive: true },
-  { id: "staff_006", firstName: "Sunita", lastName: "Devi", email: "sunita@imperialresidency.in", role: "Housekeeping Staff", department: "HOUSEKEEPING", isActive: true },
-  { id: "staff_007", firstName: "Arun", lastName: "Chef", email: "arun@imperialresidency.in", role: "Restaurant Manager", department: "RESTAURANT", isActive: true },
-  { id: "staff_008", firstName: "Neha", lastName: "Accountant", email: "neha@imperialresidency.in", role: "Accountant", department: "FINANCE", isActive: true },
+  { id: "staff_001", firstName: "Sunil", lastName: "Manager", email: "sunil@hotelshemron.com", role: "General Manager", department: "MANAGEMENT", isActive: true },
+  { id: "staff_002", firstName: "Pooja", lastName: "Verma", email: "pooja@hotelshemron.com", role: "Front Desk Manager", department: "FRONT_DESK", isActive: true },
+  { id: "staff_003", firstName: "Rahul", lastName: "Kapoor", email: "rahul@hotelshemron.com", role: "Receptionist", department: "FRONT_DESK", isActive: true },
+  { id: "staff_004", firstName: "Meena", lastName: "Kumari", email: "meena@hotelshemron.com", role: "Housekeeping Manager", department: "HOUSEKEEPING", isActive: true },
+  { id: "staff_005", firstName: "Ramu", lastName: "Prasad", email: "ramu@hotelshemron.com", role: "Housekeeping Staff", department: "HOUSEKEEPING", isActive: true },
+  { id: "staff_006", firstName: "Sunita", lastName: "Devi", email: "sunita@hotelshemron.com", role: "Housekeeping Staff", department: "HOUSEKEEPING", isActive: true },
+  { id: "staff_007", firstName: "Arun", lastName: "Chef", email: "arun@hotelshemron.com", role: "Restaurant Manager", department: "RESTAURANT", isActive: true },
+  { id: "staff_008", firstName: "Neha", lastName: "Accountant", email: "neha@hotelshemron.com", role: "Accountant", department: "FINANCE", isActive: true },
 ];
 
 // ─── Attention Items ───

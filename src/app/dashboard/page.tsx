@@ -1,7 +1,7 @@
 import DashboardClient from "./DashboardClient";
 
 export const metadata = {
-  title: "Dashboard — KaizerStay",
+  title: "Dashboard — StaySphere",
 };
 
 export default function DashboardPage() {

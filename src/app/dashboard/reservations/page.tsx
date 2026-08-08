@@ -1,7 +1,7 @@
 import ReservationsClient from "./ReservationsClient";
 
 export const metadata = {
-  title: "Reservations — KaizerStay",
+  title: "Reservations — StaySphere",
 };
 
 export default function ReservationsPage() {

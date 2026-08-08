@@ -13,8 +13,8 @@ export default function SettingsClient() {
   const [checkInTime, setCheckInTime] = useState("14:00");
   const [checkOutTime, setCheckOutTime] = useState("11:00");
   const [taxRate, setTaxRate] = useState(12);
-  const [wifiNetwork, setWifiNetwork] = useState("ImperialGuest_WiFi");
-  const [wifiPass, setWifiPass] = useState("Imperial2026");
+  const [wifiNetwork, setWifiNetwork] = useState("ShemronGuest_WiFi");
+  const [wifiPass, setWifiPass] = useState("Shemron2026");
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {

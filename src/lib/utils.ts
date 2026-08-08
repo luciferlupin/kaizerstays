@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════
-// KaizerStay — Utility Functions
+// StaySphere — Utility Functions
 // ═══════════════════════════════════════════════════
 
 import { format, formatDistanceToNow, differenceInDays, parseISO } from "date-fns";

@@ -1,7 +1,7 @@
 import StaffClient from "./StaffClient";
 
 export const metadata = {
-  title: "Staff & RBAC — KaizerStay",
+  title: "Staff & RBAC — StaySphere",
 };
 
 export default function StaffPage() {

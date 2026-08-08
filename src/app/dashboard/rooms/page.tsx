@@ -1,7 +1,7 @@
 import RoomsClient from "./RoomsClient";
 
 export const metadata = {
-  title: "Room Management — KaizerStay",
+  title: "Room Management — StaySphere",
 };
 
 export default function RoomsPage() {

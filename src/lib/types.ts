@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════
-// KaizerStay — Shared TypeScript Types
+// StaySphere — Shared TypeScript Types
 // ═══════════════════════════════════════════════════
 
 import type {
