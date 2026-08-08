@@ -4,7 +4,7 @@ import type { Metadata, Viewport } from "next";
 export const metadata: Metadata = {
   title: {
     default: "StaySphere — Hotel Operating System",
-    template: "%s — StaySphere",
+    template: "%s",
   },
   description: "Run your entire hotel from one intelligent operating system. Bookings. Rooms. Guests. Payments. Housekeeping. Revenue. One platform.",
   keywords: ["hotel management", "PMS", "hotel software", "property management", "StaySphere", "Hotel Shemron"],
