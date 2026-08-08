@@ -45,13 +45,6 @@ export default function LoginClient() {
     }
   };
 
-  const quickLogin = (idOrEmail: string, pass: string, targetPath: string) => {
-    setEmailOrId(idOrEmail);
-    setPassword(pass);
-    loginUser(idOrEmail, pass);
-    router.push(targetPath);
-  };
-
   return (
     <div
       style={{
@@ -140,7 +133,7 @@ export default function LoginClient() {
 
           {error && (
             <div style={{ color: "var(--red-600)", fontSize: "13px", textAlign: "center" }}>
-              Invalid credentials. Use one of the quick demo buttons below.
+              Invalid Staff ID or Password. Please check your credentials.
             </div>
           )}
 
@@ -148,47 +141,6 @@ export default function LoginClient() {
             Sign In to Workspace <ArrowRight size={16} />
           </button>
         </form>
-
-        {/* Quick Demo Login Presets */}
-        <div style={{ marginTop: "28px", paddingTop: "20px", borderTop: "1px solid rgba(0,0,0,0.08)" }}>
-          <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#86868B", textAlign: "center", marginBottom: "12px" }}>
-            Quick One-Tap Login Roles
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={() => quickLogin("Ninaad.khera@gmail.com", "12345", "/dashboard/owner")}
-              style={{ justifyContent: "flex-start" }}
-            >
-              <Crown size={14} className="text-warning" /> Owner Console
-            </button>
-
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={() => quickLogin("frontdesk@hotelshemron.com", "12345", "/dashboard/front-desk")}
-              style={{ justifyContent: "flex-start" }}
-            >
-              <ConciergeBell size={14} className="text-primary" /> Front Desk
-            </button>
-
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={() => quickLogin("housekeeping@hotelshemron.com", "12345", "/employee")}
-              style={{ justifyContent: "flex-start" }}
-            >
-              <Sparkles size={14} className="text-success" /> Housekeeping
-            </button>
-
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={() => quickLogin("chef@hotelshemron.com", "12345", "/dashboard/pos")}
-              style={{ justifyContent: "flex-start" }}
-            >
-              <Utensils size={14} className="text-danger" /> Restaurant POS
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
