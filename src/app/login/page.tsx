@@ -1,12 +1,12 @@
 "use client";
 
-import BookingClient from "./BookingClient";
+import LoginClient from "./LoginClient";
 import { AppStateProvider } from "@/context/AppStateContext";
 
-export default function PublicBookingPage() {
+export default function LoginPage() {
   return (
     <AppStateProvider>
-      <BookingClient />
+      <LoginClient />
     </AppStateProvider>
   );
 }

@@ -27,6 +27,7 @@ import {
   TrendingUp,
   Radio,
   Globe,
+  Crown,
 } from "lucide-react";
 import { classNames } from "@/lib/utils";
 
@@ -52,6 +53,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   TrendingUp,
   Radio,
   Globe,
+  Crown,
 };
 
 interface NavItemDef {
@@ -98,6 +100,7 @@ const NAV_GROUPS: NavGroupDef[] = [
   {
     title: "ADMINISTRATION",
     items: [
+      { label: "Owner Console", href: "/dashboard/owner", icon: "Crown" },
       { label: "Staff", href: "/dashboard/staff", icon: "UserCog" },
       { label: "Activity Log", href: "/dashboard/activity", icon: "Activity" },
       { label: "Settings", href: "/dashboard/settings", icon: "Settings" },

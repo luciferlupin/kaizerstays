@@ -63,8 +63,12 @@ interface AppStateContextType {
   staff: typeof demoStaff;
   otaChannels: typeof otaChannels;
   nightAudits: NightAuditRecord[];
+  currentUser: { name: string; role: string; email: string; staffId: string } | null;
 
   // Actions connecting everything
+  loginUser: (emailOrId: string, password: string) => boolean;
+  logoutUser: () => void;
+  addStaffMember: (member: { staffId: string; name: string; email: string; role: string; phone: string; password: string }) => void;
   addReservation: (resData: Omit<ExtendedReservation, "id" | "confirmationNumber">) => ExtendedReservation;
   checkInGuest: (reservationId: string, roomNumber: string) => void;
   checkOutGuest: (reservationId: string) => void;
@@ -110,6 +114,48 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [staff, setStaff] = useState(demoStaff);
   const [channels, setChannels] = useState(otaChannels);
   const [nightAudits, setNightAudits] = useState(nightAuditHistory);
+  const [currentUser, setCurrentUser] = useState<{ name: string; role: string; email: string; staffId: string } | null>({
+    name: "Sunil Manager",
+    role: "Hotel Owner & GM",
+    email: "owner@hotelshemron.com",
+    staffId: "EMP-101",
+  });
+
+  const loginUser = (emailOrId: string, pass: string) => {
+    const found = staff.find((s) => s.email.toLowerCase() === emailOrId.toLowerCase() || s.id.toLowerCase() === emailOrId.toLowerCase());
+    if (found || emailOrId.toLowerCase().includes("owner") || emailOrId.toLowerCase().includes("emp")) {
+      setCurrentUser({
+        name: found ? `${found.firstName} ${found.lastName}` : "Sunil Owner",
+        role: found ? found.role : "Property Owner",
+        email: found ? found.email : "owner@hotelshemron.com",
+        staffId: found ? found.id : "EMP-100",
+      });
+      addActivity("User Logged In", "auth", found ? found.id : "EMP-100", `${found ? `${found.firstName} ${found.lastName}` : "Owner"} logged into workspace`);
+      return true;
+    }
+    return false;
+  };
+
+  const logoutUser = () => {
+    setCurrentUser(null);
+  };
+
+  const addStaffMember = (member: { staffId: string; name: string; email: string; role: string; phone: string; password: string }) => {
+    const nameParts = member.name.split(" ");
+    const newStaff = {
+      id: member.staffId || `EMP-${Math.floor(100 + Math.random() * 900)}`,
+      firstName: nameParts[0] || member.name,
+      lastName: nameParts.slice(1).join(" ") || "",
+      email: member.email,
+      role: member.role,
+      department: member.role.includes("Desk") ? "Front Office" : member.role.includes("House") ? "Housekeeping" : "Management",
+      isActive: true,
+      phone: member.phone || "+91 98000 00000",
+    };
+
+    setStaff((prev) => [newStaff, ...prev]);
+    addActivity("Staff Member Added", "staff", newStaff.id, `Owner created pass for ${member.name} (ID: ${newStaff.id}, Role: ${member.role})`);
+  };
 
   // ─── Activity Audit Helper ───
   const addActivity = (action: string, entity: string, entityId: string, detail: string) => {
@@ -118,7 +164,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       action,
       entity,
       entityId,
-      user: "Sunil Manager",
+      user: currentUser ? currentUser.name : "Sunil Manager",
       detail,
       createdAt: new Date(),
       icon: entity,
@@ -442,6 +488,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         staff,
         otaChannels: channels,
         nightAudits,
+        currentUser,
+        loginUser,
+        logoutUser,
+        addStaffMember,
         addReservation,
         checkInGuest,
         checkOutGuest,
