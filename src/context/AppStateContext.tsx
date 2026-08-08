@@ -159,19 +159,19 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     addActivity("Staff Member Added", "staff", newStaff.id, `Owner created pass for ${member.name} (ID: ${newStaff.id}, Role: ${member.role})`);
   };
 
-  // ─── Activity Audit Helper ───
+  // ─── Activity Audit Helper (Ultra-low storage pruning) ───
   const addActivity = (action: string, entity: string, entityId: string, detail: string) => {
     const newAct = {
       id: `act_${Date.now()}`,
       action,
       entity,
       entityId,
-      user: currentUser ? currentUser.name : "Sunil Manager",
+      user: currentUser ? currentUser.name : "Ninaad Khera",
       detail,
       createdAt: new Date(),
       icon: entity,
     };
-    setActivity((prev) => [newAct, ...prev]);
+    setActivity((prev) => [newAct, ...prev].slice(0, 30));
   };
 
   // ─── Add Reservation (connected to Guest CRM, Room Status, & Activity) ───
