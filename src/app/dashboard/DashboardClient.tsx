@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 
 export default function DashboardClient() {
-  const { property, rooms, reservations, activity, payments } = useAppState();
+  const { property, rooms, reservations, activity, payments, currentUser } = useAppState();
   const greeting = getGreeting();
   const [activeTab, setActiveTab] = useState<"arrivals" | "departures">("arrivals");
 
@@ -52,7 +52,7 @@ export default function DashboardClient() {
       {/* Header Greeting */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">{greeting}, Sunil Manager</h1>
+          <h1 className="page-title">{greeting}, {currentUser ? currentUser.name : "Ninaad Khera"}</h1>
           <p className="page-description">
             Here is what's happening at {property.name} today.
           </p>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAppState } from "@/context/AppStateContext";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import Link from "next/link";
 import {
   Crown,
   UserPlus,
@@ -10,6 +11,7 @@ import {
   TrendingUp,
   DollarSign,
   ShieldCheck,
+  ShieldAlert,
   Key,
   Check,
   X,
@@ -21,9 +23,21 @@ import {
 } from "lucide-react";
 
 export default function OwnerDashboardClient() {
-  const { property, staff, addStaffMember, reservations, payments, expenses } = useAppState();
+  const { property, staff, addStaffMember, reservations, payments, expenses, currentUser } = useAppState();
   const [showAddModal, setShowAddModal] = useState(false);
   const [memberCreated, setMemberCreated] = useState(false);
+
+  const user = currentUser || {
+    name: "Ninaad Khera",
+    role: "Property Owner & GM",
+    email: "Ninaad.khera@gmail.com",
+    staffId: "OWNER-001",
+  };
+
+  const isOwnerOrGM =
+    user.role.toLowerCase().includes("owner") ||
+    user.role.toLowerCase().includes("manager") ||
+    user.role.toLowerCase().includes("gm");
 
   // Form State
   const [staffId, setStaffId] = useState(`EMP-${Math.floor(100 + Math.random() * 900)}`);
@@ -36,6 +50,25 @@ export default function OwnerDashboardClient() {
   const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0) + 1845000;
   const totalExpenseAmount = expenses.reduce((sum, e) => sum + e.amount, 0) + 712000;
   const grossProfit = totalRevenue - totalExpenseAmount;
+
+  if (!isOwnerOrGM) {
+    return (
+      <div className="page-content" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
+        <div className="card" style={{ maxWidth: "460px", padding: "32px", textAlign: "center" }}>
+          <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "var(--red-50)", color: "var(--red-600)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: "16px" }}>
+            <ShieldAlert size={28} />
+          </div>
+          <h2 style={{ fontSize: "20px", fontWeight: 800 }}>Access Restricted</h2>
+          <p className="text-sm text-secondary" style={{ margin: "12px 0 20px" }}>
+            The Owner Console is restricted to Property Owners and General Managers. Your current role is <strong>{user.role}</strong>.
+          </p>
+          <Link href="/dashboard" className="btn btn-primary">
+            Return to Operations Workspace
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const handleCreateMember = () => {
     if (!fullName.trim() || !email.trim()) return;

@@ -113,13 +113,46 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
+import { useAppState } from "@/context/AppStateContext";
+
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { currentUser } = useAppState();
+
+  const user = currentUser || {
+    name: "Ninaad Khera",
+    role: "Property Owner & GM",
+    email: "Ninaad.khera@gmail.com",
+    staffId: "OWNER-001",
+  };
+
+  const isOwnerOrGM =
+    user.role.toLowerCase().includes("owner") ||
+    user.role.toLowerCase().includes("manager") ||
+    user.role.toLowerCase().includes("gm");
+
+  const isFrontDesk = user.role.toLowerCase().includes("desk");
+  const isHousekeeping = user.role.toLowerCase().includes("house");
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
     return pathname.startsWith(href);
   };
+
+  const filteredNavGroups = NAV_GROUPS.map((group) => {
+    const items = group.items.filter((item) => {
+      // Owner pages: Owner Console, Staff, Revenue Manager, Expenses, Analytics, Settings
+      if (item.href === "/dashboard/owner" || item.href === "/dashboard/staff" || item.href === "/dashboard/settings" || item.href === "/dashboard/revenue" || item.href === "/dashboard/expenses" || item.href === "/dashboard/analytics") {
+        return isOwnerOrGM;
+      }
+      if (isHousekeeping) {
+        return item.href === "/dashboard/housekeeping" || item.href === "/dashboard/rooms" || item.href === "/dashboard/requests" || item.href === "/dashboard";
+      }
+      return true;
+    });
+
+    return { ...group, items };
+  }).filter((group) => group.items.length > 0);
 
   return (
     <aside className={classNames("sidebar", isOpen && "open")}>
@@ -152,7 +185,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="sidebar-nav">
-        {NAV_GROUPS.map((group) => (
+        {filteredNavGroups.map((group) => (
           <div key={group.title} className="sidebar-section">
             <div className="sidebar-section-title">{group.title}</div>
             {group.items.map((item) => {
@@ -182,14 +215,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <div
             className="avatar avatar-sm"
-            style={{ background: "#2563EB", color: "white" }}
+            style={{ background: isOwnerOrGM ? "#0071E3" : "#34C759", color: "white" }}
           >
-            SM
+            {user.name.split(" ").map((n) => n[0]).join("")}
           </div>
-          <div>
-            <div style={{ fontSize: "13px", fontWeight: 600 }}>Sunil Manager</div>
-            <div style={{ fontSize: "11px", color: "var(--color-text-tertiary)" }}>
-              General Manager
+          <div style={{ overflow: "hidden" }}>
+            <div style={{ fontSize: "13px", fontWeight: 600, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+              {user.name}
+            </div>
+            <div style={{ fontSize: "11px", color: "var(--color-text-tertiary)", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+              {user.role}
             </div>
           </div>
         </div>
