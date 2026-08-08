@@ -176,33 +176,48 @@ function generateRooms() {
 
 export const demoRooms = generateRooms();
 
-// ─── Guests (Clean Empty Production List) ───
-export const demoGuests: Array<{ id: string; firstName: string; lastName: string; email: string; phone: string; city: string; country: string; isVip: boolean; totalStays: number; totalSpent: number; totalNights: number }> = [];
-
-// ─── Reservations (Clean Empty Production List) ───
-export const demoReservations: Array<any> = [];
-
-// ─── Housekeeping Tasks (Clean Empty Production List) ───
-export const demoHousekeepingTasks: Array<any> = [];
-
-// ─── Guest Requests (Clean Empty Production List) ───
-export const demoGuestRequests: Array<any> = [];
-
-// ─── Recent Payments (Clean Empty Production List) ───
-export const demoPayments: Array<any> = [];
-
-// ─── Recent Activity (Initial Owner Log Entry) ───
-export const demoActivity = [
-  { id: "act_001", action: "System Initialized", entity: "system", entityId: "prop_demo_001", user: "Ninaad Khera", detail: "StaySphere OS workspace initialized for Hotel Shemron, Neemrana", createdAt: new Date(), icon: "checkin" },
+// ─── Guests (1 Production Verification Record) ───
+export const demoGuests = [
+  { id: "guest_001", firstName: "Anand", lastName: "Verma", email: "anand.verma@gmail.com", phone: "+91 98112 34567", city: "New Delhi", country: "IN", isVip: true, totalStays: 3, totalSpent: 28500, totalNights: 5 },
 ];
 
-// ─── Expenses (Clean Empty Production List) ───
-export const demoExpenses: Array<any> = [];
+// ─── Reservations (1 Production Verification Record) ───
+export const demoReservations = [
+  { id: "res_001", confirmationNumber: "SS-SHM-20260808-00101", guestId: "guest_001", guestName: "Anand Verma", status: "CONFIRMED", checkIn: today, checkOut: tomorrow, nights: 1, roomNumber: "201", roomType: "Deluxe Room", adults: 2, children: 0, bookingSource: "DIRECT", roomRate: 5500, totalAmount: 6160, taxAmount: 660, paidAmount: 5500, balanceAmount: 660 },
+];
 
-// ─── Staff (Initial Owner Account for Ninaad Khera) ───
+// ─── Housekeeping Tasks (1 Production Verification Record) ───
+export const demoHousekeepingTasks = [
+  { id: "hk_001", roomNumber: "104", roomType: "Standard Room", type: "CHECKOUT_CLEANING", priority: "HIGH", status: "IN_PROGRESS", assignedTo: "Ramu Prasad", floor: 1 },
+];
+
+// ─── Guest Requests (1 Production Verification Record) ───
+export const demoGuestRequests = [
+  { id: "req_001", roomNumber: "201", guestName: "Anand Verma", type: "TOWELS", description: "2 Extra Fresh Bath Towels", quantity: 2, status: "ACCEPTED", priority: "NORMAL", createdAt: new Date() },
+];
+
+// ─── Recent Payments (1 Production Verification Record) ───
+export const demoPayments = [
+  { id: "pay_001", paymentNumber: "PAY-20260808-00001", guestName: "Anand Verma", reservationId: "res_001", amount: 5500, method: "UPI", status: "COMPLETED", reference: "UPI987654321", receivedAt: new Date() },
+];
+
+// ─── Recent Activity (1 Production Verification Record) ───
+export const demoActivity = [
+  { id: "act_001", action: "Reservation Confirmed", entity: "reservation", entityId: "res_001", user: "Ninaad Khera", detail: "Anand Verma - Deluxe Room #201 confirmed for 1 night", createdAt: new Date(), icon: "calendar" },
+];
+
+// ─── Expenses (1 Production Verification Record) ───
+export const demoExpenses = [
+  { id: "exp_001", date: today, vendor: "CleanPro Supplies Neemrana", category: "SUPPLIES", description: "Linen Sanitizer & Cleaning Supplies", amount: 2800, method: "UPI" },
+];
+
+// ─── Staff (Owner + 1 Front Desk Manager Record) ───
 export const demoStaff = [
   { id: "OWNER-001", firstName: "Ninaad", lastName: "Khera", email: "Ninaad.khera@gmail.com", role: "Property Owner & GM", department: "MANAGEMENT", isActive: true },
+  { id: "EMP-102", firstName: "Rahul", lastName: "Kapoor", email: "rahul.fdesk@hotelshemron.com", role: "Front Desk Manager", department: "FRONT_DESK", isActive: true },
 ];
 
 // ─── Attention Items ───
-export const demoAttentionItems: Array<any> = [];
+export const demoAttentionItems = [
+  { type: "arrivals", message: "1 arrival scheduled today", count: 1, severity: "info" as const, link: "/dashboard/front-desk" },
+];

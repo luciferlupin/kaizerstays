@@ -427,7 +427,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       amount: payment.amount,
       method: payment.method,
       status: "COMPLETED",
-      reference: payment.reference || null,
+      reference: payment.reference || "",
       receivedAt: new Date(),
     };
 
