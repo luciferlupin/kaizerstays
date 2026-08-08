@@ -22,6 +22,11 @@ import {
   MessageSquare,
   BellDot,
   X,
+  Moon,
+  Utensils,
+  TrendingUp,
+  Radio,
+  Globe,
 } from "lucide-react";
 import { classNames } from "@/lib/utils";
 
@@ -42,6 +47,11 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Activity,
   Settings,
   MessageSquare,
+  Moon,
+  Utensils,
+  TrendingUp,
+  Radio,
+  Globe,
 };
 
 interface NavItemDef {
@@ -51,23 +61,48 @@ interface NavItemDef {
   badge?: number;
 }
 
-const NAV_ITEMS: NavItemDef[] = [
-  { label: "Overview", href: "/dashboard", icon: "LayoutDashboard" },
-  { label: "Front Desk", href: "/dashboard/front-desk", icon: "ConciergeBell", badge: 4 },
-  { label: "Reservations", href: "/dashboard/reservations", icon: "CalendarCheck" },
-  { label: "Calendar", href: "/dashboard/calendar", icon: "Calendar" },
-  { label: "Guests", href: "/dashboard/guests", icon: "Users" },
-  { label: "Rooms", href: "/dashboard/rooms", icon: "DoorOpen" },
-  { label: "Housekeeping", href: "/dashboard/housekeeping", icon: "Sparkles", badge: 5 },
-  { label: "Guest Requests", href: "/dashboard/requests", icon: "MessageSquare", badge: 2 },
-  { label: "Payments", href: "/dashboard/payments", icon: "CreditCard" },
-  { label: "Expenses", href: "/dashboard/expenses", icon: "Receipt" },
-  { label: "Invoices", href: "/dashboard/invoices", icon: "FileText" },
-  { label: "Analytics", href: "/dashboard/analytics", icon: "BarChart3" },
-  { label: "Reports", href: "/dashboard/reports", icon: "ClipboardList" },
-  { label: "Staff", href: "/dashboard/staff", icon: "UserCog" },
-  { label: "Activity", href: "/dashboard/activity", icon: "Activity" },
-  { label: "Settings", href: "/dashboard/settings", icon: "Settings" },
+interface NavGroupDef {
+  title: string;
+  items: NavItemDef[];
+}
+
+const NAV_GROUPS: NavGroupDef[] = [
+  {
+    title: "OPERATIONS",
+    items: [
+      { label: "Overview", href: "/dashboard", icon: "LayoutDashboard" },
+      { label: "Front Desk", href: "/dashboard/front-desk", icon: "ConciergeBell", badge: 4 },
+      { label: "Reservations", href: "/dashboard/reservations", icon: "CalendarCheck" },
+      { label: "Calendar", href: "/dashboard/calendar", icon: "Calendar" },
+      { label: "Guests", href: "/dashboard/guests", icon: "Users" },
+      { label: "Rooms", href: "/dashboard/rooms", icon: "DoorOpen" },
+      { label: "Housekeeping", href: "/dashboard/housekeeping", icon: "Sparkles", badge: 5 },
+      { label: "Guest Requests", href: "/dashboard/requests", icon: "MessageSquare", badge: 2 },
+      { label: "Night Audit", href: "/dashboard/night-audit", icon: "Moon" },
+      { label: "Restaurant POS", href: "/dashboard/pos", icon: "Utensils" },
+    ],
+  },
+  {
+    title: "REVENUE & CHANNELS",
+    items: [
+      { label: "Payments", href: "/dashboard/payments", icon: "CreditCard" },
+      { label: "Expenses", href: "/dashboard/expenses", icon: "Receipt" },
+      { label: "Invoices", href: "/dashboard/invoices", icon: "FileText" },
+      { label: "Revenue Manager", href: "/dashboard/revenue", icon: "TrendingUp" },
+      { label: "Channel Manager", href: "/dashboard/channels", icon: "Radio" },
+      { label: "Booking Engine", href: "/dashboard/booking-engine", icon: "Globe" },
+      { label: "Analytics", href: "/dashboard/analytics", icon: "BarChart3" },
+      { label: "Reports", href: "/dashboard/reports", icon: "ClipboardList" },
+    ],
+  },
+  {
+    title: "ADMINISTRATION",
+    items: [
+      { label: "Staff", href: "/dashboard/staff", icon: "UserCog" },
+      { label: "Activity Log", href: "/dashboard/activity", icon: "Activity" },
+      { label: "Settings", href: "/dashboard/settings", icon: "Settings" },
+    ],
+  },
 ];
 
 interface SidebarProps {
@@ -114,26 +149,29 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="sidebar-nav">
-        <div className="sidebar-section">
-          {NAV_ITEMS.map((item) => {
-            const IconComponent = ICON_MAP[item.icon] || LayoutDashboard;
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={classNames("sidebar-link", active && "active")}
-                onClick={() => onClose && onClose()}
-              >
-                <IconComponent className="sidebar-link-icon" size={18} />
-                <span>{item.label}</span>
-                {item.badge ? (
-                  <span className="sidebar-link-badge">{item.badge}</span>
-                ) : null}
-              </Link>
-            );
-          })}
-        </div>
+        {NAV_GROUPS.map((group) => (
+          <div key={group.title} className="sidebar-section">
+            <div className="sidebar-section-title">{group.title}</div>
+            {group.items.map((item) => {
+              const IconComponent = ICON_MAP[item.icon] || LayoutDashboard;
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={classNames("sidebar-link", active && "active")}
+                  onClick={() => onClose && onClose()}
+                >
+                  <IconComponent className="sidebar-link-icon" size={18} />
+                  <span>{item.label}</span>
+                  {item.badge ? (
+                    <span className="sidebar-link-badge">{item.badge}</span>
+                  ) : null}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* Footer */}
@@ -141,7 +179,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <div
             className="avatar avatar-sm"
-            style={{ background: "#3B82F6", color: "white" }}
+            style={{ background: "#2563EB", color: "white" }}
           >
             SM
           </div>
