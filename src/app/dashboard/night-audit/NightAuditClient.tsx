@@ -44,14 +44,41 @@ export default function NightAuditClient() {
   } | null>(null);
 
   const initialSteps: AuditStep[] = [
-    { id: 1, name: "Verify Room Occupancy & Statuses", description: "Audit 33 occupied rooms and check for unassigned arrivals", status: "idle" },
-    { id: 2, name: "Post Room Charges & GST Taxes", description: "Batch post room tariffs & 12% GST to guest folios", status: "idle" },
-    { id: 3, name: "Reconcile Restaurant POS & Outlets", description: "Consolidate KOT bills & room charges from F&B outlets", status: "idle" },
-    { id: 4, name: "Verify Payment Ledgers & Deposits", description: "Reconcile UPI, credit card VCCs, cash, and bank transfers", status: "idle" },
-    { id: 5, name: "Close Financial Day & Generate Reports", description: "Seal business date for 08 Aug 2026 and advance system clock", status: "idle" },
+    { id: 1, name: "Verify Room Occupancy & Unassigned Arrivals", description: "Audit 43 rooms and verify checked-in guest folios", status: "idle" },
+    { id: 2, name: "Batch Post Room Tariffs & GST Taxes (SAC 9963)", description: "Batch post room tariffs & GST (12% / 18%) to guest folios", status: "idle" },
+    { id: 3, name: "Reconcile Restaurant POS & Outlet Room Charges", description: "Consolidate KOT bills & room charges from F&B outlets", status: "idle" },
+    { id: 4, name: "Assess Late Check-out Penalties & No-Show Auto-Cancels", description: "Process no-show fees & late checkout surcharges", status: "idle" },
+    { id: 5, name: "Settle City Ledger & Corporate Credit Aging", description: "Reconcile direct billing corporate accounts & guest ledgers", status: "idle" },
+    { id: 6, name: "Seal Business Date & Generate EOD Flash Report", description: "Seal financial business date and advance system clock", status: "idle" },
   ];
 
   const [steps, setSteps] = useState<AuditStep[]>(initialSteps);
+
+  const exportEODReport = () => {
+    const record = auditResult || {
+      roomsCharged: 33,
+      revenuePosted: 142800,
+      taxCollected: 17136,
+      openFolios: 2,
+    };
+    const content = `StaySphere OS — Hotel Shemron EOD Night Audit Flash Report
+Date: ${formatDate(new Date(), "yyyy-MM-dd HH:mm:ss")}
+Auditor: Ninaad Khera (Property Owner & GM)
+
+=== FINANCIAL SUMMARY ===
+Rooms Charged: ${record.roomsCharged}
+Total Revenue Posted: INR ${record.revenuePosted}
+GST Tax Collected (12%/18%): INR ${record.taxCollected}
+Open Guest Folios: ${record.openFolios}
+Business Date Status: CLOSED & SEALED
+`;
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `StaySphere_EOD_NightAudit_${formatDate(new Date(), "yyyy-MM-dd")}.txt`;
+    a.click();
+  };
 
   const startNightAudit = () => {
     setIsRunning(true);
