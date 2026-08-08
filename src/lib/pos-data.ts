@@ -94,54 +94,21 @@ export const menuItems: MenuItem[] = [
 // ─── Restaurant Tables ───
 export const posTables: POSTable[] = [
   { id: "tbl_1", number: 1, seats: 2, location: "Indoor", status: "AVAILABLE", currentOrderId: null, guestName: null, roomNumber: null },
-  { id: "tbl_2", number: 2, seats: 2, location: "Indoor", status: "OCCUPIED", currentOrderId: "kot_001", guestName: "Rajesh Sharma", roomNumber: "301" },
+  { id: "tbl_2", number: 2, seats: 2, location: "Indoor", status: "AVAILABLE", currentOrderId: null, guestName: null, roomNumber: null },
   { id: "tbl_3", number: 3, seats: 4, location: "Indoor", status: "AVAILABLE", currentOrderId: null, guestName: null, roomNumber: null },
-  { id: "tbl_4", number: 4, seats: 4, location: "Indoor", status: "OCCUPIED", currentOrderId: "kot_002", guestName: null, roomNumber: null },
+  { id: "tbl_4", number: 4, seats: 4, location: "Indoor", status: "AVAILABLE", currentOrderId: null, guestName: null, roomNumber: null },
   { id: "tbl_5", number: 5, seats: 6, location: "Indoor", status: "AVAILABLE", currentOrderId: null, guestName: null, roomNumber: null },
-  { id: "tbl_6", number: 6, seats: 6, location: "Indoor", status: "RESERVED", currentOrderId: null, guestName: "Vikram Singh", roomNumber: "303" },
+  { id: "tbl_6", number: 6, seats: 6, location: "Indoor", status: "AVAILABLE", currentOrderId: null, guestName: null, roomNumber: null },
   { id: "tbl_7", number: 7, seats: 2, location: "Poolside", status: "AVAILABLE", currentOrderId: null, guestName: null, roomNumber: null },
-  { id: "tbl_8", number: 8, seats: 4, location: "Poolside", status: "OCCUPIED", currentOrderId: "kot_003", guestName: "Sneha Reddy", roomNumber: "501" },
+  { id: "tbl_8", number: 8, seats: 4, location: "Poolside", status: "AVAILABLE", currentOrderId: null, guestName: null, roomNumber: null },
   { id: "tbl_9", number: 9, seats: 4, location: "Poolside", status: "AVAILABLE", currentOrderId: null, guestName: null, roomNumber: null },
   { id: "tbl_10", number: 10, seats: 8, location: "Terrace", status: "AVAILABLE", currentOrderId: null, guestName: null, roomNumber: null },
   { id: "tbl_11", number: 11, seats: 4, location: "Terrace", status: "AVAILABLE", currentOrderId: null, guestName: null, roomNumber: null },
   { id: "tbl_12", number: 12, seats: 2, location: "Terrace", status: "AVAILABLE", currentOrderId: null, guestName: null, roomNumber: null },
 ];
 
-// ─── Active Kitchen Orders ───
-export const activeKOTs: KitchenOrder[] = [
-  {
-    id: "kot_001", kotNumber: "KOT-0045", tableNumber: 2,
-    items: [
-      { menuItemId: "m011", name: "Butter Chicken", quantity: 1, price: 420, notes: "" },
-      { menuItemId: "m017", name: "Butter Naan", quantity: 3, price: 60, notes: "" },
-      { menuItemId: "m030", name: "Fresh Lime Soda", quantity: 2, price: 120, notes: "Less sugar" },
-    ],
-    status: "PREPARING", createdAt: new Date(Date.now() - 15 * 60000), total: 840,
-    guestName: "Rajesh Sharma", roomNumber: "301", paymentMethod: null,
-  },
-  {
-    id: "kot_002", kotNumber: "KOT-0046", tableNumber: 4,
-    items: [
-      { menuItemId: "m001", name: "Paneer Tikka", quantity: 1, price: 320, notes: "" },
-      { menuItemId: "m012", name: "Paneer Butter Masala", quantity: 1, price: 360, notes: "Less spicy" },
-      { menuItemId: "m020", name: "Jeera Rice", quantity: 1, price: 180, notes: "" },
-      { menuItemId: "m033", name: "Mango Lassi", quantity: 2, price: 150, notes: "" },
-    ],
-    status: "READY", createdAt: new Date(Date.now() - 25 * 60000), total: 1160,
-    guestName: null, roomNumber: null, paymentMethod: null,
-  },
-  {
-    id: "kot_003", kotNumber: "KOT-0047", tableNumber: 8,
-    items: [
-      { menuItemId: "m006", name: "Tandoori Chicken", quantity: 1, price: 450, notes: "" },
-      { menuItemId: "m013", name: "Mutton Rogan Josh", quantity: 1, price: 520, notes: "" },
-      { menuItemId: "m018", name: "Garlic Naan", quantity: 4, price: 80, notes: "" },
-      { menuItemId: "m036", name: "Fresh Orange Juice", quantity: 1, price: 180, notes: "" },
-    ],
-    status: "PENDING", createdAt: new Date(Date.now() - 5 * 60000), total: 1470,
-    guestName: "Sneha Reddy", roomNumber: "501", paymentMethod: null,
-  },
-];
+// ─── Active Kitchen Orders (Clean Empty List) ───
+export const activeKOTs: KitchenOrder[] = [];
 
 export const menuCategories = [
   { id: "STARTERS", label: "Starters", emoji: "🍢" },
@@ -152,8 +119,8 @@ export const menuCategories = [
 ];
 
 export const posStats = {
-  todayRevenue: 18450,
-  ordersToday: 24,
-  avgOrderValue: 769,
-  activeOrders: 3,
+  todayRevenue: 0,
+  ordersToday: 0,
+  avgOrderValue: 0,
+  activeOrders: 0,
 };

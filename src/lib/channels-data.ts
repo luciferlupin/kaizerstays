@@ -155,13 +155,7 @@ export interface NightAuditRecord {
   completedAt: Date;
 }
 
-export const nightAuditHistory: NightAuditRecord[] = [
-  { id: "na_001", date: daysFromNow(-1), status: "COMPLETED", roomsCharged: 33, revenuePosted: 142800, taxCollected: 17136, openFolios: 2, discrepancies: 0, runBy: "Sunil Manager", completedAt: new Date(Date.now() - 14 * 3600000) },
-  { id: "na_002", date: daysFromNow(-2), status: "COMPLETED", roomsCharged: 30, revenuePosted: 128500, taxCollected: 15420, openFolios: 1, discrepancies: 0, runBy: "Sunil Manager", completedAt: new Date(Date.now() - 38 * 3600000) },
-  { id: "na_003", date: daysFromNow(-3), status: "COMPLETED", roomsCharged: 35, revenuePosted: 156200, taxCollected: 18744, openFolios: 3, discrepancies: 1, runBy: "Pooja Verma", completedAt: new Date(Date.now() - 62 * 3600000) },
-  { id: "na_004", date: daysFromNow(-4), status: "COMPLETED", roomsCharged: 28, revenuePosted: 115600, taxCollected: 13872, openFolios: 0, discrepancies: 0, runBy: "Sunil Manager", completedAt: new Date(Date.now() - 86 * 3600000) },
-  { id: "na_005", date: daysFromNow(-5), status: "PARTIAL", roomsCharged: 31, revenuePosted: 135400, taxCollected: 16248, openFolios: 4, discrepancies: 2, runBy: "Pooja Verma", completedAt: new Date(Date.now() - 110 * 3600000) },
-];
+export const nightAuditHistory: NightAuditRecord[] = [];
 
 // ─── Booking Engine Data ───
 export interface PromoCode {
