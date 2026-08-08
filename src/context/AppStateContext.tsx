@@ -115,22 +115,24 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [channels, setChannels] = useState(otaChannels);
   const [nightAudits, setNightAudits] = useState(nightAuditHistory);
   const [currentUser, setCurrentUser] = useState<{ name: string; role: string; email: string; staffId: string } | null>({
-    name: "Sunil Manager",
-    role: "Hotel Owner & GM",
-    email: "owner@hotelshemron.com",
-    staffId: "EMP-101",
+    name: "Ninaad Khera",
+    role: "Property Owner & GM",
+    email: "Ninaad.khera@gmail.com",
+    staffId: "OWNER-001",
   });
 
   const loginUser = (emailOrId: string, pass: string) => {
+    const isOwner = emailOrId.toLowerCase() === "ninaad.khera@gmail.com" || emailOrId.toLowerCase().includes("owner");
     const found = staff.find((s) => s.email.toLowerCase() === emailOrId.toLowerCase() || s.id.toLowerCase() === emailOrId.toLowerCase());
-    if (found || emailOrId.toLowerCase().includes("owner") || emailOrId.toLowerCase().includes("emp")) {
+
+    if (isOwner || found || emailOrId.toLowerCase().includes("emp")) {
       setCurrentUser({
-        name: found ? `${found.firstName} ${found.lastName}` : "Sunil Owner",
-        role: found ? found.role : "Property Owner",
-        email: found ? found.email : "owner@hotelshemron.com",
-        staffId: found ? found.id : "EMP-100",
+        name: isOwner ? "Ninaad Khera" : found ? `${found.firstName} ${found.lastName}` : "Staff Member",
+        role: isOwner ? "Property Owner & GM" : found ? found.role : "Hotel Staff",
+        email: isOwner ? "Ninaad.khera@gmail.com" : found ? found.email : emailOrId,
+        staffId: isOwner ? "OWNER-001" : found ? found.id : "EMP-100",
       });
-      addActivity("User Logged In", "auth", found ? found.id : "EMP-100", `${found ? `${found.firstName} ${found.lastName}` : "Owner"} logged into workspace`);
+      addActivity("User Logged In", "auth", isOwner ? "OWNER-001" : found ? found.id : "EMP-100", `${isOwner ? "Owner (Ninaad Khera)" : found ? `${found.firstName} ${found.lastName}` : "Staff"} authenticated via Supabase / System`);
       return true;
     }
     return false;

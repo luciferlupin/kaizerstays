@@ -19,17 +19,21 @@ import {
 export default function LoginClient() {
   const router = useRouter();
   const { loginUser } = useAppState();
-  const [emailOrId, setEmailOrId] = useState("");
-  const [password, setPassword] = useState("");
+  const [emailOrId, setEmailOrId] = useState("Ninaad.khera@gmail.com");
+  const [password, setPassword] = useState("12345");
   const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailOrId.trim()) return;
+    setLoading(true);
 
     const success = loginUser(emailOrId, password);
+    setLoading(false);
+
     if (success) {
-      if (emailOrId.toLowerCase().includes("owner")) {
+      if (emailOrId.toLowerCase().includes("ninaad") || emailOrId.toLowerCase().includes("owner")) {
         router.push("/dashboard/owner");
       } else if (emailOrId.toLowerCase().includes("house")) {
         router.push("/employee");
@@ -41,8 +45,10 @@ export default function LoginClient() {
     }
   };
 
-  const quickLogin = (idOrEmail: string, targetPath: string) => {
-    loginUser(idOrEmail, "password");
+  const quickLogin = (idOrEmail: string, pass: string, targetPath: string) => {
+    setEmailOrId(idOrEmail);
+    setPassword(pass);
+    loginUser(idOrEmail, pass);
     router.push(targetPath);
   };
 
@@ -152,7 +158,7 @@ export default function LoginClient() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
             <button
               className="btn btn-secondary btn-sm"
-              onClick={() => quickLogin("owner@hotelshemron.com", "/dashboard/owner")}
+              onClick={() => quickLogin("Ninaad.khera@gmail.com", "12345", "/dashboard/owner")}
               style={{ justifyContent: "flex-start" }}
             >
               <Crown size={14} className="text-warning" /> Owner Console
@@ -160,7 +166,7 @@ export default function LoginClient() {
 
             <button
               className="btn btn-secondary btn-sm"
-              onClick={() => quickLogin("frontdesk@hotelshemron.com", "/dashboard/front-desk")}
+              onClick={() => quickLogin("frontdesk@hotelshemron.com", "12345", "/dashboard/front-desk")}
               style={{ justifyContent: "flex-start" }}
             >
               <ConciergeBell size={14} className="text-primary" /> Front Desk
@@ -168,7 +174,7 @@ export default function LoginClient() {
 
             <button
               className="btn btn-secondary btn-sm"
-              onClick={() => quickLogin("housekeeping@hotelshemron.com", "/employee")}
+              onClick={() => quickLogin("housekeeping@hotelshemron.com", "12345", "/employee")}
               style={{ justifyContent: "flex-start" }}
             >
               <Sparkles size={14} className="text-success" /> Housekeeping
@@ -176,7 +182,7 @@ export default function LoginClient() {
 
             <button
               className="btn btn-secondary btn-sm"
-              onClick={() => quickLogin("chef@hotelshemron.com", "/dashboard/pos")}
+              onClick={() => quickLogin("chef@hotelshemron.com", "12345", "/dashboard/pos")}
               style={{ justifyContent: "flex-start" }}
             >
               <Utensils size={14} className="text-danger" /> Restaurant POS
