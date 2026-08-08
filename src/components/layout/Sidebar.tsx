@@ -21,6 +21,7 @@ import {
   Hotel,
   MessageSquare,
   BellDot,
+  X,
 } from "lucide-react";
 import { classNames } from "@/lib/utils";
 
@@ -69,7 +70,12 @@ const NAV_ITEMS: NavItemDef[] = [
   { label: "Settings", href: "/dashboard/settings", icon: "Settings" },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
 
   const isActive = (href: string) => {
@@ -78,11 +84,21 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="sidebar">
-      {/* Logo */}
+    <aside className={classNames("sidebar", isOpen && "open")}>
+      {/* Logo & Mobile Close */}
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">K</div>
         <span>KaizerStay</span>
+
+        {/* Mobile close button */}
+        {onClose && (
+          <button
+            className="btn btn-ghost btn-icon btn-sm mobile-close-btn"
+            onClick={onClose}
+          >
+            <X size={18} />
+          </button>
+        )}
       </div>
 
       {/* Property Switcher */}
@@ -107,6 +123,7 @@ export default function Sidebar() {
                 key={item.href}
                 href={item.href}
                 className={classNames("sidebar-link", active && "active")}
+                onClick={() => onClose && onClose()}
               >
                 <IconComponent className="sidebar-link-icon" size={18} />
                 <span>{item.label}</span>

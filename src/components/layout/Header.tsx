@@ -1,14 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Bell, Command } from "lucide-react";
+import { Search, Bell, Command, Menu } from "lucide-react";
+import { formatDate, getToday } from "@/lib/utils";
 
-export default function Header() {
+interface HeaderProps {
+  onToggleMobileMenu?: () => void;
+}
+
+export default function Header({ onToggleMobileMenu }: HeaderProps) {
   const [searchOpen, setSearchOpen] = useState(false);
+  const todayFormatted = formatDate(getToday(), "EEE, d MMM yyyy");
 
   return (
     <header className="main-header">
       <div className="main-header-left">
+        {/* Mobile Hamburger Button */}
+        {onToggleMobileMenu && (
+          <button
+            className="btn btn-ghost btn-icon mobile-hamburger-btn"
+            onClick={onToggleMobileMenu}
+            aria-label="Open mobile navigation menu"
+          >
+            <Menu size={20} />
+          </button>
+        )}
+
         {/* Search trigger */}
         <button
           className="search-input-wrapper"
@@ -23,14 +40,14 @@ export default function Header() {
             alignItems: "center",
             gap: "8px",
             cursor: "pointer",
-            minWidth: "240px",
           }}
         >
           <Search size={14} color="var(--color-text-tertiary)" />
-          <span style={{ fontSize: "13px", color: "var(--color-text-tertiary)" }}>
+          <span className="search-text-placeholder" style={{ fontSize: "13px", color: "var(--color-text-tertiary)" }}>
             Search guests, rooms, reservations...
           </span>
           <span
+            className="search-shortcut"
             style={{
               marginLeft: "auto",
               fontSize: "11px",
@@ -56,20 +73,18 @@ export default function Header() {
           <span className="notification-dot" />
         </button>
 
-        {/* Date display */}
+        {/* Date display with suppressHydrationWarning */}
         <div
+          suppressHydrationWarning
+          className="header-date-display"
           style={{
             fontSize: "13px",
             color: "var(--color-text-secondary)",
             padding: "0 8px",
+            fontWeight: 500,
           }}
         >
-          {new Date().toLocaleDateString("en-IN", {
-            weekday: "short",
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-          })}
+          {todayFormatted}
         </div>
       </div>
     </header>
