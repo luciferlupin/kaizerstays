@@ -84,6 +84,8 @@ interface AppStateContextType {
   addPOSOrder: (order: KitchenOrder, chargeToRoomNumber?: string) => void;
   runNightAudit: () => NightAuditRecord;
   addActivity: (action: string, entity: string, entityId: string, detail: string) => void;
+  updateOTAChannel: (channelId: string, updates: Partial<typeof otaChannels[0]>) => void;
+  connectAllChannelsToCRM: () => void;
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
@@ -211,7 +213,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   // ─── Activity Audit Helper (Ultra-low storage pruning) ───
   const addActivity = (action: string, entity: string, entityId: string, detail: string) => {
     const newAct = {
-      id: `act_${Date.now()}`,
+      id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       action,
       entity,
       entityId,
@@ -521,6 +523,31 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     return newRecord;
   };
 
+  // ─── OTA Channel Sync & Connection Actions ───
+  const updateOTAChannel = (channelId: string, updates: Partial<typeof otaChannels[0]>) => {
+    setChannels((prev) =>
+      prev.map((c) => (c.id === channelId ? { ...c, ...updates, lastSync: new Date() } : c))
+    );
+    const target = channels.find((c) => c.id === channelId);
+    if (target) {
+      addActivity("OTA Channel Updated", "ota", channelId, `${target.name} configuration updated for Hotel Shemron`);
+    }
+  };
+
+  const connectAllChannelsToCRM = () => {
+    setChannels((prev) =>
+      prev.map((c) => ({
+        ...c,
+        status: "CONNECTED",
+        lastSync: new Date(),
+        apiKeyConfigured: true,
+        webhookActive: true,
+        hotelId: c.hotelId || `SHM-${c.name.substring(0, 3).toUpperCase()}-${Math.floor(10000 + Math.random() * 90000)}`,
+      }))
+    );
+    addActivity("All OTA Channels Connected", "ota", "all_ota", "Established 2-way real-time rate & inventory sync for Hotel Shemron across all 12 OTA platforms");
+  };
+
   return (
     <AppStateContext.Provider
       value={{
@@ -558,6 +585,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         addPOSOrder,
         runNightAudit,
         addActivity,
+        updateOTAChannel,
+        connectAllChannelsToCRM,
       }}
     >
       {children}

@@ -17,6 +17,7 @@ export interface OTAChannel {
   id: string;
   name: string;
   logo: string;
+  category: "Global OTA" | "Domestic / Regional" | "Vacation Rental" | "MetaSearch";
   status: "CONNECTED" | "SYNCING" | "ERROR" | "DISCONNECTED";
   lastSync: Date;
   roomsPushed: number;
@@ -24,16 +25,24 @@ export interface OTAChannel {
   revenueThisMonth: number;
   commission: number; // percentage
   rateModifier: number; // percentage markup over base
+  hotelId?: string;
+  apiKeyConfigured?: boolean;
+  webhookActive?: boolean;
 }
 
 export const otaChannels: OTAChannel[] = [
-  { id: "ch_booking", name: "Booking.com", logo: "B", status: "CONNECTED", lastSync: new Date(Date.now() - 3 * 60000), roomsPushed: 35, bookingsThisMonth: 42, revenueThisMonth: 485000, commission: 15, rateModifier: 0 },
-  { id: "ch_makemytrip", name: "MakeMyTrip", logo: "M", status: "CONNECTED", lastSync: new Date(Date.now() - 5 * 60000), roomsPushed: 30, bookingsThisMonth: 28, revenueThisMonth: 312000, commission: 18, rateModifier: 5 },
-  { id: "ch_goibibo", name: "Goibibo", logo: "G", status: "CONNECTED", lastSync: new Date(Date.now() - 4 * 60000), roomsPushed: 30, bookingsThisMonth: 18, revenueThisMonth: 198000, commission: 16, rateModifier: 5 },
-  { id: "ch_agoda", name: "Agoda", logo: "A", status: "CONNECTED", lastSync: new Date(Date.now() - 8 * 60000), roomsPushed: 25, bookingsThisMonth: 12, revenueThisMonth: 156000, commission: 17, rateModifier: 0 },
-  { id: "ch_expedia", name: "Expedia", logo: "E", status: "SYNCING", lastSync: new Date(Date.now() - 12 * 60000), roomsPushed: 20, bookingsThisMonth: 8, revenueThisMonth: 124000, commission: 20, rateModifier: 0 },
-  { id: "ch_airbnb", name: "Airbnb", logo: "A", status: "CONNECTED", lastSync: new Date(Date.now() - 6 * 60000), roomsPushed: 10, bookingsThisMonth: 5, revenueThisMonth: 72000, commission: 14, rateModifier: 10 },
-  { id: "ch_tripadvisor", name: "TripAdvisor", logo: "T", status: "ERROR", lastSync: new Date(Date.now() - 60 * 60000), roomsPushed: 0, bookingsThisMonth: 0, revenueThisMonth: 0, commission: 12, rateModifier: 0 },
+  { id: "ch_booking", name: "Booking.com", logo: "B", category: "Global OTA", status: "CONNECTED", lastSync: new Date(Date.now() - 3 * 60000), roomsPushed: 35, bookingsThisMonth: 42, revenueThisMonth: 485000, commission: 15, rateModifier: 0, hotelId: "SHM-BCOM-88219", apiKeyConfigured: true, webhookActive: true },
+  { id: "ch_makemytrip", name: "MakeMyTrip", logo: "M", category: "Domestic / Regional", status: "CONNECTED", lastSync: new Date(Date.now() - 5 * 60000), roomsPushed: 30, bookingsThisMonth: 28, revenueThisMonth: 312000, commission: 18, rateModifier: 5, hotelId: "SHM-MMT-44012", apiKeyConfigured: true, webhookActive: true },
+  { id: "ch_goibibo", name: "Goibibo", logo: "G", category: "Domestic / Regional", status: "CONNECTED", lastSync: new Date(Date.now() - 4 * 60000), roomsPushed: 30, bookingsThisMonth: 18, revenueThisMonth: 198000, commission: 16, rateModifier: 5, hotelId: "SHM-GOI-99231", apiKeyConfigured: true, webhookActive: true },
+  { id: "ch_agoda", name: "Agoda", logo: "A", category: "Global OTA", status: "CONNECTED", lastSync: new Date(Date.now() - 8 * 60000), roomsPushed: 25, bookingsThisMonth: 12, revenueThisMonth: 156000, commission: 17, rateModifier: 0, hotelId: "SHM-AGO-33109", apiKeyConfigured: true, webhookActive: true },
+  { id: "ch_expedia", name: "Expedia", logo: "E", category: "Global OTA", status: "CONNECTED", lastSync: new Date(Date.now() - 2 * 60000), roomsPushed: 20, bookingsThisMonth: 8, revenueThisMonth: 124000, commission: 20, rateModifier: 0, hotelId: "SHM-EXP-11204", apiKeyConfigured: true, webhookActive: true },
+  { id: "ch_airbnb", name: "Airbnb", logo: "A", category: "Vacation Rental", status: "CONNECTED", lastSync: new Date(Date.now() - 6 * 60000), roomsPushed: 10, bookingsThisMonth: 5, revenueThisMonth: 72000, commission: 14, rateModifier: 10, hotelId: "SHM-ABNB-77321", apiKeyConfigured: true, webhookActive: true },
+  { id: "ch_tripadvisor", name: "TripAdvisor", logo: "T", category: "MetaSearch", status: "CONNECTED", lastSync: new Date(Date.now() - 1 * 60000), roomsPushed: 20, bookingsThisMonth: 4, revenueThisMonth: 48000, commission: 12, rateModifier: 0, hotelId: "SHM-TADV-66512", apiKeyConfigured: true, webhookActive: true },
+  { id: "ch_yatra", name: "Yatra.com", logo: "Y", category: "Domestic / Regional", status: "CONNECTED", lastSync: new Date(Date.now() - 10 * 60000), roomsPushed: 25, bookingsThisMonth: 11, revenueThisMonth: 115000, commission: 15, rateModifier: 0, hotelId: "SHM-YTR-55410", apiKeyConfigured: true, webhookActive: true },
+  { id: "ch_easemytrip", name: "EaseMyTrip", logo: "E", category: "Domestic / Regional", status: "CONNECTED", lastSync: new Date(Date.now() - 15 * 60000), roomsPushed: 20, bookingsThisMonth: 9, revenueThisMonth: 92000, commission: 14, rateModifier: 0, hotelId: "SHM-EMT-88301", apiKeyConfigured: true, webhookActive: true },
+  { id: "ch_cleartrip", name: "Cleartrip", logo: "C", category: "Domestic / Regional", status: "CONNECTED", lastSync: new Date(Date.now() - 12 * 60000), roomsPushed: 20, bookingsThisMonth: 7, revenueThisMonth: 76000, commission: 16, rateModifier: 0, hotelId: "SHM-CLR-22340", apiKeyConfigured: true, webhookActive: true },
+  { id: "ch_google", name: "Google Hotel Ads", logo: "G", category: "MetaSearch", status: "CONNECTED", lastSync: new Date(Date.now() - 2 * 60000), roomsPushed: 35, bookingsThisMonth: 15, revenueThisMonth: 185000, commission: 8, rateModifier: 0, hotelId: "SHM-GGL-00192", apiKeyConfigured: true, webhookActive: true },
+  { id: "ch_hostelworld", name: "Hostelworld", logo: "H", category: "Global OTA", status: "CONNECTED", lastSync: new Date(Date.now() - 20 * 60000), roomsPushed: 15, bookingsThisMonth: 3, revenueThisMonth: 28000, commission: 15, rateModifier: 0, hotelId: "SHM-HWL-44901", apiKeyConfigured: true, webhookActive: true },
 ];
 
 // ─── Rate Parity Grid ───

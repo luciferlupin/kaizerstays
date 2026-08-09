@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAppState } from "@/context/AppStateContext";
 import { formatCurrency, getGreeting, formatDate } from "@/lib/utils";
@@ -26,6 +26,11 @@ import {
 
 export default function DashboardClient() {
   const { property, rooms, reservations, activity, payments, currentUser } = useAppState();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const greeting = getGreeting();
   const [activeTab, setActiveTab] = useState<"arrivals" | "departures">("arrivals");
 
@@ -280,8 +285,8 @@ export default function DashboardClient() {
         </div>
         <div className="card-body" style={{ padding: "16px 20px" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {activity.slice(0, 5).map((act) => (
-              <div key={act.id} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            {activity.slice(0, 5).map((act, idx) => (
+              <div key={`${act.id}_${idx}`} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <div
                   style={{
                     width: "32px",
@@ -300,7 +305,9 @@ export default function DashboardClient() {
                   <div style={{ fontSize: "14px", fontWeight: 600 }}>{act.action}</div>
                   <div className="text-xs text-secondary">{act.detail}</div>
                 </div>
-                <div className="text-xs text-tertiary">{formatDate(act.createdAt, "hh:mm a")}</div>
+                <div className="text-xs text-tertiary" suppressHydrationWarning>
+                  {mounted && act.createdAt ? formatDate(act.createdAt, "hh:mm a") : "Recent"}
+                </div>
               </div>
             ))}
           </div>
