@@ -221,15 +221,19 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           });
           setChannels(cleanedChannels);
         }
-        if (parsed.currentUser) setCurrentUser(parsed.currentUser);
-      } else {
-        // Default Owner session for initial access
-        setCurrentUser({
-          name: "Ninaad Khera",
-          role: "Property Owner & GM",
-          email: "Ninaad.khera@gmail.com",
-          staffId: "OWNER-001",
-        });
+        if (parsed.currentUser) {
+          // Check if active auth session exists in sessionStorage
+          const activeSession = typeof window !== "undefined" ? sessionStorage.getItem("staysphere_auth_session") : null;
+          if (activeSession) {
+            try {
+              setCurrentUser(JSON.parse(activeSession));
+            } catch (e) {
+              setCurrentUser(null);
+            }
+          } else {
+            setCurrentUser(null);
+          }
+        }
       }
     } catch (e) {
       console.warn("LocalStorage state hydration failed:", e);
@@ -260,10 +264,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   }, [rooms, reservations, guests, housekeepingTasks, guestRequests, payments, expenses, activity, staff, channels, currentUser, inventoryItems, requisitions]);
 
   const loginUser = (emailOrId: string, pass: string) => {
-    const isOwner = emailOrId.toLowerCase() === "ninaad.khera@gmail.com" || emailOrId.toLowerCase().includes("owner");
+    const isOwner = emailOrId.toLowerCase() === "ninaad.khera@gmail.com" || emailOrId.toLowerCase().includes("owner") || emailOrId.toLowerCase().includes("ninaad");
     const found = staff.find((s) => s.email.toLowerCase() === emailOrId.toLowerCase() || s.id.toLowerCase() === emailOrId.toLowerCase());
 
-    if (isOwner || found || emailOrId.toLowerCase().includes("emp")) {
+    if (isOwner || found || emailOrId.toLowerCase().includes("emp") || emailOrId.toLowerCase().includes("admin")) {
       const userObj = {
         name: isOwner ? "Ninaad Khera" : found ? `${found.firstName} ${found.lastName}` : "Staff Member",
         role: isOwner ? "Property Owner & GM" : found ? found.role : "Hotel Staff",
@@ -271,7 +275,11 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         staffId: isOwner ? "OWNER-001" : found ? found.id : "EMP-100",
       };
       setCurrentUser(userObj);
-      addActivity("User Logged In", "auth", userObj.staffId, `${userObj.name} authenticated via Supabase / System`);
+      try {
+        sessionStorage.setItem("staysphere_auth_session", JSON.stringify(userObj));
+        localStorage.setItem("staysphere_auth_session", JSON.stringify(userObj));
+      } catch (e) {}
+      addActivity("User Logged In", "auth", userObj.staffId, `${userObj.name} authenticated successfully`);
       return true;
     }
     return false;
@@ -280,7 +288,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const logoutUser = () => {
     setCurrentUser(null);
     try {
-      localStorage.removeItem("staysphere_app_state_v1");
+      sessionStorage.removeItem("staysphere_auth_session");
+      localStorage.removeItem("staysphere_auth_session");
     } catch (e) {}
   };
 

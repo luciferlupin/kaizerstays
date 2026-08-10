@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAppState } from "@/context/AppStateContext";
 import { formatDate } from "@/lib/utils";
 import {
@@ -19,16 +20,34 @@ import {
 import Link from "next/link";
 
 export default function EmployeeClient() {
+  const router = useRouter();
   const { currentUser, housekeepingTasks, updateHousekeepingTaskStatus, logoutUser } = useAppState();
+  const [mounted, setMounted] = useState(false);
   const [clockedIn, setClockedIn] = useState(true);
   const [clockTime, setClockTime] = useState<Date | null>(new Date());
 
-  const user = currentUser || {
-    name: "Ramu Prasad",
-    role: "Housekeeping Supervisor",
-    email: "ramu@hotelshemron.com",
-    staffId: "EMP-104",
-  };
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !currentUser) {
+      router.replace("/login");
+    }
+  }, [mounted, currentUser, router]);
+
+  if (!mounted || !currentUser) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0F172A", color: "#fff" }}>
+        <div style={{ textAlign: "center" }}>
+          <div className="spin-animation" style={{ width: "32px", height: "32px", border: "3px solid rgba(255,255,255,0.2)", borderTopColor: "#0071E3", borderRadius: "50%", margin: "0 auto 16px auto" }} />
+          <p style={{ fontSize: "14px", color: "#94A3B8" }}>Verifying employee credentials...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const user = currentUser;
 
   const handleToggleClock = () => {
     setClockedIn(!clockedIn);
