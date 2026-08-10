@@ -1,5 +1,5 @@
 /* ===========================================
-   StaySphere Design System
+   KaizerStays Design System
    Premium hotel management SaaS interface
    =========================================== */
 
@@ -1801,8 +1801,21 @@ h5 { font-size: var(--text-base); font-weight: var(--font-medium); }
   }
   /* Force single column layout for dashboard columns on mobile */
   div[style*="grid-template-columns: 2fr 1fr"],
-  div[style*="grid-template-columns: 1fr 1fr"] {
+  div[style*="grid-template-columns: 1fr 1fr"],
+  div[style*="grid-template-columns: 1fr 340px"] {
     grid-template-columns: 1fr !important;
+  }
+  .guest-inbox-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .guest-inbox-grid > aside {
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--color-border);
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .guest-inbox-grid > section {
+    min-height: 520px;
   }
 }
 

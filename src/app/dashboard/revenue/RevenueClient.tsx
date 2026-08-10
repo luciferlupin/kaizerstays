@@ -1,268 +1,139 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useAppState } from "@/context/AppStateContext";
+import { formatCurrency } from "@/lib/utils";
+import { toDateKey } from "@/lib/rates";
 import {
-  generateRateCalendar,
-  competitors,
-  pricingRules,
-  DayRate,
-  PricingRule,
-} from "@/lib/channels-data";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import {
-  TrendingUp,
-  Sparkles,
-  Sliders,
+  AlertTriangle,
+  ArrowRight,
+  BarChart3,
+  CalendarRange,
   CheckCircle2,
-  Calendar,
-  Building,
-  ArrowUpRight,
-  Zap,
-  Check,
-  Plus,
-  X,
-  Clock,
+  TrendingUp,
 } from "lucide-react";
 
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
 export default function RevenueClient() {
-  const [calendar, setCalendar] = useState<DayRate[]>(generateRateCalendar());
-  const [rules, setRules] = useState<PricingRule[]>(pricingRules);
-  const [aiApplied, setAiApplied] = useState(false);
-  const [activeTab, setActiveTab] = useState<"calendar" | "competitors" | "rules">("calendar");
+  const { reservations, rooms, otaChannels } = useAppState();
+  const activeReservations = reservations.filter(
+    (reservation) => reservation.status !== "CANCELLED"
+  );
+  const roomRevenue = activeReservations.reduce(
+    (total, reservation) => total + reservation.roomRate * reservation.nights,
+    0
+  );
+  const soldRoomNights = activeReservations.reduce(
+    (total, reservation) => total + reservation.nights,
+    0
+  );
+  const adr = soldRoomNights ? roomRevenue / soldRoomNights : 0;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const horizonDays = 30;
+  const horizonEnd = addDays(today, horizonDays);
 
-  const handleApplyAIRates = () => {
-    setCalendar((prev) =>
-      prev.map((day) => ({
-        ...day,
-        rates: { ...day.aiSuggested },
-      }))
-    );
-    setAiApplied(true);
-    setTimeout(() => setAiApplied(false), 3000);
-  };
+  const forwardRoomNights = activeReservations.reduce((total, reservation) => {
+    const start = new Date(reservation.checkIn) > today ? new Date(reservation.checkIn) : today;
+    const end = new Date(reservation.checkOut) < horizonEnd ? new Date(reservation.checkOut) : horizonEnd;
+    if (end <= start) return total;
+    return total + Math.ceil((end.getTime() - start.getTime()) / 86400000);
+  }, 0);
+  const availableRoomNights = rooms.filter((room) => room.isActive).length * horizonDays;
+  const occupancy = availableRoomNights ? Math.round((forwardRoomNights / availableRoomNights) * 100) : 0;
+  const revPar = availableRoomNights ? roomRevenue / availableRoomNights : 0;
+  const outstanding = activeReservations.reduce(
+    (total, reservation) => total + reservation.balanceAmount,
+    0
+  );
 
-  const toggleRule = (ruleId: string) => {
-    setRules(rules.map((r) => (r.id === ruleId ? { ...r, isActive: !r.isActive } : r)));
-  };
+  const dailyPlan = Array.from({ length: 14 }, (_, index) => {
+    const date = addDays(today, index);
+    const nextDate = addDays(date, 1);
+    const booked = activeReservations.filter((reservation) =>
+      new Date(reservation.checkIn) < nextDate && new Date(reservation.checkOut) > date
+    ).length;
+    const dailyOccupancy = rooms.length ? Math.round((booked / rooms.length) * 100) : 0;
+    const adjustment = dailyOccupancy >= 80 ? 15 : dailyOccupancy >= 60 ? 8 : dailyOccupancy <= 20 ? -10 : 0;
+    const reason = dailyOccupancy >= 80
+      ? "High pickup"
+      : dailyOccupancy >= 60
+        ? "Healthy demand"
+        : dailyOccupancy <= 20
+          ? "Low pickup"
+          : "Hold base rate";
+    return { date, booked, occupancy: dailyOccupancy, adjustment, reason };
+  });
+
+  const connectedChannels = otaChannels.filter(
+    (channel) => channel.status === "CONNECTED" && channel.apiKeyConfigured
+  ).length;
 
   return (
     <div className="page-content">
-      {/* Header */}
       <div className="page-header">
         <div>
           <h1 className="page-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <TrendingUp size={24} className="text-primary" />
-            AI Revenue Optimization & Dynamic Pricing
+            <TrendingUp size={25} className="text-primary" /> Revenue Planner
           </h1>
           <p className="page-description">
-            Maximize RevPAR & ADR with AI-driven rate recommendations, demand forecasting, and competitor rate tracking for Hotel Shemron.
+            Actual PMS revenue, forward occupancy and transparent pricing suggestions for Hotel Shemron.
           </p>
         </div>
-        <div className="page-actions">
-          <button className="btn btn-primary" onClick={handleApplyAIRates} style={{ background: "linear-gradient(135deg, #2563EB 0%, #7C3AED 100%)", border: "none" }}>
-            <Sparkles size={16} /> Apply AI Recommended Rates
-          </button>
-        </div>
+        <Link className="btn btn-primary" href="/dashboard/rates">
+          <CalendarRange size={16} /> Open Rates & Availability
+        </Link>
       </div>
 
-      {aiApplied && (
-        <div
-          style={{
-            background: "var(--green-50)",
-            color: "var(--green-800)",
-            padding: "12px 16px",
-            borderRadius: "var(--radius-md)",
-            marginBottom: "20px",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            fontSize: "14px",
-            fontWeight: 600,
-          }}
-        >
-          <CheckCircle2 size={18} /> AI Recommended tariffs successfully applied across 30-day booking horizon!
-        </div>
-      )}
-
-      {/* Overview KPI Cards */}
       <div className="stats-grid">
-        <div className="stat-card">
-          <span className="stat-card-label">Average Daily Rate (ADR)</span>
-          <div className="stat-card-value text-primary">{formatCurrency(5840)}</div>
-          <span className="text-xs text-success" style={{ marginTop: "4px" }}>+12.4% vs last month</span>
-        </div>
+        <div className="stat-card"><span className="stat-card-label">Average Daily Rate</span><div className="stat-card-value text-primary">{formatCurrency(adr)}</div><span className="text-xs text-secondary">From saved room charges</span></div>
+        <div className="stat-card"><span className="stat-card-label">30-Day Forward Occupancy</span><div className="stat-card-value text-warning">{occupancy}%</div><span className="text-xs text-secondary">{forwardRoomNights} sold room-nights</span></div>
+        <div className="stat-card"><span className="stat-card-label">Forward RevPAR</span><div className="stat-card-value text-success">{formatCurrency(revPar)}</div><span className="text-xs text-secondary">Room revenue / available nights</span></div>
+        <div className="stat-card"><span className="stat-card-label">Outstanding Folio Balance</span><div className="stat-card-value">{formatCurrency(outstanding)}</div><span className="text-xs text-secondary">Across active reservations</span></div>
+      </div>
 
-        <div className="stat-card">
-          <span className="stat-card-label">RevPAR</span>
-          <div className="stat-card-value text-success">{formatCurrency(4438)}</div>
-          <span className="text-xs text-success" style={{ marginTop: "4px" }}>Optimized yield</span>
-        </div>
-
-        <div className="stat-card">
-          <span className="stat-card-label">30-Day Forecast Occupancy</span>
-          <div className="stat-card-value text-warning">74%</div>
-          <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>Peak on weekends</span>
-        </div>
-
-        <div className="stat-card">
-          <span className="stat-card-label">Active Pricing Rules</span>
-          <div className="stat-card-value">{rules.filter((r) => r.isActive).length}</div>
-          <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>Auto-adjusting rates</span>
+      <div className="card" style={{ padding: "14px 16px", marginBottom: "20px", display: "flex", gap: "10px", borderColor: connectedChannels ? "rgba(52,199,89,.35)" : "rgba(255,149,0,.35)" }}>
+        {connectedChannels ? <CheckCircle2 size={18} className="text-success" /> : <AlertTriangle size={18} className="text-warning" />}
+        <div className="text-sm">
+          <strong>{connectedChannels ? `${connectedChannels} verified distribution connection${connectedChannels === 1 ? "" : "s"}` : "No competitor or OTA pricing feed connected."}</strong>{" "}
+          {connectedChannels ? "Channel data can be included after date-level rate import is enabled." : "Recommendations below use only saved reservations and physical room inventory; no external rate is presented as live."}
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="tabs">
-        <button className={`tab ${activeTab === "calendar" ? "active" : ""}`} onClick={() => setActiveTab("calendar")}>
-          30-Day Dynamic Rate Calendar
-        </button>
-        <button className={`tab ${activeTab === "competitors" ? "active" : ""}`} onClick={() => setActiveTab("competitors")}>
-          Competitor Rate Intelligence ({competitors.length})
-        </button>
-        <button className={`tab ${activeTab === "rules" ? "active" : ""}`} onClick={() => setActiveTab("rules")}>
-          Dynamic Pricing Rules ({rules.length})
-        </button>
+      <div className="card" style={{ marginBottom: "20px" }}>
+        <div className="card-header">
+          <div><h3 style={{ fontSize: "16px", fontWeight: 700 }}>14-day pickup and rate guidance</h3><p className="text-xs text-secondary">Guidance is deterministic: +15% at 80%+, +8% at 60%+, -10% at 20% or below.</p></div>
+        </div>
+        <div className="card-body" style={{ padding: 0, overflowX: "auto" }}>
+          <table className="data-table">
+            <thead><tr><th>Date</th><th>Booked rooms</th><th>Occupancy</th><th>Signal</th><th>Suggested change</th><th className="text-right">Action</th></tr></thead>
+            <tbody>
+              {dailyPlan.map((day) => (
+                <tr key={toDateKey(day.date)}>
+                  <td className="font-semibold">{new Intl.DateTimeFormat("en-IN", { weekday: "short", day: "2-digit", month: "short" }).format(day.date)}</td>
+                  <td>{day.booked} / {rooms.length}</td>
+                  <td className="mono font-semibold">{day.occupancy}%</td>
+                  <td><span className={`badge ${day.adjustment > 0 ? "badge-success" : day.adjustment < 0 ? "badge-warning" : "badge-default"}`}>{day.reason}</span></td>
+                  <td className={`font-semibold ${day.adjustment > 0 ? "text-success" : day.adjustment < 0 ? "text-warning" : "text-secondary"}`}>{day.adjustment > 0 ? "+" : ""}{day.adjustment}%</td>
+                  <td className="text-right"><Link className="btn btn-secondary btn-sm" href="/dashboard/rates">Review rates <ArrowRight size={14} /></Link></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* TAB 1: RATE CALENDAR */}
-      {activeTab === "calendar" && (
-        <div className="card">
-          <div className="card-header" style={{ padding: "16px 20px" }}>
-            <div>
-              <h3 style={{ fontSize: "16px", fontWeight: 700 }}>30-Day Rate & Demand Matrix</h3>
-              <p className="text-xs text-secondary">Click any rate to inspect demand drivers and AI suggestions</p>
-            </div>
-          </div>
-          <div className="card-body" style={{ padding: 0, overflowX: "auto" }}>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Day</th>
-                  <th>Demand Level</th>
-                  <th>Occ. Forecast</th>
-                  <th>Standard Room</th>
-                  <th>Deluxe Room</th>
-                  <th>Premium Room</th>
-                  <th>Royal Suite</th>
-                  <th>AI Suggestion</th>
-                </tr>
-              </thead>
-              <tbody>
-                {calendar.map((day, idx) => (
-                  <tr key={idx}>
-                    <td className="font-semibold">{formatDate(day.date, "dd MMM")}</td>
-                    <td className="text-secondary">{day.dayOfWeek}</td>
-                    <td>
-                      <span
-                        className={`badge ${
-                          day.demand === "PEAK"
-                            ? "badge-danger"
-                            : day.demand === "HIGH"
-                            ? "badge-warning"
-                            : day.demand === "MEDIUM"
-                            ? "badge-primary"
-                            : "badge-default"
-                        }`}
-                      >
-                        {day.demand}
-                      </span>
-                      {day.eventName && (
-                        <div className="text-xs text-primary" style={{ marginTop: "2px", fontWeight: 600 }}>
-                          🎉 {day.eventName}
-                        </div>
-                      )}
-                    </td>
-                    <td className="mono font-semibold">{day.occupancyForecast}%</td>
-                    <td className="mono font-bold">{formatCurrency(day.rates["Standard Room"])}</td>
-                    <td className="mono font-bold">{formatCurrency(day.rates["Deluxe Room"])}</td>
-                    <td className="mono font-bold">{formatCurrency(day.rates["Premium Room"])}</td>
-                    <td className="mono font-bold text-primary">{formatCurrency(day.rates["Royal Suite"])}</td>
-                    <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <span className="mono text-xs text-purple font-semibold" style={{ background: "var(--purple-50)", padding: "4px 8px", borderRadius: "var(--radius-sm)" }}>
-                          {formatCurrency(day.aiSuggested["Deluxe Room"])} (Deluxe)
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 2: COMPETITORS */}
-      {activeTab === "competitors" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px" }}>
-          {competitors.map((comp, idx) => (
-            <div key={idx} className="card" style={{ padding: "20px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
-                <div>
-                  <h3 style={{ fontSize: "16px", fontWeight: 700 }}>{comp.name}</h3>
-                  <div className="text-xs text-secondary">{comp.distance} away • ⭐ {comp.rating}</div>
-                </div>
-                <Building size={20} className="text-tertiary" />
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px", margin: "16px 0" }}>
-                {Object.entries(comp.rates).map(([cat, rate]) => (
-                  <div key={cat} style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
-                    <span className="text-secondary">{cat}</span>
-                    <span className="mono font-semibold">{formatCurrency(rate)}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ paddingTop: "12px", borderTop: "1px solid var(--color-border-subtle)", fontSize: "12px", color: "var(--color-primary)", display: "flex", alignItems: "center", gap: "4px", fontWeight: 600 }}>
-                <ArrowUpRight size={14} /> Shemron is priced 8% lower on average
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* TAB 3: PRICING RULES */}
-      {activeTab === "rules" && (
-        <div className="card">
-          <div className="card-header" style={{ padding: "16px 20px" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: 700 }}>Configured Dynamic Pricing Automation Rules</h3>
-          </div>
-          <div className="card-body" style={{ padding: 0 }}>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Rule Name</th>
-                  <th>Trigger Condition</th>
-                  <th>Pricing Action</th>
-                  <th>Status</th>
-                  <th className="text-right">Toggle</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rules.map((rule) => (
-                  <tr key={rule.id}>
-                    <td className="font-semibold">{rule.name}</td>
-                    <td className="mono text-xs">{rule.condition}</td>
-                    <td className="text-primary font-semibold">{rule.action}</td>
-                    <td>
-                      <span className={`badge ${rule.isActive ? "badge-success" : "badge-default"}`}>
-                        {rule.isActive ? "ACTIVE" : "INACTIVE"}
-                      </span>
-                    </td>
-                    <td className="text-right">
-                      <button className="btn btn-secondary btn-sm" onClick={() => toggleRule(rule.id)}>
-                        {rule.isActive ? "Disable" : "Enable"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      <div className="card" style={{ padding: "20px" }}>
+        <h3 style={{ display: "flex", gap: "8px", alignItems: "center", fontSize: "16px", fontWeight: 700 }}><BarChart3 size={18} /> Revenue data boundary</h3>
+        <p className="text-sm text-secondary" style={{ marginTop: "8px", lineHeight: 1.6 }}>
+          This page calculates from reservations saved in this KaizerStays browser workspace. Historical comparison, market demand, competitor rates and automated repricing require a database plus contracted data providers; they are intentionally not simulated here.
+        </p>
+      </div>
     </div>
   );
 }

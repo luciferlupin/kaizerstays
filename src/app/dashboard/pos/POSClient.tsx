@@ -580,17 +580,15 @@ export default function POSClient() {
           <QrCode size={64} className="text-primary" style={{ margin: "0 auto 16px" }} />
           <h2 style={{ fontSize: "20px", fontWeight: 800 }}>Contactless QR Table & In-Room Dining</h2>
           <p className="text-sm text-secondary" style={{ margin: "12px 0 24px" }}>
-            Guests scan QR codes placed on restaurant tables or room nightstands to browse the live menu, order food, and charge directly to their stay folio.
+            Configure a guest menu route before printing table or in-room dining QR codes. POS ordering and room-folio posting remain available to staff above.
           </p>
 
           <div style={{ background: "var(--color-bg-tertiary)", padding: "20px", borderRadius: "var(--radius-md)", margin: "16px 0" }}>
-            <div style={{ fontSize: "13px", fontWeight: 600 }}>Active QR Portal URL</div>
-            <div className="mono text-primary" style={{ fontSize: "14px", marginTop: "4px" }}>
-              https://staysphere.app/guest/menu?hotel=shemron
-            </div>
+            <div style={{ fontSize: "13px", fontWeight: 600 }}>Guest QR portal</div>
+            <div className="text-sm text-warning" style={{ marginTop: "4px" }}>Not configured</div>
           </div>
 
-          <button className="btn btn-primary" onClick={() => alert("Downloading printable QR tabletop standees PDF!")}>
+          <button className="btn btn-primary" disabled title="Create and verify a public guest menu route first">
             Download Printable Tabletop QR PDF
           </button>
         </div>

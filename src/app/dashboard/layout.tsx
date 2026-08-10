@@ -62,7 +62,7 @@ function DashboardAuthGuard({ children }: { children: React.ReactNode }) {
               margin: "0 auto 16px auto",
             }}
           />
-          <h3 style={{ fontSize: "16px", fontWeight: 700 }}>StaySphere OS</h3>
+          <h3 style={{ fontSize: "16px", fontWeight: 700 }}>KaizerStays OS</h3>
           <p style={{ fontSize: "13px", color: "#94A3B8", marginTop: "4px" }}>
             Verifying staff authentication session...
           </p>

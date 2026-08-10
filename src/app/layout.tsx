@@ -3,13 +3,13 @@ import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
   title: {
-    default: "StaySphere — Hotel Operating System",
+    default: "KaizerStays — Hotel Operating System",
     template: "%s",
   },
   description: "Run your entire hotel from one intelligent operating system. Bookings. Rooms. Guests. Payments. Housekeeping. Revenue. One platform.",
-  keywords: ["hotel management", "PMS", "hotel software", "property management", "StaySphere", "Hotel Shemron"],
-  applicationName: "StaySphere",
-  authors: [{ name: "StaySphere" }],
+  keywords: ["hotel management", "PMS", "hotel software", "property management", "KaizerStays", "Hotel Shemron"],
+  applicationName: "KaizerStays",
+  authors: [{ name: "KaizerStays" }],
 };
 
 export const viewport: Viewport = {
@@ -33,7 +33,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="StaySphere" />
+        <meta name="apple-mobile-web-app-title" content="KaizerStays" />
       </head>
       <body>{children}</body>
     </html>

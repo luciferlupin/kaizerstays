@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Search, X, CalendarCheck, DoorOpen, Users, Sparkles, CreditCard, Settings, ArrowRight } from "lucide-react";
-import { demoReservations, demoRooms, demoGuests } from "@/lib/demo-data";
+import { Search, X, CalendarCheck, DoorOpen, Users, Sparkles, ArrowRight, Plus } from "lucide-react";
+import { useAppState } from "@/context/AppStateContext";
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -13,16 +13,10 @@ interface CommandPaletteProps {
 export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const { reservations, rooms, guests } = useAppState();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        if (isOpen) onClose();
-        else {
-          // Open triggered from header or hotkey
-        }
-      }
       if (e.key === "Escape" && isOpen) {
         onClose();
       }
@@ -38,17 +32,17 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
     onClose();
   };
 
-  const filteredReservations = demoReservations.filter((r) =>
+  const filteredReservations = reservations.filter((r) =>
     r.guestName.toLowerCase().includes(query.toLowerCase()) ||
     r.confirmationNumber.toLowerCase().includes(query.toLowerCase())
   );
 
-  const filteredGuests = demoGuests.filter((g) =>
+  const filteredGuests = guests.filter((g) =>
     `${g.firstName} ${g.lastName}`.toLowerCase().includes(query.toLowerCase()) ||
     g.phone.includes(query)
   );
 
-  const filteredRooms = demoRooms.filter((r) =>
+  const filteredRooms = rooms.filter((r) =>
     r.number.includes(query) || r.typeName.toLowerCase().includes(query.toLowerCase())
   );
 
@@ -89,7 +83,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
                 <Sparkles className="command-palette-item-icon" /> Housekeeping Tasks
               </div>
               <div className="command-palette-item" onClick={() => navigateTo("/dashboard/reservations/new")}>
-                <PlusIcon className="command-palette-item-icon" /> Create New Booking
+                <Plus className="command-palette-item-icon" /> Create New Booking
               </div>
             </div>
           )}
@@ -159,14 +153,5 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
         </div>
       </div>
     </div>
-  );
-}
-
-function PlusIcon(props: any) {
-  return (
-    <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="12" y1="5" x2="12" y2="19"></line>
-      <line x1="5" y1="12" x2="19" y2="12"></line>
-    </svg>
   );
 }

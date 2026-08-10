@@ -47,8 +47,8 @@ export default function OwnerDashboardClient() {
   const [role, setRole] = useState("Front Desk Receptionist");
   const [password, setPassword] = useState("Shemron@2026");
 
-  const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0) + 1845000;
-  const totalExpenseAmount = expenses.reduce((sum, e) => sum + e.amount, 0) + 712000;
+  const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
+  const totalExpenseAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
   const grossProfit = totalRevenue - totalExpenseAmount;
 
   if (!isOwnerOrGM) {
@@ -184,7 +184,8 @@ export default function OwnerDashboardClient() {
                   <td className="text-right">
                     <button
                       className="btn btn-secondary btn-sm"
-                      onClick={() => alert(`Reset password link generated for ${s.firstName} ${s.lastName} (${s.id})!`)}
+                      disabled
+                      title="Connect an identity provider before enabling password resets"
                     >
                       <Key size={12} /> Reset Pass
                     </button>

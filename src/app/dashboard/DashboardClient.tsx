@@ -1,35 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useAppState } from "@/context/AppStateContext";
 import { formatCurrency, getGreeting, formatDate } from "@/lib/utils";
+import { toDateKey } from "@/lib/rates";
 import {
-  Users,
-  BedDouble,
   LogIn,
-  LogOut,
-  Sparkles,
-  Wrench,
-  TrendingUp,
   AlertTriangle,
-  ArrowUpRight,
   CheckCircle2,
-  Clock,
   ChevronRight,
-  UserCheck,
-  Building2,
-  DollarSign,
-  Search,
-  Filter,
+  CalendarRange,
+  MessageCircle,
+  Radio,
 } from "lucide-react";
 
 export default function DashboardClient() {
-  const { property, rooms, reservations, activity, payments, currentUser } = useAppState();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const { property, rooms, reservations, activity, currentUser } = useAppState();
 
   const greeting = getGreeting();
   const [activeTab, setActiveTab] = useState<"arrivals" | "departures">("arrivals");
@@ -41,16 +28,14 @@ export default function DashboardClient() {
   const dirtyRooms = rooms.filter((r) => r.status === "DIRTY").length;
   const cleaningRooms = rooms.filter((r) => r.status === "CLEANING").length;
   const maintenanceRooms = rooms.filter((r) => r.status === "MAINTENANCE").length;
-  const reservedRooms = rooms.filter((r) => r.status === "RESERVED").length;
 
   const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
 
-  const arrivals = reservations.filter((r) => r.status === "CONFIRMED");
-  const departures = reservations.filter((r) => r.status === "CHECKED_IN");
+  const todayKey = toDateKey(new Date());
+  const arrivals = reservations.filter((r) => r.status === "CONFIRMED" && toDateKey(new Date(r.checkIn)) === todayKey);
+  const departures = reservations.filter((r) => r.status === "CHECKED_IN" && toDateKey(new Date(r.checkOut)) === todayKey);
   const inHouseReservations = reservations.filter((r) => r.status === "CHECKED_IN");
   const inHouseGuestsCount = inHouseReservations.reduce((sum, r) => sum + r.adults + (r.children || 0), 0);
-
-  const revenueToday = payments.reduce((sum, p) => sum + p.amount, 0);
 
   const totalOutstandingFolio = reservations.reduce((sum, r) => sum + (r.balanceAmount || 0), 0);
 
@@ -110,6 +95,21 @@ export default function DashboardClient() {
             Across {inHouseReservations.length} occupied rooms
           </span>
         </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "12px", marginBottom: "24px" }}>
+        <Link href="/dashboard/reservations/new" className="card" style={{ padding: "16px", display: "flex", gap: "12px", alignItems: "center" }}>
+          <LogIn size={20} className="text-primary" /><div><div className="font-semibold text-sm">Create reservation</div><div className="text-xs text-secondary">Availability-aware booking</div></div><ChevronRight size={15} style={{ marginLeft: "auto" }} />
+        </Link>
+        <Link href="/dashboard/rates" className="card" style={{ padding: "16px", display: "flex", gap: "12px", alignItems: "center" }}>
+          <CalendarRange size={20} className="text-primary" /><div><div className="font-semibold text-sm">Update rates</div><div className="text-xs text-secondary">Rates, inventory, restrictions</div></div><ChevronRight size={15} style={{ marginLeft: "auto" }} />
+        </Link>
+        <Link href="/dashboard/messages" className="card" style={{ padding: "16px", display: "flex", gap: "12px", alignItems: "center" }}>
+          <MessageCircle size={20} className="text-primary" /><div><div className="font-semibold text-sm">Guest inbox</div><div className="text-xs text-secondary">Notes and reply drafts</div></div><ChevronRight size={15} style={{ marginLeft: "auto" }} />
+        </Link>
+        <Link href="/dashboard/channels" className="card" style={{ padding: "16px", display: "flex", gap: "12px", alignItems: "center" }}>
+          <Radio size={20} className="text-warning" /><div><div className="font-semibold text-sm">OTA setup</div><div className="text-xs text-secondary">Mapping and connection status</div></div><ChevronRight size={15} style={{ marginLeft: "auto" }} />
+        </Link>
       </div>
 
       {/* Dynamic Attention Banner */}
@@ -179,7 +179,7 @@ export default function DashboardClient() {
                   {activeTab === "arrivals" ? "No Arrivals Scheduled for Today" : "No Departures Scheduled for Today"}
                 </h4>
                 <p className="text-xs text-secondary" style={{ marginTop: "4px" }}>
-                  New bookings created or imported from OTAs will appear here automatically.
+                  Saved PMS bookings appear here. OTA bookings require an approved channel connection.
                 </p>
               </div>
             ) : (
@@ -187,7 +187,6 @@ export default function DashboardClient() {
                 <thead>
                   <tr>
                     <th>Guest Name</th>
-                    <th>Room Type & No</th>
                     <th>Dates</th>
                     <th>Source</th>
                     <th>Balance</th>
@@ -303,6 +302,7 @@ export default function DashboardClient() {
         </div>
         <div className="card-body" style={{ padding: "16px 20px" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {activity.length === 0 && <p className="text-sm text-secondary">No operational activity has been recorded yet.</p>}
             {activity.slice(0, 5).map((act, idx) => (
               <div key={`${act.id}_${idx}`} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <div
@@ -324,7 +324,7 @@ export default function DashboardClient() {
                   <div className="text-xs text-secondary">{act.detail}</div>
                 </div>
                 <div className="text-xs text-tertiary" suppressHydrationWarning>
-                  {mounted && act.createdAt ? formatDate(act.createdAt, "hh:mm a") : "Recent"}
+                  {act.createdAt ? formatDate(act.createdAt, "hh:mm a") : "Recent"}
                 </div>
               </div>
             ))}

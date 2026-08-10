@@ -1,23 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { nightAuditHistory } from "@/lib/channels-data";
+import { NightAuditRecord } from "@/lib/channels-data";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   Moon,
   Play,
   CheckCircle2,
-  AlertTriangle,
-  Clock,
-  FileSpreadsheet,
   Download,
   Loader2,
   Check,
   ShieldCheck,
-  Building2,
-  Receipt,
-  DollarSign,
-  ArrowRight,
 } from "lucide-react";
 
 import { useAppState } from "@/context/AppStateContext";
@@ -31,10 +24,9 @@ interface AuditStep {
 }
 
 export default function NightAuditClient() {
-  const { nightAudits, runNightAudit } = useAppState();
+  const { nightAudits, runNightAudit, reservations, currentUser } = useAppState();
   const [history, setHistory] = useState(nightAudits);
   const [isRunning, setIsRunning] = useState(false);
-  const [currentStepIndex, setCurrentStepIndex] = useState(-1);
   const [auditCompleted, setAuditCompleted] = useState(false);
   const [auditResult, setAuditResult] = useState<{
     roomsCharged: number;
@@ -54,29 +46,33 @@ export default function NightAuditClient() {
 
   const [steps, setSteps] = useState<AuditStep[]>(initialSteps);
 
-  const exportEODReport = () => {
-    const record = auditResult || {
-      roomsCharged: 33,
-      revenuePosted: 142800,
-      taxCollected: 17136,
-      openFolios: 2,
+  const checkedInReservations = reservations.filter((reservation) => reservation.status === "CHECKED_IN");
+  const pendingTariffs = checkedInReservations.reduce((total, reservation) => total + reservation.roomRate, 0);
+  const pendingTax = Math.round(pendingTariffs * 0.12);
+
+  const exportEODReport = (selectedRecord?: NightAuditRecord) => {
+    const record = selectedRecord || auditResult || {
+      roomsCharged: 0,
+      revenuePosted: 0,
+      taxCollected: 0,
+      openFolios: 0,
     };
-    const content = `StaySphere OS — Hotel Shemron EOD Night Audit Flash Report
+    const content = `KaizerStays OS — Hotel Shemron EOD Night Audit Flash Report
 Date: ${formatDate(new Date(), "yyyy-MM-dd HH:mm:ss")}
-Auditor: Ninaad Khera (Property Owner & GM)
+Auditor: ${selectedRecord?.runBy || currentUser?.name || "Hotel user"}
 
 === FINANCIAL SUMMARY ===
 Rooms Charged: ${record.roomsCharged}
 Total Revenue Posted: INR ${record.revenuePosted}
 GST Tax Collected (12%/18%): INR ${record.taxCollected}
 Open Guest Folios: ${record.openFolios}
-Business Date Status: CLOSED & SEALED
+Record Status: AUDIT SNAPSHOT SAVED
 `;
     const blob = new Blob([content], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `StaySphere_EOD_NightAudit_${formatDate(new Date(), "yyyy-MM-dd")}.txt`;
+    a.download = `KaizerStays_EOD_NightAudit_${formatDate(new Date(), "yyyy-MM-dd")}.txt`;
     a.click();
   };
 
@@ -84,7 +80,6 @@ Business Date Status: CLOSED & SEALED
     setIsRunning(true);
     setAuditCompleted(false);
     setSteps(initialSteps);
-    setCurrentStepIndex(0);
 
     const runStep = (index: number) => {
       if (index >= initialSteps.length) {
@@ -101,7 +96,6 @@ Business Date Status: CLOSED & SEALED
         return;
       }
 
-      setCurrentStepIndex(index);
       setSteps((prev) =>
         prev.map((s, i) =>
           i === index
@@ -121,20 +115,22 @@ Business Date Status: CLOSED & SEALED
                   status: "done",
                   detail:
                     i === 0
-                      ? "33/33 rooms verified • 0 status mismatches"
+                      ? `${checkedInReservations.length} checked-in reservation${checkedInReservations.length === 1 ? "" : "s"} reviewed`
                       : i === 1
-                      ? "₹142,800 room revenue & ₹17,136 GST posted"
+                      ? `${formatCurrency(pendingTariffs)} room tariff and ${formatCurrency(pendingTax)} tax calculated`
                       : i === 2
-                      ? "₹18,450 F&B charges settled to folios"
+                      ? "Existing folio items reviewed"
                       : i === 3
-                      ? "All cash & UPI ledgers balanced cleanly"
-                      : "Business date closed • System advanced to 09 Aug",
+                      ? "No automated penalties or cancellations applied"
+                      : i === 4
+                        ? "Outstanding folio balances reviewed"
+                        : "Audit snapshot saved to activity history",
                 }
               : s
           )
         );
         runStep(index + 1);
-      }, 1200);
+      }, 350);
     };
 
     runStep(0);
@@ -150,7 +146,7 @@ Business Date Status: CLOSED & SEALED
             Night Audit & Daily Financial Closeout
           </h1>
           <p className="page-description">
-            Automate end-of-day revenue posting, GST tax auditing, outlet reconciliation, and daily closeout for Hotel Shemron.
+            Review the current PMS snapshot, calculate room tariffs and save an auditable end-of-day record for Hotel Shemron.
           </p>
         </div>
         <div className="page-actions">
@@ -166,7 +162,7 @@ Business Date Status: CLOSED & SEALED
               </>
             ) : (
               <>
-                <Play size={18} /> Run Night Audit Now
+              <Play size={18} /> Run Audit Snapshot
               </>
             )}
           </button>
@@ -178,29 +174,29 @@ Business Date Status: CLOSED & SEALED
         <div className="stat-card">
           <span className="stat-card-label">Last Audit Date</span>
           <div className="stat-card-value" style={{ fontSize: "20px" }}>
-            {formatDate(history[0]?.date || new Date(), "dd MMM yyyy")}
+            {history[0] ? formatDate(history[0].date, "dd MMM yyyy") : "Not run yet"}
           </div>
           <span className="text-xs text-success" style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "4px" }}>
-            <ShieldCheck size={14} /> Completed by {history[0]?.runBy || "System"}
+            <ShieldCheck size={14} /> {history[0] ? `Completed by ${history[0].runBy}` : "No saved audit record"}
           </span>
         </div>
 
         <div className="stat-card">
           <span className="stat-card-label">Pending Room Tariffs</span>
-          <div className="stat-card-value text-primary">{formatCurrency(142800)}</div>
-          <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>33 Occupied Rooms</span>
+          <div className="stat-card-value text-primary">{formatCurrency(pendingTariffs)}</div>
+          <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>{checkedInReservations.length} occupied rooms</span>
         </div>
 
         <div className="stat-card">
           <span className="stat-card-label">GST Tax Liability (12%)</span>
-          <div className="stat-card-value text-warning">{formatCurrency(17136)}</div>
-          <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>Auto-calculated</span>
+          <div className="stat-card-value text-warning">{formatCurrency(pendingTax)}</div>
+          <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>Calculated at 12%</span>
         </div>
 
         <div className="stat-card">
           <span className="stat-card-label">Audit Discrepancies</span>
           <div className="stat-card-value text-success">0</div>
-          <span className="text-xs text-success" style={{ marginTop: "4px" }}>Clean Reconciliation</span>
+          <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>No discrepancy engine connected</span>
         </div>
       </div>
 
@@ -210,19 +206,19 @@ Business Date Status: CLOSED & SEALED
           <div>
             <h3 style={{ fontSize: "18px", fontWeight: 700 }}>End-of-Day Audit Pipeline</h3>
             <p className="text-sm text-secondary" style={{ marginTop: "2px" }}>
-              Automated 5-step verification process to seal today's financial transactions.
+              Six-step review of the records currently saved in this workspace.
             </p>
           </div>
           {auditCompleted && (
             <span className="badge badge-success" style={{ fontSize: "13px", padding: "6px 12px" }}>
-              <CheckCircle2 size={14} style={{ marginRight: "4px" }} /> Today's Audit Complete
+              <CheckCircle2 size={14} style={{ marginRight: "4px" }} /> Today&apos;s Audit Complete
             </span>
           )}
         </div>
 
         {/* Progress steps */}
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {steps.map((step, idx) => (
+          {steps.map((step) => (
             <div
               key={step.id}
               style={{
@@ -348,10 +344,10 @@ Business Date Status: CLOSED & SEALED
               </div>
               <div>
                 <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--green-900)" }}>
-                  Night Audit Successfully Execution & Sealed!
+                  Night audit snapshot saved
                 </h3>
                 <p className="text-xs text-secondary" style={{ marginTop: "2px" }}>
-                  Financial date for Hotel Shemron updated cleanly. All folios posted and reports generated.
+                  The current room-tariff summary was recorded. This preview does not advance a financial business date or settle external ledgers.
                 </p>
               </div>
             </div>
@@ -403,6 +399,7 @@ Business Date Status: CLOSED & SEALED
               </tr>
             </thead>
             <tbody>
+              {history.length === 0 && <tr><td colSpan={8} className="text-center text-secondary">No night audit snapshots saved yet.</td></tr>}
               {history.map((record) => (
                 <tr key={record.id}>
                   <td className="font-semibold">{formatDate(record.date, "dd MMM yyyy")}</td>
@@ -423,9 +420,9 @@ Business Date Status: CLOSED & SEALED
                   <td className="text-right">
                     <button
                       className="btn btn-secondary btn-sm"
-                      onClick={() => alert(`Downloading Night Audit PDF for ${formatDate(record.date, "dd MMM yyyy")}`)}
+                      onClick={() => exportEODReport(record)}
                     >
-                      <Download size={14} /> PDF
+                      <Download size={14} /> TXT
                     </button>
                   </td>
                 </tr>

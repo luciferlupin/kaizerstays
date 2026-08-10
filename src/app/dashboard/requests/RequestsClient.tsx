@@ -22,7 +22,7 @@ export default function RequestsClient() {
           <MessageSquare size={36} className="text-tertiary" style={{ margin: "0 auto 12px auto" }} />
           <h3 style={{ fontSize: "16px", fontWeight: 700 }}>No Active Guest Requests</h3>
           <p className="text-xs text-secondary" style={{ marginTop: "4px" }}>
-            Guest requests submitted via In-Room QR Portals (Towels, Housekeeping, Room Service) will appear here in real-time.
+            Guest stay links and staff-created service requests appear here for assignment and completion.
           </p>
         </div>
       ) : (

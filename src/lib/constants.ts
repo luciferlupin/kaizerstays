@@ -1,9 +1,9 @@
 // ═══════════════════════════════════════════════════
-// StaySphere — Application Constants
+// KaizerStays — Application Constants
 // Hotel Operating System for Hotel Shemron, Neemrana
 // ═══════════════════════════════════════════════════
 
-export const APP_NAME = "StaySphere";
+export const APP_NAME = "KaizerStays";
 export const APP_DESCRIPTION = "Run your entire hotel from one intelligent operating system";
 export const DEFAULT_CURRENCY = "INR";
 export const DEFAULT_TIMEZONE = "Asia/Kolkata";

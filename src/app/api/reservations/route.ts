@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const isPlaceholder = process.env.DATABASE_URL?.includes("placeholder");
 
-    const confNo = `SS-SHM-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const confNo = `KZ-SHM-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const newRes = {
       id: `res_${Date.now()}`,

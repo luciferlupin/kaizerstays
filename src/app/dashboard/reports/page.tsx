@@ -1,7 +1,7 @@
 import ReportsClient from "./ReportsClient";
 
 export const metadata = {
-  title: "Reports — StaySphere",
+  title: "Reports — KaizerStays",
 };
 
 export default function ReportsPage() {

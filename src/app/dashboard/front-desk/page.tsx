@@ -1,7 +1,7 @@
 import FrontDeskClient from "./FrontDeskClient";
 
 export const metadata = {
-  title: "Front Desk Workspace — StaySphere",
+  title: "Front Desk Workspace — KaizerStays",
 };
 
 export default function FrontDeskPage() {

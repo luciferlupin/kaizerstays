@@ -68,7 +68,7 @@ export default function ReportsClient() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `StaySphere_${id}_${timeFilter.toLowerCase()}_${dateStr}.${format === "csv" ? "csv" : "txt"}`;
+      a.download = `KaizerStays_${id}_${timeFilter.toLowerCase()}_${dateStr}.${format === "csv" ? "csv" : "txt"}`;
       a.click();
 
       setDownloading(null);
