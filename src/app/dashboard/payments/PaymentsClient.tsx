@@ -74,30 +74,43 @@ export default function PaymentsClient() {
 
       <div className="card">
         <div className="card-body" style={{ padding: 0 }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Payment #</th>
-                <th>Guest Name</th>
-                <th>Method</th>
-                <th>Reference #</th>
-                <th>Timestamp</th>
-                <th className="text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p) => (
-                <tr key={p.id}>
-                  <td className="mono text-xs font-semibold">{p.paymentNumber}</td>
-                  <td className="font-semibold">{p.guestName}</td>
-                  <td><span className="badge badge-default">{p.method}</span></td>
-                  <td className="mono text-xs text-tertiary">{p.reference || "N/A"}</td>
-                  <td className="text-xs text-secondary">{formatDate(p.receivedAt, "dd MMM yyyy, hh:mm a")}</td>
-                  <td className="text-right mono font-bold text-success">{formatCurrency(p.amount)}</td>
+          {filtered.length === 0 ? (
+            <div style={{ padding: "48px 20px", textAlign: "center" }}>
+              <CreditCard size={36} className="text-tertiary" style={{ margin: "0 auto 12px auto" }} />
+              <h3 style={{ fontSize: "16px", fontWeight: 700 }}>No Payment Transactions Yet</h3>
+              <p className="text-xs text-secondary" style={{ marginTop: "4px", marginBottom: "16px" }}>
+                Record guest payments, UPI receipts, cash deposits, or OTA settlements.
+              </p>
+              <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>
+                <Plus size={14} /> Record Payment
+              </button>
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Payment #</th>
+                  <th>Guest Name</th>
+                  <th>Method</th>
+                  <th>Reference #</th>
+                  <th>Timestamp</th>
+                  <th className="text-right">Amount</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((p) => (
+                  <tr key={p.id}>
+                    <td className="mono text-xs font-semibold">{p.paymentNumber}</td>
+                    <td className="font-semibold">{p.guestName}</td>
+                    <td><span className="badge badge-default">{p.method}</span></td>
+                    <td className="mono text-xs text-tertiary">{p.reference || "N/A"}</td>
+                    <td className="text-xs text-secondary">{formatDate(p.receivedAt, "dd MMM yyyy, hh:mm a")}</td>
+                    <td className="text-right mono font-bold text-success">{formatCurrency(p.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 

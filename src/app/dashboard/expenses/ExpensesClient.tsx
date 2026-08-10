@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { demoExpenses } from "@/lib/demo-data";
+import { useAppState } from "@/context/AppStateContext";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Receipt, Plus, Search, X, Check } from "lucide-react";
 
 export default function ExpensesClient() {
-  const [expenses, setExpenses] = useState(demoExpenses);
+  const { expenses, addExpense } = useAppState();
   const [showModal, setShowModal] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -30,7 +30,7 @@ export default function ExpensesClient() {
       amount,
       method,
     };
-    setExpenses([newExpense, ...expenses]);
+    addExpense(newExpense);
     setSaved(true);
     setTimeout(() => {
       setShowModal(false);
@@ -70,30 +70,43 @@ export default function ExpensesClient() {
 
       <div className="card">
         <div className="card-body" style={{ padding: 0 }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Vendor / Payee</th>
-                <th>Category</th>
-                <th>Description</th>
-                <th>Payment Method</th>
-                <th className="text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {expenses.map((e) => (
-                <tr key={e.id}>
-                  <td>{formatDate(e.date, "dd MMM yyyy")}</td>
-                  <td className="font-semibold">{e.vendor}</td>
-                  <td><span className="badge badge-default">{e.category}</span></td>
-                  <td className="text-secondary">{e.description}</td>
-                  <td><span className="badge badge-default">{e.method}</span></td>
-                  <td className="text-right mono font-bold text-danger">{formatCurrency(e.amount)}</td>
+          {expenses.length === 0 ? (
+            <div style={{ padding: "48px 20px", textAlign: "center" }}>
+              <Receipt size={36} className="text-tertiary" style={{ margin: "0 auto 12px auto" }} />
+              <h3 style={{ fontSize: "16px", fontWeight: 700 }}>No Expenses Logged Yet</h3>
+              <p className="text-xs text-secondary" style={{ marginTop: "4px", marginBottom: "16px" }}>
+                Click &quot;Log Expense&quot; above to record operational payouts, vendor bills, or utility costs.
+              </p>
+              <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>
+                <Plus size={14} /> Log First Expense
+              </button>
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Vendor / Payee</th>
+                  <th>Category</th>
+                  <th>Description</th>
+                  <th>Payment Method</th>
+                  <th className="text-right">Amount</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {expenses.map((e) => (
+                  <tr key={e.id}>
+                    <td>{formatDate(e.date, "dd MMM yyyy")}</td>
+                    <td className="font-semibold">{e.vendor}</td>
+                    <td><span className="badge badge-default">{e.category}</span></td>
+                    <td className="text-secondary">{e.description}</td>
+                    <td><span className="badge badge-default">{e.method}</span></td>
+                    <td className="text-right mono font-bold text-danger">{formatCurrency(e.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 

@@ -88,75 +88,87 @@ export default function FrontDeskClient() {
       {/* Main Table Content */}
       <div className="card">
         <div className="card-body" style={{ padding: 0 }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Guest Name</th>
-                <th>Confirmation #</th>
-                <th>Room Type & Number</th>
-                <th>Stay Dates</th>
-                <th>Source</th>
-                <th>Payment Status</th>
-                <th className="text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(activeTab === "arrivals"
-                ? arrivals
-                : activeTab === "departures"
-                ? departures
-                : inHouse
-              ).map((r) => (
-                <tr key={r.id}>
-                  <td className="font-semibold">{r.guestName}</td>
-                  <td className="mono text-xs">{r.confirmationNumber}</td>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>{r.roomType}</div>
-                    <div className="text-xs text-primary" style={{ fontWeight: 700 }}>
-                      {r.roomNumber ? `Room #${r.roomNumber}` : "Unassigned"}
-                    </div>
-                  </td>
-                  <td className="text-sm">
-                    {formatDate(r.checkIn, "dd MMM")} → {formatDate(r.checkOut, "dd MMM")} ({r.nights}n)
-                  </td>
-                  <td>
-                    <span className="badge badge-default">{r.bookingSource}</span>
-                  </td>
-                  <td>
-                    {r.balanceAmount === 0 ? (
-                      <span className="badge badge-success">Paid</span>
-                    ) : (
-                      <span className="badge badge-warning">
-                        Due: {formatCurrency(r.balanceAmount)}
-                      </span>
-                    )}
-                  </td>
-                  <td className="text-right">
-                    {activeTab === "arrivals" && (
-                      <button
-                        className="btn btn-primary btn-sm"
-                        onClick={() => {
-                          setCheckInModal(r);
-                          setAssignedRoomNumber(r.roomNumber || "301");
-                        }}
-                      >
-                        <LogIn size={14} /> Check In
-                      </button>
-                    )}
-
-                    {(activeTab === "departures" || activeTab === "in_house") && (
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => setCheckOutModal(r)}
-                      >
-                        <LogOut size={14} /> Check Out
-                      </button>
-                    )}
-                  </td>
+          {(activeTab === "arrivals" ? arrivals : activeTab === "departures" ? departures : inHouse).length === 0 ? (
+            <div style={{ padding: "48px 20px", textAlign: "center" }}>
+              <UserCheck size={36} className="text-tertiary" style={{ margin: "0 auto 12px auto" }} />
+              <h3 style={{ fontSize: "16px", fontWeight: 700 }}>
+                {activeTab === "arrivals" ? "No Expected Arrivals" : activeTab === "departures" ? "No Expected Departures" : "No In-House Guests"}
+              </h3>
+              <p className="text-xs text-secondary" style={{ marginTop: "4px" }}>
+                {activeTab === "arrivals" ? "New bookings from OTA channels or direct walk-ins will appear here." : "All guest checkouts and stays will update here."}
+              </p>
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Guest Name</th>
+                  <th>Confirmation #</th>
+                  <th>Room Type & Number</th>
+                  <th>Stay Dates</th>
+                  <th>Source</th>
+                  <th>Payment Status</th>
+                  <th className="text-right">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(activeTab === "arrivals"
+                  ? arrivals
+                  : activeTab === "departures"
+                  ? departures
+                  : inHouse
+                ).map((r) => (
+                  <tr key={r.id}>
+                    <td className="font-semibold">{r.guestName}</td>
+                    <td className="mono text-xs">{r.confirmationNumber}</td>
+                    <td>
+                      <div style={{ fontWeight: 600 }}>{r.roomType}</div>
+                      <div className="text-xs text-primary" style={{ fontWeight: 700 }}>
+                        {r.roomNumber ? `Room #${r.roomNumber}` : "Unassigned"}
+                      </div>
+                    </td>
+                    <td className="text-sm">
+                      {formatDate(r.checkIn, "dd MMM")} → {formatDate(r.checkOut, "dd MMM")} ({r.nights}n)
+                    </td>
+                    <td>
+                      <span className="badge badge-default">{r.bookingSource}</span>
+                    </td>
+                    <td>
+                      {r.balanceAmount === 0 ? (
+                        <span className="badge badge-success">Paid</span>
+                      ) : (
+                        <span className="badge badge-warning">
+                          Due: {formatCurrency(r.balanceAmount)}
+                        </span>
+                      )}
+                    </td>
+                    <td className="text-right">
+                      {activeTab === "arrivals" && (
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => {
+                            setCheckInModal(r);
+                            setAssignedRoomNumber(r.roomNumber || "301");
+                          }}
+                        >
+                          <LogIn size={14} /> Check In
+                        </button>
+                      )}
+
+                      {(activeTab === "departures" || activeTab === "in_house") && (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => setCheckOutModal(r)}
+                        >
+                          <LogOut size={14} /> Check Out
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 

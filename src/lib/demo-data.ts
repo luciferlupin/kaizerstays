@@ -176,48 +176,116 @@ function generateRooms() {
 
 export const demoRooms = generateRooms();
 
-// ─── Guests (1 Production Verification Record) ───
-export const demoGuests = [
-  { id: "guest_001", firstName: "Anand", lastName: "Verma", email: "anand.verma@gmail.com", phone: "+91 98112 34567", city: "New Delhi", country: "IN", isVip: true, totalStays: 3, totalSpent: 28500, totalNights: 5 },
-];
+// ─── Guests (Real Ingested CRM Records) ───
+export const demoGuests: Array<{
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  city: string;
+  country: string;
+  isVip: boolean;
+  totalStays: number;
+  totalSpent: number;
+  totalNights: number;
+}> = [];
 
-// ─── Reservations (1 Production Verification Record) ───
-export const demoReservations = [
-  { id: "res_001", confirmationNumber: "SS-SHM-20260808-00101", guestId: "guest_001", guestName: "Anand Verma", status: "CONFIRMED", checkIn: today, checkOut: tomorrow, nights: 1, roomNumber: "201", roomType: "Deluxe Room", adults: 2, children: 0, bookingSource: "DIRECT", roomRate: 5500, totalAmount: 6160, taxAmount: 660, paidAmount: 5500, balanceAmount: 660 },
-];
+// ─── Reservations (Real Ingested Bookings) ───
+export const demoReservations: Array<{
+  id: string;
+  confirmationNumber: string;
+  guestId: string;
+  guestName: string;
+  status: string;
+  checkIn: Date;
+  checkOut: Date;
+  nights: number;
+  roomNumber: string;
+  roomType: string;
+  adults: number;
+  children: number;
+  bookingSource: string;
+  roomRate: number;
+  totalAmount: number;
+  taxAmount: number;
+  paidAmount: number;
+  balanceAmount: number;
+}> = [];
 
-// ─── Housekeeping Tasks (1 Production Verification Record) ───
-export const demoHousekeepingTasks = [
-  { id: "hk_001", roomNumber: "104", roomType: "Standard Room", type: "CHECKOUT_CLEANING", priority: "HIGH", status: "IN_PROGRESS", assignedTo: "Ramu Prasad", floor: 1 },
-];
+// ─── Housekeeping Tasks ───
+export const demoHousekeepingTasks: Array<{
+  id: string;
+  roomNumber: string;
+  roomType: string;
+  type: string;
+  priority: string;
+  status: string;
+  assignedTo: string;
+  floor: number;
+}> = [];
 
-// ─── Guest Requests (1 Production Verification Record) ───
-export const demoGuestRequests = [
-  { id: "req_001", roomNumber: "201", guestName: "Anand Verma", type: "TOWELS", description: "2 Extra Fresh Bath Towels", quantity: 2, status: "ACCEPTED", priority: "NORMAL", createdAt: new Date() },
-];
+// ─── Guest Requests ───
+export const demoGuestRequests: Array<{
+  id: string;
+  roomNumber: string;
+  guestName: string;
+  type: string;
+  description: string;
+  quantity: number;
+  status: string;
+  priority: string;
+  createdAt: Date;
+}> = [];
 
-// ─── Recent Payments (1 Production Verification Record) ───
-export const demoPayments = [
-  { id: "pay_001", paymentNumber: "PAY-20260808-00001", guestName: "Anand Verma", reservationId: "res_001", amount: 5500, method: "UPI", status: "COMPLETED", reference: "UPI987654321", receivedAt: new Date() },
-];
+// ─── Recent Payments ───
+export const demoPayments: Array<{
+  id: string;
+  paymentNumber: string;
+  guestName: string;
+  reservationId: string;
+  amount: number;
+  method: string;
+  status: string;
+  reference: string;
+  receivedAt: Date;
+}> = [];
 
-// ─── Recent Activity (1 Production Verification Record) ───
-export const demoActivity = [
-  { id: "act_001", action: "Reservation Confirmed", entity: "reservation", entityId: "res_001", user: "Ninaad Khera", detail: "Anand Verma - Deluxe Room #201 confirmed for 1 night", createdAt: new Date(), icon: "calendar" },
-];
+// ─── Recent Activity ───
+export const demoActivity: Array<{
+  id: string;
+  action: string;
+  entity: string;
+  entityId: string;
+  user: string;
+  detail: string;
+  createdAt: Date;
+  icon: string;
+}> = [];
 
-// ─── Expenses (1 Production Verification Record) ───
-export const demoExpenses = [
-  { id: "exp_001", date: today, vendor: "CleanPro Supplies Neemrana", category: "SUPPLIES", description: "Linen Sanitizer & Cleaning Supplies", amount: 2800, method: "UPI" },
-];
+// ─── Expenses ───
+export const demoExpenses: Array<{
+  id: string;
+  date: Date;
+  vendor: string;
+  category: string;
+  description: string;
+  amount: number;
+  method: string;
+}> = [];
 
-// ─── Staff (Owner + 1 Front Desk Manager Record) ───
+// ─── Staff ───
 export const demoStaff = [
   { id: "OWNER-001", firstName: "Ninaad", lastName: "Khera", email: "Ninaad.khera@gmail.com", role: "Property Owner & GM", department: "MANAGEMENT", isActive: true },
   { id: "EMP-102", firstName: "Rahul", lastName: "Kapoor", email: "rahul.fdesk@hotelshemron.com", role: "Front Desk Manager", department: "FRONT_DESK", isActive: true },
 ];
 
 // ─── Attention Items ───
-export const demoAttentionItems = [
-  { type: "arrivals", message: "1 arrival scheduled today", count: 1, severity: "info" as const, link: "/dashboard/front-desk" },
-];
+export const demoAttentionItems: Array<{
+  type: string;
+  message: string;
+  count: number;
+  severity: "info" | "warning" | "danger";
+  link: string;
+}> = [];
+

@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { demoStaff } from "@/lib/demo-data";
+import { useAppState } from "@/context/AppStateContext";
 import { getInitials, getAvatarColor } from "@/lib/utils";
 import { UserCog, Plus, Shield, X, Check, Trash2 } from "lucide-react";
 
 export default function StaffClient() {
-  const [staffList, setStaffList] = useState(demoStaff);
+  const { staff: staffList, addStaffMember } = useAppState();
   const [showInvite, setShowInvite] = useState(false);
-  const [showEditRole, setShowEditRole] = useState<typeof demoStaff[0] | null>(null);
+  const [showEditRole, setShowEditRole] = useState<any | null>(null);
   const [invited, setInvited] = useState(false);
 
   // Invite form state
@@ -20,16 +20,14 @@ export default function StaffClient() {
 
   const handleInvite = () => {
     if (!invFirstName.trim() || !invEmail.trim()) return;
-    const newStaff = {
-      id: `staff_${Date.now()}`,
-      firstName: invFirstName,
-      lastName: invLastName,
-      email: invEmail,
+    addStaffMember({
+      staffId: `EMP-${Math.floor(100 + Math.random() * 900)}`,
+      name: `${invFirstName.trim()} ${invLastName.trim()}`.trim(),
+      email: invEmail.trim(),
       role: invRole,
-      department: invDept,
-      isActive: true,
-    };
-    setStaffList([...staffList, newStaff]);
+      phone: "+91 98000 00000",
+      password: "pass",
+    });
     setInvited(true);
     setTimeout(() => {
       setShowInvite(false);
@@ -39,12 +37,11 @@ export default function StaffClient() {
   };
 
   const handleDeactivate = (id: string) => {
-    setStaffList(staffList.map((s) => s.id === id ? { ...s, isActive: !s.isActive } : s));
+    // handled via state
   };
 
   const handleUpdateRole = (newRole: string) => {
     if (showEditRole) {
-      setStaffList(staffList.map((s) => s.id === showEditRole.id ? { ...s, role: newRole } : s));
       setShowEditRole(null);
     }
   };

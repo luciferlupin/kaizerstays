@@ -8,6 +8,7 @@ import {
   Search,
   Filter,
   Plus,
+  Calendar,
   CalendarCheck,
   ArrowUpRight,
   MoreVertical,
@@ -109,78 +110,96 @@ export default function ReservationsClient() {
       {/* Data Table */}
       <div className="card">
         <div className="card-body" style={{ padding: 0 }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Guest & Confirmation</th>
-                <th>Room Type / No</th>
-                <th>Dates & Nights</th>
-                <th>Channel</th>
-                <th>Status</th>
-                <th className="text-right">Total</th>
-                <th className="text-right">Balance</th>
-                <th className="text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((res) => (
-                <tr key={res.id}>
-                  <td>
-                    <div className="font-semibold">{res.guestName}</div>
-                    <div className="mono text-tertiary text-xs">{res.confirmationNumber}</div>
-                  </td>
-                  <td>
-                    <div>{res.roomType}</div>
-                    <div className="text-xs text-primary font-semibold">
-                      {res.roomNumber ? `Room #${res.roomNumber}` : "Unassigned"}
-                    </div>
-                  </td>
-                  <td>
-                    <div>{formatDate(res.checkIn, "dd MMM")} → {formatDate(res.checkOut, "dd MMM")}</div>
-                    <div className="text-xs text-tertiary">{res.nights} Nights • {res.adults} Adults</div>
-                  </td>
-                  <td>
-                    <span className="badge badge-default">{res.bookingSource}</span>
-                  </td>
-                  <td>
-                    <span
-                      className={`badge ${
-                        res.status === "CHECKED_IN"
-                          ? "badge-success"
-                          : res.status === "CONFIRMED"
-                          ? "badge-primary"
-                          : res.status === "CANCELLED"
-                          ? "badge-danger"
-                          : "badge-default"
-                      }`}
-                    >
-                      {res.status}
-                    </span>
-                  </td>
-                  <td className="text-right mono font-semibold">{formatCurrency(res.totalAmount)}</td>
-                  <td className="text-right mono font-semibold">
-                    {res.balanceAmount === 0 ? (
-                      <span className="text-success font-bold">Paid</span>
-                    ) : (
-                      <span className="text-warning">{formatCurrency(res.balanceAmount)}</span>
-                    )}
-                  </td>
-                  <td className="text-right">
-                    <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
-                      <Link href={`/dashboard/reservations/${res.id}`} className="btn btn-secondary btn-sm">
-                        View Folio <ArrowUpRight size={12} />
-                      </Link>
-                      {res.status === "CONFIRMED" && (
-                        <button className="btn btn-ghost btn-sm text-danger" onClick={() => cancelReservation(res.id)}>
-                          Cancel
-                        </button>
-                      )}
-                    </div>
-                  </td>
+          {filtered.length === 0 ? (
+            <div style={{ padding: "48px 20px", textAlign: "center" }}>
+              <Calendar size={36} className="text-tertiary" style={{ margin: "0 auto 12px auto" }} />
+              <h3 style={{ fontSize: "16px", fontWeight: 700 }}>No Reservations Found</h3>
+              <p className="text-xs text-secondary" style={{ marginTop: "4px", marginBottom: "16px" }}>
+                Create a new direct walk-in reservation or sync with OTA Extranets (Booking.com, MMT) to import bookings.
+              </p>
+              <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+                <Link href="/dashboard/reservations/new" className="btn btn-primary btn-sm">
+                  <Plus size={14} /> New Reservation
+                </Link>
+                <Link href="/dashboard/channels" className="btn btn-secondary btn-sm">
+                  Channel Manager
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Guest & Confirmation</th>
+                  <th>Room Type / No</th>
+                  <th>Dates & Nights</th>
+                  <th>Channel</th>
+                  <th>Status</th>
+                  <th className="text-right">Total</th>
+                  <th className="text-right">Balance</th>
+                  <th className="text-right">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((res) => (
+                  <tr key={res.id}>
+                    <td>
+                      <div className="font-semibold">{res.guestName}</div>
+                      <div className="mono text-tertiary text-xs">{res.confirmationNumber}</div>
+                    </td>
+                    <td>
+                      <div>{res.roomType}</div>
+                      <div className="text-xs text-primary font-semibold">
+                        {res.roomNumber ? `Room #${res.roomNumber}` : "Unassigned"}
+                      </div>
+                    </td>
+                    <td>
+                      <div>{formatDate(res.checkIn, "dd MMM")} → {formatDate(res.checkOut, "dd MMM")}</div>
+                      <div className="text-xs text-tertiary">{res.nights} Nights • {res.adults} Adults</div>
+                    </td>
+                    <td>
+                      <span className="badge badge-default">{res.bookingSource}</span>
+                    </td>
+                    <td>
+                      <span
+                        className={`badge ${
+                          res.status === "CHECKED_IN"
+                            ? "badge-success"
+                            : res.status === "CONFIRMED"
+                            ? "badge-primary"
+                            : res.status === "CANCELLED"
+                            ? "badge-danger"
+                            : "badge-default"
+                        }`}
+                      >
+                        {res.status}
+                      </span>
+                    </td>
+                    <td className="text-right mono font-semibold">{formatCurrency(res.totalAmount)}</td>
+                    <td className="text-right mono font-semibold">
+                      {res.balanceAmount === 0 ? (
+                        <span className="text-success font-bold">Paid</span>
+                      ) : (
+                        <span className="text-warning">{formatCurrency(res.balanceAmount)}</span>
+                      )}
+                    </td>
+                    <td className="text-right">
+                      <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
+                        <Link href={`/dashboard/reservations/${res.id}`} className="btn btn-secondary btn-sm">
+                          View Folio <ArrowUpRight size={12} />
+                        </Link>
+                        {res.status === "CONFIRMED" && (
+                          <button className="btn btn-ghost btn-sm text-danger" onClick={() => cancelReservation(res.id)}>
+                            Cancel
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

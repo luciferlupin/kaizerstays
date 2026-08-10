@@ -52,6 +52,8 @@ export default function DashboardClient() {
 
   const revenueToday = payments.reduce((sum, p) => sum + p.amount, 0);
 
+  const totalOutstandingFolio = reservations.reduce((sum, r) => sum + (r.balanceAmount || 0), 0);
+
   return (
     <div className="page-content">
       {/* Header Greeting */}
@@ -59,7 +61,7 @@ export default function DashboardClient() {
         <div>
           <h1 className="page-title">{greeting}, {currentUser ? currentUser.name : "Ninaad Khera"}</h1>
           <p className="page-description">
-            Here is what's happening at {property.name} today.
+            Here is what&apos;s happening at {property.name} today.
           </p>
         </div>
         <div className="page-actions">
@@ -89,7 +91,7 @@ export default function DashboardClient() {
           <span className="stat-card-label">Arrivals Today</span>
           <div className="stat-card-value">{arrivals.length}</div>
           <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>
-            4 expected before 6 PM
+            {arrivals.length === 0 ? "No arrivals pending" : `${arrivals.length} scheduled today`}
           </span>
         </div>
 
@@ -97,49 +99,53 @@ export default function DashboardClient() {
           <span className="stat-card-label">Departures Today</span>
           <div className="stat-card-value">{departures.length}</div>
           <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>
-            Checkouts pending settlement
+            {departures.length === 0 ? "No departures pending" : `${departures.length} pending checkout`}
           </span>
         </div>
 
         <div className="stat-card">
           <span className="stat-card-label">In-House Guests</span>
-          <div className="stat-card-value text-success">{inHouseGuestsCount || 38}</div>
+          <div className="stat-card-value text-success">{inHouseGuestsCount}</div>
           <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>
-            Across {inHouseReservations.length || 18} rooms
+            Across {inHouseReservations.length} occupied rooms
           </span>
         </div>
       </div>
 
       {/* Dynamic Attention Banner */}
-      <div className="attention-card" style={{ marginBottom: "24px" }}>
-        <div className="attention-header">
-          <AlertTriangle size={18} className="text-warning" />
-          <span style={{ fontWeight: 700, fontSize: "14px" }}>Attention Required</span>
-        </div>
-        <div className="attention-body">
-          {arrivals.length > 0 && (
-            <Link href="/dashboard/front-desk" className="attention-item">
-              <span className="badge badge-warning">{arrivals.length} Arrivals</span>
-              <span>{arrivals.length} arrivals waiting for front desk check-in</span>
-              <ChevronRight size={14} style={{ marginLeft: "auto" }} />
-            </Link>
-          )}
+      {(arrivals.length > 0 || dirtyRooms > 0 || totalOutstandingFolio > 0) && (
+        <div className="attention-card" style={{ marginBottom: "24px" }}>
+          <div className="attention-header">
+            <AlertTriangle size={18} className="text-warning" />
+            <span style={{ fontWeight: 700, fontSize: "14px" }}>Attention Required</span>
+          </div>
+          <div className="attention-body">
+            {arrivals.length > 0 && (
+              <Link href="/dashboard/front-desk" className="attention-item">
+                <span className="badge badge-warning">{arrivals.length} Arrivals</span>
+                <span>{arrivals.length} arrivals waiting for front desk check-in</span>
+                <ChevronRight size={14} style={{ marginLeft: "auto" }} />
+              </Link>
+            )}
 
-          {dirtyRooms > 0 && (
-            <Link href="/dashboard/housekeeping" className="attention-item">
-              <span className="badge badge-danger">{dirtyRooms} Dirty Rooms</span>
-              <span>{dirtyRooms} rooms need housekeeping turnaround</span>
-              <ChevronRight size={14} style={{ marginLeft: "auto" }} />
-            </Link>
-          )}
+            {dirtyRooms > 0 && (
+              <Link href="/dashboard/housekeeping" className="attention-item">
+                <span className="badge badge-danger">{dirtyRooms} Dirty Rooms</span>
+                <span>{dirtyRooms} rooms need housekeeping turnaround</span>
+                <ChevronRight size={14} style={{ marginLeft: "auto" }} />
+              </Link>
+            )}
 
-          <Link href="/dashboard/payments" className="attention-item">
-            <span className="badge badge-primary">Folio Balance</span>
-            <span>₹82,400 outstanding from in-house guest folios</span>
-            <ChevronRight size={14} style={{ marginLeft: "auto" }} />
-          </Link>
+            {totalOutstandingFolio > 0 && (
+              <Link href="/dashboard/payments" className="attention-item">
+                <span className="badge badge-primary">Folio Balance</span>
+                <span>{formatCurrency(totalOutstandingFolio)} outstanding from guest folios</span>
+                <ChevronRight size={14} style={{ marginLeft: "auto" }} />
+              </Link>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Main Grid: Arrivals/Departures + Room Status */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "24px", marginBottom: "24px" }}>
@@ -166,49 +172,61 @@ export default function DashboardClient() {
           </div>
 
           <div className="card-body" style={{ padding: 0 }}>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Guest Name</th>
-                  <th>Room Type & No</th>
-                  <th>Dates</th>
-                  <th>Source</th>
-                  <th>Balance</th>
-                  <th className="text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(activeTab === "arrivals" ? arrivals : departures).map((r) => (
-                  <tr key={r.id}>
-                    <td className="font-semibold">{r.guestName}</td>
-                    <td>
-                      <div>{r.roomType}</div>
-                      <div className="text-xs text-primary font-semibold">
-                        {r.roomNumber ? `Room #${r.roomNumber}` : "Unassigned"}
-                      </div>
-                    </td>
-                    <td className="text-xs">
-                      {formatDate(r.checkIn, "dd MMM")} → {formatDate(r.checkOut, "dd MMM")}
-                    </td>
-                    <td>
-                      <span className="badge badge-default">{r.bookingSource}</span>
-                    </td>
-                    <td className="mono font-semibold text-sm">
-                      {r.balanceAmount === 0 ? (
-                        <span className="badge badge-success">Paid</span>
-                      ) : (
-                        formatCurrency(r.balanceAmount)
-                      )}
-                    </td>
-                    <td className="text-right">
-                      <Link href="/dashboard/front-desk" className="btn btn-primary btn-sm">
-                        {activeTab === "arrivals" ? "Check In" : "Check Out"}
-                      </Link>
-                    </td>
+            {(activeTab === "arrivals" ? arrivals : departures).length === 0 ? (
+              <div style={{ padding: "36px 20px", textAlign: "center" }}>
+                <CheckCircle2 size={32} className="text-success" style={{ margin: "0 auto 8px auto" }} />
+                <h4 style={{ fontSize: "14px", fontWeight: 600 }}>
+                  {activeTab === "arrivals" ? "No Arrivals Scheduled for Today" : "No Departures Scheduled for Today"}
+                </h4>
+                <p className="text-xs text-secondary" style={{ marginTop: "4px" }}>
+                  New bookings created or imported from OTAs will appear here automatically.
+                </p>
+              </div>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Guest Name</th>
+                    <th>Room Type & No</th>
+                    <th>Dates</th>
+                    <th>Source</th>
+                    <th>Balance</th>
+                    <th className="text-right">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {(activeTab === "arrivals" ? arrivals : departures).map((r) => (
+                    <tr key={r.id}>
+                      <td className="font-semibold">{r.guestName}</td>
+                      <td>
+                        <div>{r.roomType}</div>
+                        <div className="text-xs text-primary font-semibold">
+                          {r.roomNumber ? `Room #${r.roomNumber}` : "Unassigned"}
+                        </div>
+                      </td>
+                      <td className="text-xs">
+                        {formatDate(r.checkIn, "dd MMM")} → {formatDate(r.checkOut, "dd MMM")}
+                      </td>
+                      <td>
+                        <span className="badge badge-default">{r.bookingSource}</span>
+                      </td>
+                      <td className="mono font-semibold text-sm">
+                        {r.balanceAmount === 0 ? (
+                          <span className="badge badge-success">Paid</span>
+                        ) : (
+                          formatCurrency(r.balanceAmount)
+                        )}
+                      </td>
+                      <td className="text-right">
+                        <Link href="/dashboard/front-desk" className="btn btn-primary btn-sm">
+                          {activeTab === "arrivals" ? "Check In" : "Check Out"}
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 

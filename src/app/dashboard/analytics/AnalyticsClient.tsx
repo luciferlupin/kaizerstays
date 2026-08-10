@@ -25,18 +25,30 @@ export default function AnalyticsClient() {
   const [departmentFilter, setDepartmentFilter] = useState("ALL");
 
   // Dynamic Metrics computed from AppState Context
-  const totalRooms = rooms.length || 43;
+  const totalRooms = rooms.length || 35;
   const occupiedCount = rooms.filter((r) => r.status === "OCCUPIED").length;
-  const occupancyRate = totalRooms > 0 ? Math.round((occupiedCount / totalRooms) * 100) : 76.4;
+  const occupancyRate = totalRooms > 0 ? Math.round((occupiedCount / totalRooms) * 100) : 0;
 
-  const totalPaymentsRevenue = payments.reduce((sum, p) => sum + p.amount, 0) + 1967000;
-  const totalExpenseAmount = expenses.reduce((sum, e) => sum + e.amount, 0) + 712000;
+  const totalPaymentsRevenue = payments.reduce((sum, p) => sum + p.amount, 0) || reservations.reduce((sum, r) => sum + (r.paidAmount || 0), 0);
+  const totalExpenseAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
   const netGOP = totalPaymentsRevenue - totalExpenseAmount;
 
-  const adr = 5650;
-  const revpar = Math.round((adr * occupancyRate) / 100);
-  const trevpar = Math.round(revpar * 1.38);
-  const goppar = Math.round(netGOP / (totalRooms * 30));
+  const totalRoomNights = reservations.reduce((sum, r) => sum + (r.nights || 1), 0);
+  const adr = reservations.length > 0 ? Math.round(reservations.reduce((sum, r) => sum + r.roomRate, 0) / reservations.length) : 0;
+  const revpar = totalRooms > 0 ? Math.round(totalPaymentsRevenue / totalRooms) : 0;
+  const trevpar = revpar;
+  const goppar = totalRooms > 0 ? Math.round(netGOP / totalRooms) : 0;
+
+  // Channel Breakdown
+  const bcomRevenue = reservations.filter((r) => r.bookingSource === "BOOKING_COM").reduce((sum, r) => sum + r.totalAmount, 0);
+  const directRevenue = reservations.filter((r) => r.bookingSource === "DIRECT" || r.bookingSource === "WEBSITE" || r.bookingSource === "WALK_IN").reduce((sum, r) => sum + r.totalAmount, 0);
+  const mmtRevenue = reservations.filter((r) => r.bookingSource === "MAKEMYTRIP" || r.bookingSource === "GOIBIBO").reduce((sum, r) => sum + r.totalAmount, 0);
+  const totalResRevenue = reservations.reduce((sum, r) => sum + r.totalAmount, 0) || 1;
+
+  const bcomPercent = Math.round((bcomRevenue / totalResRevenue) * 100);
+  const directPercent = Math.round((directRevenue / totalResRevenue) * 100);
+  const mmtPercent = Math.round((mmtRevenue / totalResRevenue) * 100);
+  const otherPercent = Math.max(0, 100 - (bcomPercent + directPercent + mmtPercent));
 
   const exportAnalyticsReport = () => {
     const csvContent = `StaySphere OS — Hotel Shemron Executive Analytics Report
@@ -55,10 +67,10 @@ Total Operating Expenses: INR ${totalExpenseAmount}
 Gross Operating Profit (GOP): INR ${netGOP}
 
 === CHANNEL REVENUE BREAKDOWN ===
-Direct Bookings (Website / Walk-in): 42% (INR 1,195,152)
-Booking.com: 28% (INR 796,768)
-MakeMyTrip / Goibibo: 18% (INR 512,208)
-Agoda & Expedia: 12% (INR 341,472)
+Direct Bookings: ${directPercent}% (INR ${directRevenue})
+Booking.com: ${bcomPercent}% (INR ${bcomRevenue})
+MakeMyTrip / Goibibo: ${mmtPercent}% (INR ${mmtRevenue})
+Other OTAs: ${otherPercent}% (INR 0)
 `;
 
     const blob = new Blob([csvContent], { type: "text/csv" });
@@ -130,7 +142,7 @@ Agoda & Expedia: 12% (INR 341,472)
           <div className="stat-card-value text-primary">{occupancyRate}%</div>
           <div className="stat-card-change positive">
             <TrendingUp size={12} />
-            <span>+5.1% vs last period</span>
+            <span>{occupiedCount} of {totalRooms} rooms</span>
           </div>
         </div>
 
@@ -139,7 +151,7 @@ Agoda & Expedia: 12% (INR 341,472)
           <div className="stat-card-value">{formatCurrency(adr)}</div>
           <div className="stat-card-change positive">
             <TrendingUp size={12} />
-            <span>+₹420 per night</span>
+            <span>{reservations.length} active bookings</span>
           </div>
         </div>
 
@@ -148,7 +160,7 @@ Agoda & Expedia: 12% (INR 341,472)
           <div className="stat-card-value text-success">{formatCurrency(revpar)}</div>
           <div className="stat-card-change positive">
             <TrendingUp size={12} />
-            <span>+8.2% RevPAR growth</span>
+            <span>Real revenue yield</span>
           </div>
         </div>
 
@@ -157,7 +169,7 @@ Agoda & Expedia: 12% (INR 341,472)
           <div className="stat-card-value">{formatCurrency(trevpar)}</div>
           <div className="stat-card-change positive">
             <TrendingUp size={12} />
-            <span>F&B + Room Tariffs</span>
+            <span>Gross Rev / Room</span>
           </div>
         </div>
 
@@ -166,7 +178,7 @@ Agoda & Expedia: 12% (INR 341,472)
           <div className="stat-card-value text-primary">{formatCurrency(goppar)}</div>
           <div className="stat-card-change positive">
             <TrendingUp size={12} />
-            <span>GOP Profit Margin 61.8%</span>
+            <span>Net Operating Margin</span>
           </div>
         </div>
       </div>
@@ -183,40 +195,40 @@ Agoda & Expedia: 12% (INR 341,472)
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
                 <span className="font-semibold">Direct Bookings (Website / Walk-in)</span>
-                <span className="mono font-bold">42% ({formatCurrency(1195152)})</span>
+                <span className="mono font-bold">{directPercent}% ({formatCurrency(directRevenue)})</span>
               </div>
               <div style={{ width: "100%", height: "8px", background: "var(--gray-100)", borderRadius: "4px" }}>
-                <div style={{ width: "42%", height: "100%", background: "var(--blue-600)", borderRadius: "4px" }} />
+                <div style={{ width: `${directPercent}%`, height: "100%", background: "var(--blue-600)", borderRadius: "4px" }} />
               </div>
             </div>
 
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
                 <span className="font-semibold">Booking.com</span>
-                <span className="mono font-bold">28% ({formatCurrency(796768)})</span>
+                <span className="mono font-bold">{bcomPercent}% ({formatCurrency(bcomRevenue)})</span>
               </div>
               <div style={{ width: "100%", height: "8px", background: "var(--gray-100)", borderRadius: "4px" }}>
-                <div style={{ width: "28%", height: "100%", background: "var(--teal-500)", borderRadius: "4px" }} />
+                <div style={{ width: `${bcomPercent}%`, height: "100%", background: "var(--teal-500)", borderRadius: "4px" }} />
               </div>
             </div>
 
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
                 <span className="font-semibold">MakeMyTrip / Goibibo</span>
-                <span className="mono font-bold">18% ({formatCurrency(512208)})</span>
+                <span className="mono font-bold">{mmtPercent}% ({formatCurrency(mmtRevenue)})</span>
               </div>
               <div style={{ width: "100%", height: "8px", background: "var(--gray-100)", borderRadius: "4px" }}>
-                <div style={{ width: "18%", height: "100%", background: "var(--amber-500)", borderRadius: "4px" }} />
+                <div style={{ width: `${mmtPercent}%`, height: "100%", background: "var(--amber-500)", borderRadius: "4px" }} />
               </div>
             </div>
 
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                <span className="font-semibold">Agoda & Expedia</span>
-                <span className="mono font-bold">12% ({formatCurrency(341472)})</span>
+                <span className="font-semibold">Other OTAs</span>
+                <span className="mono font-bold">{otherPercent}% ({formatCurrency(0)})</span>
               </div>
               <div style={{ width: "100%", height: "8px", background: "var(--gray-100)", borderRadius: "4px" }}>
-                <div style={{ width: "12%", height: "100%", background: "var(--purple-500)", borderRadius: "4px" }} />
+                <div style={{ width: `${otherPercent}%`, height: "100%", background: "var(--purple-500)", borderRadius: "4px" }} />
               </div>
             </div>
           </div>
@@ -239,30 +251,24 @@ Agoda & Expedia: 12% (INR 341,472)
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td className="font-semibold">Deluxe Room (14 Rooms)</td>
-                  <td>82%</td>
-                  <td className="mono">{formatCurrency(5500)}</td>
-                  <td className="mono font-bold">{formatCurrency(1185000)}</td>
-                </tr>
-                <tr>
-                  <td className="font-semibold">Standard Room (15 Rooms)</td>
-                  <td>74%</td>
-                  <td className="mono">{formatCurrency(3500)}</td>
-                  <td className="mono font-bold">{formatCurrency(840000)}</td>
-                </tr>
-                <tr>
-                  <td className="font-semibold">Premium Room (10 Rooms)</td>
-                  <td>78%</td>
-                  <td className="mono">{formatCurrency(8000)}</td>
-                  <td className="mono font-bold">{formatCurrency(620000)}</td>
-                </tr>
-                <tr>
-                  <td className="font-semibold">Royal Suite (4 Suites)</td>
-                  <td>68%</td>
-                  <td className="mono">{formatCurrency(15000)}</td>
-                  <td className="mono font-bold">{formatCurrency(480000)}</td>
-                </tr>
+                {[
+                  { name: "Deluxe Room", count: rooms.filter((r) => r.typeName === "Deluxe Room").length, baseRate: 5500 },
+                  { name: "Standard Room", count: rooms.filter((r) => r.typeName === "Standard Room").length, baseRate: 3500 },
+                  { name: "Premium Room", count: rooms.filter((r) => r.typeName === "Premium Room").length, baseRate: 8000 },
+                  { name: "Royal Suite", count: rooms.filter((r) => r.typeName === "Royal Suite").length, baseRate: 15000 },
+                ].map((cat) => {
+                  const catRes = reservations.filter((r) => r.roomType === cat.name);
+                  const catRev = catRes.reduce((sum, r) => sum + r.totalAmount, 0);
+                  const catOcc = cat.count > 0 ? Math.round((catRes.length / cat.count) * 100) : 0;
+                  return (
+                    <tr key={cat.name}>
+                      <td className="font-semibold">{cat.name} ({cat.count} Rooms)</td>
+                      <td>{catOcc}%</td>
+                      <td className="mono">{formatCurrency(cat.baseRate)}</td>
+                      <td className="mono font-bold">{formatCurrency(catRev)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

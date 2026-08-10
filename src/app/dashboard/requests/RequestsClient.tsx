@@ -17,45 +17,55 @@ export default function RequestsClient() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "16px" }}>
-        {guestRequests.map((req) => (
-          <div key={req.id} className="card" style={{ padding: "20px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <div style={{ fontSize: "18px", fontWeight: 800 }}>Room #{req.roomNumber}</div>
-              <span className={`badge ${req.status === "REQUESTED" ? "badge-warning" : req.status === "COMPLETED" ? "badge-success" : "badge-primary"}`}>
-                {req.status}
-              </span>
-            </div>
+      {guestRequests.length === 0 ? (
+        <div className="card" style={{ padding: "48px 20px", textAlign: "center" }}>
+          <MessageSquare size={36} className="text-tertiary" style={{ margin: "0 auto 12px auto" }} />
+          <h3 style={{ fontSize: "16px", fontWeight: 700 }}>No Active Guest Requests</h3>
+          <p className="text-xs text-secondary" style={{ marginTop: "4px" }}>
+            Guest requests submitted via In-Room QR Portals (Towels, Housekeeping, Room Service) will appear here in real-time.
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "16px" }}>
+          {guestRequests.map((req) => (
+            <div key={req.id} className="card" style={{ padding: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <div style={{ fontSize: "18px", fontWeight: 800 }}>Room #{req.roomNumber}</div>
+                <span className={`badge ${req.status === "REQUESTED" ? "badge-warning" : req.status === "COMPLETED" ? "badge-success" : "badge-primary"}`}>
+                  {req.status}
+                </span>
+              </div>
 
-            <div style={{ margin: "12px 0" }}>
-              <div style={{ fontWeight: 600 }}>{req.guestName}</div>
-              <div className="text-sm text-secondary" style={{ marginTop: "4px" }}>
-                {req.type}: <strong>{req.description}</strong> (Qty: {req.quantity})
+              <div style={{ margin: "12px 0" }}>
+                <div style={{ fontWeight: 600 }}>{req.guestName}</div>
+                <div className="text-sm text-secondary" style={{ marginTop: "4px" }}>
+                  {req.type}: <strong>{req.description}</strong> (Qty: {req.quantity})
+                </div>
+              </div>
+
+              <div style={{ marginTop: "16px" }}>
+                {req.status === "REQUESTED" && (
+                  <button className="btn btn-primary w-full" onClick={() => updateGuestRequestStatus(req.id, "ON_THE_WAY")}>
+                    Accept & Mark On The Way
+                  </button>
+                )}
+
+                {req.status === "ON_THE_WAY" && (
+                  <button className="btn btn-success w-full" onClick={() => updateGuestRequestStatus(req.id, "COMPLETED")}>
+                    Mark Completed
+                  </button>
+                )}
+
+                {req.status === "COMPLETED" && (
+                  <div className="badge badge-success w-full" style={{ padding: "8px", justifyContent: "center" }}>
+                    <CheckCircle2 size={14} style={{ marginRight: "4px" }} /> Task Delivered & Completed
+                  </div>
+                )}
               </div>
             </div>
-
-            <div style={{ marginTop: "16px" }}>
-              {req.status === "REQUESTED" && (
-                <button className="btn btn-primary w-full" onClick={() => updateGuestRequestStatus(req.id, "ON_THE_WAY")}>
-                  Accept & Mark On The Way
-                </button>
-              )}
-
-              {req.status === "ON_THE_WAY" && (
-                <button className="btn btn-success w-full" onClick={() => updateGuestRequestStatus(req.id, "COMPLETED")}>
-                  Mark Completed
-                </button>
-              )}
-
-              {req.status === "COMPLETED" && (
-                <div className="badge badge-success w-full" style={{ padding: "8px", justifyContent: "center" }}>
-                  <CheckCircle2 size={14} style={{ marginRight: "4px" }} /> Task Delivered & Completed
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -53,63 +53,73 @@ export default function GuestsClient() {
       {/* Guest Table */}
       <div className="card">
         <div className="card-body" style={{ padding: 0 }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Guest Name</th>
-                <th>Contact Information</th>
-                <th>City & Country</th>
-                <th>Total Stays</th>
-                <th>Total Nights</th>
-                <th className="text-right">Lifetime Spend</th>
-                <th className="text-right">Profile</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((g) => (
-                <tr key={g.id}>
-                  <td>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <div
-                        className="avatar avatar-sm"
-                        style={{ background: getAvatarColor(g.firstName), color: "white" }}
-                      >
-                        {getInitials(g.firstName, g.lastName)}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
-                          {g.firstName} {g.lastName}
-                          {g.isVip && (
-                            <span className="badge badge-warning" style={{ fontSize: "10px" }}>
-                              <Star size={10} style={{ marginRight: "2px" }} /> VIP
-                            </span>
-                          )}
+          {filtered.length === 0 ? (
+            <div style={{ padding: "48px 20px", textAlign: "center" }}>
+              <Users size={36} className="text-tertiary" style={{ margin: "0 auto 12px auto" }} />
+              <h3 style={{ fontSize: "16px", fontWeight: 700 }}>No Guest Profiles Found</h3>
+              <p className="text-xs text-secondary" style={{ marginTop: "4px" }}>
+                Guest profiles are automatically created and tracked as guests check in or reservations are synced.
+              </p>
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Guest Name</th>
+                  <th>Contact Information</th>
+                  <th>City & Country</th>
+                  <th>Total Stays</th>
+                  <th>Total Nights</th>
+                  <th className="text-right">Lifetime Spend</th>
+                  <th className="text-right">Profile</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((g) => (
+                  <tr key={g.id}>
+                    <td>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div
+                          className="avatar avatar-sm"
+                          style={{ background: getAvatarColor(g.firstName), color: "white" }}
+                        >
+                          {getInitials(g.firstName, g.lastName)}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
+                            {g.firstName} {g.lastName}
+                            {g.isVip && (
+                              <span className="badge badge-warning" style={{ fontSize: "10px" }}>
+                                <Star size={10} style={{ marginRight: "2px" }} /> VIP
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="text-sm">{g.email}</div>
-                    <div className="text-xs text-tertiary">{g.phone}</div>
-                  </td>
-                  <td>{g.city}, {g.country}</td>
-                  <td className="font-semibold">{g.totalStays} Stays</td>
-                  <td className="text-secondary">{g.totalNights} Nights</td>
-                  <td className="text-right mono font-bold text-success">
-                    {formatCurrency(g.totalSpent)}
-                  </td>
-                  <td className="text-right">
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => setSelectedGuest(g)}
-                    >
-                      View CRM <ArrowUpRight size={12} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </td>
+                    <td>
+                      <div className="text-sm">{g.email}</div>
+                      <div className="text-xs text-tertiary">{g.phone}</div>
+                    </td>
+                    <td>{g.city}, {g.country}</td>
+                    <td className="font-semibold">{g.totalStays} Stays</td>
+                    <td className="text-secondary">{g.totalNights} Nights</td>
+                    <td className="text-right mono font-bold text-success">
+                      {formatCurrency(g.totalSpent)}
+                    </td>
+                    <td className="text-right">
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => setSelectedGuest(g)}
+                      >
+                        View CRM <ArrowUpRight size={12} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 

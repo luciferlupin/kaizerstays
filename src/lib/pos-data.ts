@@ -94,7 +94,7 @@ export const menuItems: MenuItem[] = [
 // ─── Restaurant Tables ───
 export const posTables: POSTable[] = [
   { id: "tbl_1", number: 1, seats: 2, location: "Indoor", status: "AVAILABLE", currentOrderId: null, guestName: null, roomNumber: null },
-  { id: "tbl_2", number: 2, seats: 2, location: "Indoor", status: "OCCUPIED", currentOrderId: "kot_001", guestName: "Anand Verma", roomNumber: "201" },
+  { id: "tbl_2", number: 2, seats: 2, location: "Indoor", status: "AVAILABLE", currentOrderId: null, guestName: null, roomNumber: null },
   { id: "tbl_3", number: 3, seats: 4, location: "Indoor", status: "AVAILABLE", currentOrderId: null, guestName: null, roomNumber: null },
   { id: "tbl_4", number: 4, seats: 4, location: "Indoor", status: "AVAILABLE", currentOrderId: null, guestName: null, roomNumber: null },
   { id: "tbl_5", number: 5, seats: 6, location: "Indoor", status: "AVAILABLE", currentOrderId: null, guestName: null, roomNumber: null },
@@ -107,19 +107,8 @@ export const posTables: POSTable[] = [
   { id: "tbl_12", number: 12, seats: 2, location: "Terrace", status: "AVAILABLE", currentOrderId: null, guestName: null, roomNumber: null },
 ];
 
-// ─── Active Kitchen Orders (1 Verification Record) ───
-export const activeKOTs: KitchenOrder[] = [
-  {
-    id: "kot_001", kotNumber: "KOT-0001", tableNumber: 2,
-    items: [
-      { menuItemId: "m012", name: "Paneer Butter Masala", quantity: 1, price: 360, notes: "Medium spicy" },
-      { menuItemId: "m018", name: "Garlic Naan", quantity: 2, price: 80, notes: "" },
-      { menuItemId: "m030", name: "Fresh Lime Soda", quantity: 1, price: 120, notes: "" },
-    ],
-    status: "PREPARING", createdAt: new Date(), total: 640,
-    guestName: "Anand Verma", roomNumber: "201", paymentMethod: "ROOM_FOLIO",
-  },
-];
+// ─── Active Kitchen Orders ───
+export const activeKOTs: KitchenOrder[] = [];
 
 export const menuCategories = [
   { id: "STARTERS", label: "Starters", emoji: "🍢" },

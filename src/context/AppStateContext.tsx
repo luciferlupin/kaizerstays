@@ -140,13 +140,13 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.rooms?.length) setRooms(parsed.rooms);
-        if (parsed.reservations?.length) setReservations(parsed.reservations);
-        if (parsed.guests?.length) setGuests(parsed.guests);
-        if (parsed.housekeepingTasks) setHousekeepingTasks(parsed.housekeepingTasks);
-        if (parsed.guestRequests) setGuestRequests(parsed.guestRequests);
-        if (parsed.payments) setPayments(parsed.payments);
-        if (parsed.expenses) setExpenses(parsed.expenses);
-        if (parsed.activity) setActivity(parsed.activity);
+        if (parsed.reservations) setReservations(parsed.reservations.filter((r: any) => r.id !== "res_001" && !r.guestName?.includes("Anand Verma")));
+        if (parsed.guests) setGuests(parsed.guests.filter((g: any) => g.id !== "guest_001" && g.firstName !== "Anand"));
+        if (parsed.housekeepingTasks) setHousekeepingTasks(parsed.housekeepingTasks.filter((h: any) => h.id !== "hk_001"));
+        if (parsed.guestRequests) setGuestRequests(parsed.guestRequests.filter((r: any) => r.id !== "req_001"));
+        if (parsed.payments) setPayments(parsed.payments.filter((p: any) => p.id !== "pay_001"));
+        if (parsed.expenses) setExpenses(parsed.expenses.filter((e: any) => e.id !== "exp_001"));
+        if (parsed.activity) setActivity(parsed.activity.filter((a: any) => a.id !== "act_001"));
         if (parsed.staff?.length) setStaff(parsed.staff);
         if (parsed.channels?.length) setChannels(parsed.channels);
         if (parsed.currentUser) setCurrentUser(parsed.currentUser);
