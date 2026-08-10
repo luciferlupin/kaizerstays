@@ -57,11 +57,6 @@ export const BOOKING_SOURCE_LABELS: Record<string, string> = {
   WEBSITE: "Website",
   BOOKING_COM: "Booking.com",
   AGODA: "Agoda",
-  EXPEDIA: "Expedia",
-  MAKEMYTRIP: "MakeMyTrip",
-  GOIBIBO: "Goibibo",
-  AIRBNB: "Airbnb",
-  TRAVEL_AGENT: "Travel Agent",
   CORPORATE: "Corporate",
   OTHER: "Other",
 };

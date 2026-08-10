@@ -5,7 +5,7 @@
 export type RoomStatus = "AVAILABLE" | "OCCUPIED" | "DIRTY" | "CLEANING" | "MAINTENANCE" | "RESERVED" | "OUT_OF_SERVICE" | "INSPECTED";
 export type HousekeepingStatus = "CLEAN" | "DIRTY" | "CLEANING" | "INSPECTED";
 export type ReservationStatus = "PENDING" | "CONFIRMED" | "CHECKED_IN" | "CHECKED_OUT" | "CANCELLED";
-export type BookingSource = "DIRECT" | "WEBSITE" | "WALK_IN" | "BOOKING_COM" | "MAKEMYTRIP" | "AGODA" | "GOIBIBO" | "EXPEDIA" | "AIRBNB" | "CORPORATE";
+export type BookingSource = "DIRECT" | "WEBSITE" | "WALK_IN" | "BOOKING_COM" | "AGODA" | "CORPORATE";
 export type PaymentMethod = "CASH" | "UPI" | "CREDIT_CARD" | "DEBIT_CARD" | "RAZORPAY" | "BANK_TRANSFER" | "ROOM_FOLIO";
 export type PaymentStatus = "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED";
 export type Priority = "LOW" | "NORMAL" | "HIGH" | "URGENT";

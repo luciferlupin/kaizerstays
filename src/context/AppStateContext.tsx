@@ -147,8 +147,6 @@ interface AppStateContextType {
   runNightAudit: () => NightAuditRecord;
   addActivity: (action: string, entity: string, entityId: string, detail: string) => void;
   updateOTAChannel: (channelId: string, updates: Partial<typeof otaChannels[0]>) => void;
-  connectAllChannelsToCRM: () => void;
-  fetchAndImportOTAExtranet: (channelId: string, credentials: { username: string; password?: string; propertyId?: string }) => OTAImportResult;
   addInventoryItem: (item: Omit<StockInventoryItem, "id">) => void;
   updateInventoryStock: (itemId: string, adjustmentQty: number, reason?: string) => void;
   addRequisition: (req: Omit<StockRequisition, "id" | "reqNumber" | "date">) => void;
@@ -194,8 +192,18 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.rooms?.length) setRooms(parsed.rooms);
-        if (parsed.reservations) setReservations(parsed.reservations.filter((r: any) => r.id !== "res_001" && !r.guestName?.includes("Anand Verma")));
-        if (parsed.guests) setGuests(parsed.guests.filter((g: any) => g.id !== "guest_001" && g.firstName !== "Anand"));
+        if (parsed.reservations) setReservations(parsed.reservations.filter((r: any) =>
+          r.id !== "res_001" &&
+          !r.guestName?.includes("Anand Verma") &&
+          !r.id?.startsWith("res_agd_") &&
+          !r.id?.startsWith("res_bcom_")
+        ));
+        if (parsed.guests) setGuests(parsed.guests.filter((g: any) =>
+          g.id !== "guest_001" &&
+          g.firstName !== "Anand" &&
+          !g.id?.startsWith("guest_agd_") &&
+          !g.id?.startsWith("guest_bcom_")
+        ));
         if (parsed.housekeepingTasks) setHousekeepingTasks(parsed.housekeepingTasks.filter((h: any) => h.id !== "hk_001"));
         if (parsed.guestRequests) setGuestRequests(parsed.guestRequests.filter((r: any) => r.id !== "req_001"));
         if (parsed.payments) setPayments(parsed.payments.filter((p: any) => p.id !== "pay_001"));
@@ -203,24 +211,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         if (parsed.staff?.length) setStaff(parsed.staff);
         if (parsed.inventoryItems?.length) setInventoryItems(parsed.inventoryItems);
         if (parsed.requisitions?.length) setRequisitions(parsed.requisitions);
-        if (parsed.channels?.length) {
-          const cleanedChannels = parsed.channels.map((ch: any) => {
-            if (ch.revenueThisMonth === 485000 || ch.revenueThisMonth === 312000 || ch.revenueThisMonth === 198000 || ch.bookingsThisMonth === 42 || ch.bookingsThisMonth === 28) {
-              return {
-                ...ch,
-                status: "NOT_CONNECTED",
-                roomsPushed: 0,
-                bookingsThisMonth: 0,
-                revenueThisMonth: 0,
-                apiKeyConfigured: false,
-                webhookActive: false,
-                lastSync: undefined,
-              };
-            }
-            return ch;
-          });
-          setChannels(cleanedChannels);
-        }
+        // Previous preview builds persisted simulated OTA connection states.
+        // Do not hydrate those values as real partner connectivity.
+        setChannels(otaChannels);
         if (parsed.currentUser) {
           // Check if active auth session exists in sessionStorage
           const activeSession = typeof window !== "undefined" ? sessionStorage.getItem("staysphere_auth_session") : null;
@@ -290,6 +283,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     try {
       sessionStorage.removeItem("staysphere_auth_session");
       localStorage.removeItem("staysphere_auth_session");
+      const saved = localStorage.getItem("staysphere_app_state_v1");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        parsed.currentUser = null;
+        localStorage.setItem("staysphere_app_state_v1", JSON.stringify(parsed));
+      }
     } catch (e) {}
   };
 
@@ -628,20 +627,16 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     channelId: string,
     credentials: { username: string; password?: string; propertyId?: string }
   ): OTAImportResult => {
+    throw new Error(
+      "Direct extranet credential import is disabled. Configure an approved OTA API or channel manager before importing partner data."
+    );
+
     const targetChannel = channels.find((c) => c.id === channelId) || channels[0];
     const channelPrefix =
       channelId === "ch_booking"
         ? "BCOM"
         : channelId === "ch_agoda"
         ? "AGD"
-        : channelId === "ch_makemytrip"
-        ? "MMT"
-        : channelId === "ch_expedia"
-        ? "EXP"
-        : channelId === "ch_goibibo"
-        ? "GOI"
-        : channelId === "ch_airbnb"
-        ? "ABNB"
         : "OTA";
 
     const bookingSource =
@@ -649,24 +644,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         ? "BOOKING_COM"
         : channelId === "ch_agoda"
         ? "AGODA"
-        : channelId === "ch_makemytrip"
-        ? "MAKEMYTRIP"
-        : channelId === "ch_expedia"
-        ? "EXPEDIA"
-        : channelId === "ch_goibibo"
-        ? "GOIBIBO"
-        : channelId === "ch_airbnb"
-        ? "AIRBNB"
         : "BOOKING_COM";
 
     const propertyCode =
       credentials.propertyId ||
       targetChannel.hotelId ||
-      (channelId === "ch_booking"
-        ? "SHM-BCOM-88219"
-        : channelId === "ch_agoda"
-        ? "SHM-AGO-33109"
-        : `SHM-${channelPrefix}-99102`);
+      "UNVERIFIED";
 
     const getShiftedDate = (days: number, hour = 12) => {
       const d = new Date();
@@ -1024,6 +1007,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   };
 
   const connectAllChannelsToCRM = () => {
+    throw new Error(
+      "Simulated bulk connection is disabled. Each OTA must be verified through an approved connectivity provider."
+    );
+
     setChannels((prev) =>
       prev.map((c) => ({
         ...c,
@@ -1034,7 +1021,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         hotelId: c.hotelId || `SHM-${c.name.substring(0, 3).toUpperCase()}-${Math.floor(10000 + Math.random() * 90000)}`,
       }))
     );
-    addActivity("All OTA Channels Connected", "ota", "all_ota", "Established 2-way real-time rate & inventory sync for Hotel Shemron across all 12 OTA platforms");
+    addActivity("All OTA Channels Connected", "ota", "all_ota", "Established 2-way real-time rate & inventory sync for Hotel Shemron across OTA platforms (Booking.com & Agoda)");
   };
 
   // ─── Stock & Inventory Handlers ───
@@ -1126,8 +1113,6 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         runNightAudit,
         addActivity,
         updateOTAChannel,
-        connectAllChannelsToCRM,
-        fetchAndImportOTAExtranet,
         addInventoryItem,
         updateInventoryStock,
         addRequisition,

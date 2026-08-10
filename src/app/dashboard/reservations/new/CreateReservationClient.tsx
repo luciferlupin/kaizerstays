@@ -220,7 +220,7 @@ export default function CreateReservationClient() {
               <option value="WALK_IN">Walk-In Desk</option>
               <option value="WEBSITE">Direct Website</option>
               <option value="BOOKING_COM">Booking.com</option>
-              <option value="MAKEMYTRIP">MakeMyTrip</option>
+              <option value="AGODA">Agoda</option>
               <option value="CORPORATE">Corporate</option>
             </select>
           </div>

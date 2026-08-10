@@ -31,32 +31,8 @@ export interface OTAChannel {
 }
 
 export const otaChannels: OTAChannel[] = [
-  { id: "ch_booking", name: "Booking.com", logo: "B", category: "Global OTA", status: "NOT_CONNECTED", roomsPushed: 0, bookingsThisMonth: 0, revenueThisMonth: 0, commission: 15, rateModifier: 0, hotelId: "SHM-BCOM-88219", apiKeyConfigured: false, webhookActive: false },
-  { id: "ch_makemytrip", name: "MakeMyTrip", logo: "M", category: "Domestic / Regional", status: "NOT_CONNECTED", roomsPushed: 0, bookingsThisMonth: 0, revenueThisMonth: 0, commission: 18, rateModifier: 5, hotelId: "SHM-MMT-44012", apiKeyConfigured: false, webhookActive: false },
-  { id: "ch_goibibo", name: "Goibibo", logo: "G", category: "Domestic / Regional", status: "NOT_CONNECTED", roomsPushed: 0, bookingsThisMonth: 0, revenueThisMonth: 0, commission: 16, rateModifier: 5, hotelId: "SHM-GOI-99231", apiKeyConfigured: false, webhookActive: false },
-  { id: "ch_agoda", name: "Agoda", logo: "A", category: "Global OTA", status: "NOT_CONNECTED", roomsPushed: 0, bookingsThisMonth: 0, revenueThisMonth: 0, commission: 17, rateModifier: 0, hotelId: "SHM-AGO-33109", apiKeyConfigured: false, webhookActive: false },
-  { id: "ch_expedia", name: "Expedia", logo: "E", category: "Global OTA", status: "NOT_CONNECTED", roomsPushed: 0, bookingsThisMonth: 0, revenueThisMonth: 0, commission: 20, rateModifier: 0, hotelId: "SHM-EXP-11204", apiKeyConfigured: false, webhookActive: false },
-  { id: "ch_airbnb", name: "Airbnb", logo: "A", category: "Vacation Rental", status: "NOT_CONNECTED", roomsPushed: 0, bookingsThisMonth: 0, revenueThisMonth: 0, commission: 14, rateModifier: 10, hotelId: "SHM-ABNB-77321", apiKeyConfigured: false, webhookActive: false },
-  { id: "ch_tripadvisor", name: "TripAdvisor", logo: "T", category: "MetaSearch", status: "NOT_CONNECTED", roomsPushed: 0, bookingsThisMonth: 0, revenueThisMonth: 0, commission: 12, rateModifier: 0, hotelId: "SHM-TADV-66512", apiKeyConfigured: false, webhookActive: false },
-  { id: "ch_yatra", name: "Yatra.com", logo: "Y", category: "Domestic / Regional", status: "NOT_CONNECTED", roomsPushed: 0, bookingsThisMonth: 0, revenueThisMonth: 0, commission: 15, rateModifier: 0, hotelId: "SHM-YTR-55410", apiKeyConfigured: false, webhookActive: false },
-  { id: "ch_easemytrip", name: "EaseMyTrip", logo: "E", category: "Domestic / Regional", status: "NOT_CONNECTED", roomsPushed: 0, bookingsThisMonth: 0, revenueThisMonth: 0, commission: 14, rateModifier: 0, hotelId: "SHM-EMT-88301", apiKeyConfigured: false, webhookActive: false },
-  { id: "ch_cleartrip", name: "Cleartrip", logo: "C", category: "Domestic / Regional", status: "NOT_CONNECTED", roomsPushed: 0, bookingsThisMonth: 0, revenueThisMonth: 0, commission: 16, rateModifier: 0, hotelId: "SHM-CLR-22340", apiKeyConfigured: false, webhookActive: false },
-  { id: "ch_google", name: "Google Hotel Ads", logo: "G", category: "MetaSearch", status: "NOT_CONNECTED", roomsPushed: 0, bookingsThisMonth: 0, revenueThisMonth: 0, commission: 8, rateModifier: 0, hotelId: "SHM-GGL-00192", apiKeyConfigured: false, webhookActive: false },
-  { id: "ch_hostelworld", name: "Hostelworld", logo: "H", category: "Global OTA", status: "NOT_CONNECTED", roomsPushed: 0, bookingsThisMonth: 0, revenueThisMonth: 0, commission: 15, rateModifier: 0, hotelId: "SHM-HWL-44901", apiKeyConfigured: false, webhookActive: false },
-];
-
-// ─── Rate Parity Grid ───
-export interface RateParityRow {
-  roomType: string;
-  baseRate: number;
-  channels: Record<string, number>;
-}
-
-export const rateParityData: RateParityRow[] = [
-  { roomType: "Standard Room", baseRate: 3500, channels: { "Booking.com": 3500, "MakeMyTrip": 3675, "Goibibo": 3675, "Agoda": 3500, "Expedia": 3500, "Airbnb": 3850 } },
-  { roomType: "Deluxe Room", baseRate: 5500, channels: { "Booking.com": 5500, "MakeMyTrip": 5775, "Goibibo": 5775, "Agoda": 5500, "Expedia": 5500, "Airbnb": 6050 } },
-  { roomType: "Premium Room", baseRate: 8000, channels: { "Booking.com": 8000, "MakeMyTrip": 8400, "Goibibo": 8400, "Agoda": 8000, "Expedia": 8000, "Airbnb": 8800 } },
-  { roomType: "Royal Suite", baseRate: 15000, channels: { "Booking.com": 15000, "MakeMyTrip": 15750, "Goibibo": 15750, "Agoda": 15000, "Expedia": 15000, "Airbnb": 16500 } },
+  { id: "ch_booking", name: "Booking.com", logo: "B", category: "Global OTA", status: "NOT_CONNECTED", roomsPushed: 0, bookingsThisMonth: 0, revenueThisMonth: 0, commission: 0, rateModifier: 0, apiKeyConfigured: false, webhookActive: false },
+  { id: "ch_agoda", name: "Agoda", logo: "A", category: "Global OTA", status: "NOT_CONNECTED", roomsPushed: 0, bookingsThisMonth: 0, revenueThisMonth: 0, commission: 0, rateModifier: 0, apiKeyConfigured: false, webhookActive: false },
 ];
 
 // ─── Revenue Manager Data ───
