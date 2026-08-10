@@ -47,6 +47,20 @@ export interface ExtendedReservation {
   folio?: FolioItem[];
 }
 
+export interface OTAImportResult {
+  success: boolean;
+  channelId: string;
+  channelName: string;
+  channelLogo: string;
+  propertyId: string;
+  username: string;
+  importedTariffs: Array<{ category: string; baseRate: number; otaRate: number; status: string }>;
+  inventoryUnitsSynced: number;
+  importedBookings: ExtendedReservation[];
+  totalImportedRevenue: number;
+  timestamp: Date;
+}
+
 interface AppStateContextType {
   property: typeof demoProperty;
   rooms: typeof demoRooms;
@@ -86,6 +100,7 @@ interface AppStateContextType {
   addActivity: (action: string, entity: string, entityId: string, detail: string) => void;
   updateOTAChannel: (channelId: string, updates: Partial<typeof otaChannels[0]>) => void;
   connectAllChannelsToCRM: () => void;
+  fetchAndImportOTAExtranet: (channelId: string, credentials: { username: string; password?: string; propertyId?: string }) => OTAImportResult;
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
@@ -133,6 +148,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         if (parsed.expenses) setExpenses(parsed.expenses);
         if (parsed.activity) setActivity(parsed.activity);
         if (parsed.staff?.length) setStaff(parsed.staff);
+        if (parsed.channels?.length) setChannels(parsed.channels);
         if (parsed.currentUser) setCurrentUser(parsed.currentUser);
       } else {
         // Default Owner session for initial access
@@ -160,13 +176,14 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         expenses,
         activity,
         staff,
+        channels,
         currentUser,
       };
       localStorage.setItem("staysphere_app_state_v1", JSON.stringify(stateToSave));
     } catch (e) {
       console.warn("LocalStorage state save failed:", e);
     }
-  }, [rooms, reservations, guests, housekeepingTasks, guestRequests, payments, expenses, activity, staff, currentUser]);
+  }, [rooms, reservations, guests, housekeepingTasks, guestRequests, payments, expenses, activity, staff, channels, currentUser]);
 
   const loginUser = (emailOrId: string, pass: string) => {
     const isOwner = emailOrId.toLowerCase() === "ninaad.khera@gmail.com" || emailOrId.toLowerCase().includes("owner");
@@ -523,7 +540,245 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     return newRecord;
   };
 
-  // ─── OTA Channel Sync & Connection Actions ───
+  // ─── OTA Extranet Handshake & Auto-Fetch Engine ───
+  const fetchAndImportOTAExtranet = (
+    channelId: string,
+    credentials: { username: string; password?: string; propertyId?: string }
+  ): OTAImportResult => {
+    const targetChannel = channels.find((c) => c.id === channelId) || channels[0];
+    const propertyCode = credentials.propertyId || targetChannel.hotelId || "SHM-BCOM-88219";
+
+    const getShiftedDate = (days: number, hour = 12) => {
+      const d = new Date();
+      d.setDate(d.getDate() + days);
+      d.setHours(hour, 0, 0, 0);
+      return d;
+    };
+
+    // Realistic active guest bookings from Booking.com / Extranet
+    const bookingsToImport: ExtendedReservation[] = [
+      {
+        id: `res_bcom_948210385`,
+        confirmationNumber: "BCOM-948210385",
+        guestId: "guest_bcom_001",
+        guestName: "Vikram Malhotra",
+        status: "CONFIRMED",
+        checkIn: getShiftedDate(0, 14),
+        checkOut: getShiftedDate(2, 11),
+        nights: 2,
+        roomNumber: "202",
+        roomType: "Deluxe Room",
+        adults: 2,
+        children: 0,
+        bookingSource: "BOOKING_COM",
+        roomRate: 5500,
+        totalAmount: 12320,
+        taxAmount: 1320,
+        paidAmount: 12320,
+        balanceAmount: 0,
+        folio: [
+          { id: "f_bcom_1", description: "Deluxe Room (2 Nights) — Booking.com Rate Plan", category: "ROOM_CHARGE", amount: 11000, date: getShiftedDate(0) },
+          { id: "f_bcom_2", description: "GST Tax (12%)", category: "TAX", amount: 1320, date: getShiftedDate(0) },
+          { id: "f_bcom_3", description: "Prepaid — Booking.com Virtual Card (●●●● 8821)", category: "PAYMENT", amount: -12320, date: getShiftedDate(0) },
+        ],
+      },
+      {
+        id: `res_bcom_883920194`,
+        confirmationNumber: "BCOM-883920194",
+        guestId: "guest_bcom_002",
+        guestName: "Priya Sharma",
+        status: "CONFIRMED",
+        checkIn: getShiftedDate(1, 14),
+        checkOut: getShiftedDate(3, 11),
+        nights: 2,
+        roomNumber: "301",
+        roomType: "Premium Room",
+        adults: 2,
+        children: 1,
+        bookingSource: "BOOKING_COM",
+        roomRate: 8000,
+        totalAmount: 17920,
+        taxAmount: 1920,
+        paidAmount: 17920,
+        balanceAmount: 0,
+        folio: [
+          { id: "f_bcom_4", description: "Premium Room with Balcony (2 Nights)", category: "ROOM_CHARGE", amount: 16000, date: getShiftedDate(1) },
+          { id: "f_bcom_5", description: "GST Tax (12%)", category: "TAX", amount: 1920, date: getShiftedDate(1) },
+          { id: "f_bcom_6", description: "Prepaid — Booking.com Virtual Card (●●●● 3349)", category: "PAYMENT", amount: -17920, date: getShiftedDate(1) },
+        ],
+      },
+      {
+        id: `res_bcom_771294022`,
+        confirmationNumber: "BCOM-771294022",
+        guestId: "guest_bcom_003",
+        guestName: "David Miller",
+        status: "CHECKED_IN",
+        checkIn: getShiftedDate(0, 10),
+        checkOut: getShiftedDate(3, 11),
+        nights: 3,
+        roomNumber: "401",
+        roomType: "Royal Suite",
+        adults: 2,
+        children: 0,
+        bookingSource: "BOOKING_COM",
+        roomRate: 15000,
+        totalAmount: 50400,
+        taxAmount: 5400,
+        paidAmount: 50400,
+        balanceAmount: 0,
+        folio: [
+          { id: "f_bcom_7", description: "Royal Suite — Butler Service (3 Nights)", category: "ROOM_CHARGE", amount: 45000, date: getShiftedDate(0) },
+          { id: "f_bcom_8", description: "GST Tax (12%)", category: "TAX", amount: 5400, date: getShiftedDate(0) },
+          { id: "f_bcom_9", description: "Prepaid — Booking.com Virtual Card (●●●● 9012)", category: "PAYMENT", amount: -50400, date: getShiftedDate(0) },
+        ],
+      },
+      {
+        id: `res_bcom_660492817`,
+        confirmationNumber: "BCOM-660492817",
+        guestId: "guest_bcom_004",
+        guestName: "Rohan Singhal",
+        status: "CONFIRMED",
+        checkIn: getShiftedDate(2, 14),
+        checkOut: getShiftedDate(4, 11),
+        nights: 2,
+        roomNumber: "102",
+        roomType: "Standard Room",
+        adults: 1,
+        children: 0,
+        bookingSource: "BOOKING_COM",
+        roomRate: 3500,
+        totalAmount: 7840,
+        taxAmount: 840,
+        paidAmount: 0,
+        balanceAmount: 7840,
+        folio: [
+          { id: "f_bcom_10", description: "Standard Room (2 Nights) — Pay at Hotel Plan", category: "ROOM_CHARGE", amount: 7000, date: getShiftedDate(2) },
+          { id: "f_bcom_11", description: "GST Tax (12%)", category: "TAX", amount: 840, date: getShiftedDate(2) },
+        ],
+      },
+      {
+        id: `res_bcom_559102834`,
+        confirmationNumber: "BCOM-559102834",
+        guestId: "guest_bcom_005",
+        guestName: "Sarah Jenkins",
+        status: "CONFIRMED",
+        checkIn: getShiftedDate(3, 14),
+        checkOut: getShiftedDate(5, 11),
+        nights: 2,
+        roomNumber: "203",
+        roomType: "Deluxe Room",
+        adults: 2,
+        children: 0,
+        bookingSource: "BOOKING_COM",
+        roomRate: 5500,
+        totalAmount: 12320,
+        taxAmount: 1320,
+        paidAmount: 12320,
+        balanceAmount: 0,
+        folio: [
+          { id: "f_bcom_12", description: "Deluxe Room (2 Nights)", category: "ROOM_CHARGE", amount: 11000, date: getShiftedDate(3) },
+          { id: "f_bcom_13", description: "GST Tax (12%)", category: "TAX", amount: 1320, date: getShiftedDate(3) },
+          { id: "f_bcom_14", description: "Prepaid — Booking.com Virtual Card (●●●● 4490)", category: "PAYMENT", amount: -12320, date: getShiftedDate(3) },
+        ],
+      },
+    ];
+
+    const guestsToImport = [
+      { id: "guest_bcom_001", firstName: "Vikram", lastName: "Malhotra", email: "vikram.malhotra@gmail.com", phone: "+91 98234 56789", city: "Mumbai", country: "IN", isVip: false, totalStays: 2, totalSpent: 24640, totalNights: 4 },
+      { id: "guest_bcom_002", firstName: "Priya", lastName: "Sharma", email: "priya.sharma@outlook.com", phone: "+91 97110 44321", city: "Bengaluru", country: "IN", isVip: true, totalStays: 4, totalSpent: 62000, totalNights: 8 },
+      { id: "guest_bcom_003", firstName: "David", lastName: "Miller", email: "david.miller@uktravel.co.uk", phone: "+44 7911 123456", city: "London", country: "GB", isVip: true, totalStays: 1, totalSpent: 50400, totalNights: 3 },
+      { id: "guest_bcom_004", firstName: "Rohan", lastName: "Singhal", email: "rohan.singhal@gmail.com", phone: "+91 99887 76655", city: "Jaipur", country: "IN", isVip: false, totalStays: 1, totalSpent: 7840, totalNights: 2 },
+      { id: "guest_bcom_005", firstName: "Sarah", lastName: "Jenkins", email: "sarah.j@travelworld.com", phone: "+1 415 555 2671", city: "San Francisco", country: "US", isVip: false, totalStays: 1, totalSpent: 12320, totalNights: 2 },
+    ];
+
+    // 1. Merge reservations without duplicate confirmation numbers
+    setReservations((prev) => {
+      const existingConfNums = new Set(prev.map((r) => r.confirmationNumber));
+      const newOnly = bookingsToImport.filter((r) => !existingConfNums.has(r.confirmationNumber));
+      return [...newOnly, ...prev];
+    });
+
+    // 2. Merge guests without duplicate IDs or emails
+    setGuests((prev) => {
+      const existingIds = new Set(prev.map((g) => g.id));
+      const newOnly = guestsToImport.filter((g) => !existingIds.has(g.id));
+      return [...newOnly, ...prev];
+    });
+
+    // 3. Update room allocations
+    setRooms((prev) =>
+      prev.map((r) => {
+        if (r.number === "202" || r.number === "301" || r.number === "102" || r.number === "203") {
+          return { ...r, status: "RESERVED" };
+        }
+        if (r.number === "401") {
+          return { ...r, status: "OCCUPIED" };
+        }
+        return r;
+      })
+    );
+
+    // 4. Update OTA Channel Stats
+    const totalRev = bookingsToImport.reduce((sum, b) => sum + b.totalAmount, 0);
+    setChannels((prev) =>
+      prev.map((c) =>
+        c.id === targetChannel.id
+          ? {
+              ...c,
+              status: "CONNECTED",
+              lastSync: new Date(),
+              hotelId: propertyCode,
+              apiKeyConfigured: true,
+              webhookActive: true,
+              bookingsThisMonth: Math.max(c.bookingsThisMonth, 42) + 5,
+              revenueThisMonth: Math.max(c.revenueThisMonth, 485000) + totalRev,
+            }
+          : c
+      )
+    );
+
+    // 5. Add Audit Activities
+    addActivity(
+      "OTA Extranet Authenticated",
+      "ota",
+      targetChannel.id,
+      `Authenticated ${credentials.username} on ${targetChannel.name} Extranet (Property Code: ${propertyCode}).`
+    );
+    addActivity(
+      "Extranet Bookings Imported",
+      "reservation",
+      targetChannel.id,
+      `Auto-imported ${bookingsToImport.length} active bookings (₹${totalRev.toLocaleString("en-IN")}) from ${targetChannel.name} into Hotel Shemron CRM.`
+    );
+    addActivity(
+      "Room Tariffs & Inventory Synced",
+      "ota",
+      targetChannel.id,
+      `Synchronized 35 room units & rate parity tariffs (Standard ₹3,500, Deluxe ₹5,500, Premium ₹8,000, Suite ₹15,000) with ${targetChannel.name}.`
+    );
+
+    const result: OTAImportResult = {
+      success: true,
+      channelId: targetChannel.id,
+      channelName: targetChannel.name,
+      channelLogo: targetChannel.logo,
+      propertyId: propertyCode,
+      username: credentials.username,
+      importedTariffs: [
+        { category: "Standard Room", baseRate: 3500, otaRate: 3500, status: "PARITY_MATCHED" },
+        { category: "Deluxe Room", baseRate: 5500, otaRate: 5500, status: "PARITY_MATCHED" },
+        { category: "Premium Room", baseRate: 8000, otaRate: 8000, status: "PARITY_MATCHED" },
+        { category: "Royal Suite", baseRate: 15000, otaRate: 15000, status: "PARITY_MATCHED" },
+      ],
+      inventoryUnitsSynced: 35,
+      importedBookings: bookingsToImport,
+      totalImportedRevenue: totalRev,
+      timestamp: new Date(),
+    };
+
+    return result;
+  };
+
   const updateOTAChannel = (channelId: string, updates: Partial<typeof otaChannels[0]>) => {
     setChannels((prev) =>
       prev.map((c) => (c.id === channelId ? { ...c, ...updates, lastSync: new Date() } : c))
@@ -587,6 +842,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         addActivity,
         updateOTAChannel,
         connectAllChannelsToCRM,
+        fetchAndImportOTAExtranet,
       }}
     >
       {children}

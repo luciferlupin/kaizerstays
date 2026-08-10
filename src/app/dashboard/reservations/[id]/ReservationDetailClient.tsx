@@ -30,9 +30,10 @@ export default function ReservationDetailClient() {
   const [payMethod, setPayMethod] = useState("UPI");
   const [payDone, setPayDone] = useState(false);
 
-  // Match reservation or fallback to first
-  const res = reservations[0];
-  const guest = guests.find((g) => g.id === res?.guestId) || guests[0];
+  const params = useParams();
+  const resId = params?.id as string | undefined;
+  const res = (resId ? reservations.find((r) => r.id === resId || r.confirmationNumber === resId) : null) || reservations[0];
+  const guest = guests.find((g) => g.id === res?.guestId || (res && `${g.firstName} ${g.lastName}`.trim() === res.guestName)) || guests[0];
 
   const folioItems = res.folio || [];
   const totalCharges = folioItems
