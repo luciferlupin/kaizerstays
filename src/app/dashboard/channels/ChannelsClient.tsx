@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 
 export default function ChannelsClient() {
-  const { otaChannels: channels, updateOTAChannel, connectAllChannelsToCRM, fetchAndImportOTAExtranet, addActivity } = useAppState();
+  const { otaChannels: channels, reservations, updateOTAChannel, connectAllChannelsToCRM, fetchAndImportOTAExtranet, addActivity } = useAppState();
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -72,8 +72,9 @@ export default function ChannelsClient() {
   const [newCommission, setNewCommission] = useState(15);
   const [newCategory, setNewCategory] = useState<OTAChannel["category"]>("Global OTA");
 
-  const totalOTARevenue = channels.reduce((sum, c) => sum + c.revenueThisMonth, 0);
-  const totalOTABookings = channels.reduce((sum, c) => sum + c.bookingsThisMonth, 0);
+  const otaReservations = reservations.filter((r) => r.bookingSource !== "DIRECT" && r.bookingSource !== "WALK_IN" && r.bookingSource !== "WEBSITE");
+  const totalOTARevenue = otaReservations.reduce((sum, r) => sum + r.totalAmount, 0);
+  const totalOTABookings = otaReservations.length;
   const connectedCount = channels.filter((c) => c.status === "CONNECTED").length;
 
   const filteredChannels = selectedCategory === "ALL"
@@ -402,117 +403,143 @@ export default function ChannelsClient() {
           marginBottom: "32px",
         }}
       >
-        {filteredChannels.map((ch) => (
-          <div
-            key={ch.id}
-            className="card"
-            style={{
-              padding: "20px",
-              border: ch.status === "CONNECTED" ? "1px solid rgba(52, 199, 89, 0.3)" : "1px solid var(--color-border)",
-              transition: "transform 0.15s ease, box-shadow 0.15s ease",
-            }}
-          >
-            {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <div
-                  style={{
-                    width: "44px",
-                    height: "44px",
-                    borderRadius: "var(--radius-md)",
-                    background: "linear-gradient(135deg, var(--color-primary-light) 0%, rgba(0,113,227,0.15) 100%)",
-                    color: "var(--color-primary)",
-                    fontWeight: 800,
-                    fontSize: "20px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
-                  }}
+        {filteredChannels.map((ch) => {
+          const channelBookings = reservations.filter((r) => {
+            if (ch.id === "ch_booking") return r.bookingSource === "BOOKING_COM";
+            if (ch.id === "ch_makemytrip") return r.bookingSource === "MAKEMYTRIP";
+            if (ch.id === "ch_goibibo") return r.bookingSource === "GOIBIBO";
+            if (ch.id === "ch_agoda") return r.bookingSource === "AGODA";
+            if (ch.id === "ch_expedia") return r.bookingSource === "EXPEDIA";
+            if (ch.id === "ch_airbnb") return r.bookingSource === "AIRBNB";
+            return r.bookingSource === ch.name.toUpperCase().replace(/\s+/g, "_");
+          });
+          const channelRevenue = channelBookings.reduce((sum, r) => sum + r.totalAmount, 0);
+          const isConnected = ch.status === "CONNECTED";
+          const displayBookings = isConnected ? (channelBookings.length || ch.bookingsThisMonth) : 0;
+          const displayRevenue = isConnected ? (channelRevenue || ch.revenueThisMonth) : 0;
+
+          return (
+            <div
+              key={ch.id}
+              className="card"
+              style={{
+                padding: "20px",
+                border: isConnected ? "1px solid rgba(52, 199, 89, 0.3)" : "1px solid var(--color-border)",
+                transition: "transform 0.15s ease, box-shadow 0.15s ease",
+              }}
+            >
+              {/* Header */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "var(--radius-md)",
+                      background: isConnected
+                        ? "linear-gradient(135deg, var(--color-primary-light) 0%, rgba(0,113,227,0.15) 100%)"
+                        : "var(--color-bg-secondary)",
+                      color: isConnected ? "var(--color-primary)" : "var(--color-text-secondary)",
+                      fontWeight: 800,
+                      fontSize: "20px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
+                    }}
+                  >
+                    {ch.logo}
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: "16px", fontWeight: 700, margin: 0 }}>{ch.name}</h3>
+                    <span className="text-xs text-tertiary" style={{ display: "block", marginTop: "2px" }}>
+                      {ch.category} • Comm: {ch.commission}%
+                    </span>
+                  </div>
+                </div>
+
+                <span
+                  className={`badge ${
+                    isConnected
+                      ? "badge-success"
+                      : ch.status === "SYNCING"
+                      ? "badge-primary"
+                      : "badge-default"
+                  }`}
+                  style={{ fontSize: "11px" }}
                 >
-                  {ch.logo}
+                  {isConnected ? "● 2-WAY LINKED" : "NOT CONNECTED"}
+                </span>
+              </div>
+
+              {/* Hotel Credentials & Mapping Info */}
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "var(--color-text-secondary)",
+                  marginBottom: "12px",
+                  padding: "8px 10px",
+                  borderRadius: "6px",
+                  background: "var(--color-bg-secondary, rgba(0,0,0,0.03))",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span>ID: <code className="mono">{ch.hotelId || "SHM-EXTRANET-01"}</code></span>
+                <span className="text-xs" style={{ fontWeight: 600, color: isConnected ? "var(--green-600)" : "var(--color-text-tertiary)" }}>
+                  {isConnected ? "Webhook Active" : "Extranet Required"}
+                </span>
+              </div>
+
+              {/* Stats Summary */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "10px",
+                  background: "var(--color-bg-tertiary)",
+                  padding: "12px",
+                  borderRadius: "var(--radius-md)",
+                  marginBottom: "14px",
+                }}
+              >
+                <div>
+                  <span className="text-xs text-tertiary">Live Bookings</span>
+                  <div style={{ fontSize: "16px", fontWeight: 700, marginTop: "2px" }}>{displayBookings}</div>
                 </div>
                 <div>
-                  <h3 style={{ fontSize: "16px", fontWeight: 700, margin: 0 }}>{ch.name}</h3>
-                  <span className="text-xs text-tertiary" style={{ display: "block", marginTop: "2px" }}>
-                    {ch.category} • Comm: {ch.commission}%
-                  </span>
+                  <span className="text-xs text-tertiary">Channel Revenue</span>
+                  <div className={`mono font-bold ${displayRevenue > 0 ? "text-primary" : "text-tertiary"}`} style={{ fontSize: "15px", marginTop: "2px" }}>
+                    {formatCurrency(displayRevenue)}
+                  </div>
                 </div>
               </div>
 
-              <span
-                className={`badge ${
-                  ch.status === "CONNECTED"
-                    ? "badge-success"
-                    : ch.status === "SYNCING"
-                    ? "badge-primary"
-                    : "badge-danger"
-                }`}
-                style={{ fontSize: "11px" }}
-              >
-                {ch.status === "CONNECTED" ? "2-WAY LINKED" : ch.status}
-              </span>
-            </div>
-
-            {/* Hotel Credentials & Mapping Info */}
-            <div
-              style={{
-                fontSize: "12px",
-                color: "var(--color-text-secondary)",
-                marginBottom: "12px",
-                padding: "8px 10px",
-                borderRadius: "6px",
-                background: "var(--color-bg-secondary, rgba(0,0,0,0.03))",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <span>ID: <code className="mono">{ch.hotelId || "SHM-AUTO-01"}</code></span>
-              <span className="text-xs text-success" style={{ fontWeight: 600 }}>
-                {ch.webhookActive ? "Webhook Active" : "Polling Active"}
-              </span>
-            </div>
-
-            {/* Stats Summary */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "10px",
-                background: "var(--color-bg-tertiary)",
-                padding: "12px",
-                borderRadius: "var(--radius-md)",
-                marginBottom: "14px",
-              }}
-            >
-              <div>
-                <span className="text-xs text-tertiary">Bookings (Month)</span>
-                <div style={{ fontSize: "16px", fontWeight: 700, marginTop: "2px" }}>{ch.bookingsThisMonth}</div>
-              </div>
-              <div>
-                <span className="text-xs text-tertiary">Revenue (Month)</span>
-                <div className="mono font-bold text-primary" style={{ fontSize: "15px", marginTop: "2px" }}>
-                  {formatCurrency(ch.revenueThisMonth)}
+              {/* Sync Metadata & Config Action */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "8px", borderTop: "1px dashed var(--color-border)" }}>
+                <div style={{ fontSize: "11px", color: "var(--color-text-tertiary)" }} suppressHydrationWarning>
+                  {isConnected && ch.lastSync ? `Sync: ${formatDate(ch.lastSync, "hh:mm a")}` : "Status: Ready to link"}
                 </div>
+                <button
+                  className={`btn btn-sm ${isConnected ? "btn-ghost" : "btn-primary"}`}
+                  style={{ fontSize: "12px", gap: "6px" }}
+                  onClick={() => handleOpenConfigModal(ch)}
+                >
+                  {isConnected ? (
+                    <>
+                      <Settings2 size={13} /> Manage Credentials
+                    </>
+                  ) : (
+                    <>
+                      <Key size={13} /> Extranet Login
+                    </>
+                  )}
+                </button>
               </div>
             </div>
-
-            {/* Sync Metadata & Config Action */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "8px", borderTop: "1px dashed var(--color-border)" }}>
-              <div style={{ fontSize: "11px", color: "var(--color-text-tertiary)" }} suppressHydrationWarning>
-                Sync: {mounted && ch.lastSync ? formatDate(ch.lastSync, "hh:mm:ss a") : "Just now"}
-              </div>
-              <button
-                className="btn btn-ghost btn-sm"
-                style={{ fontSize: "12px", gap: "6px", color: "var(--color-primary)" }}
-                onClick={() => handleOpenConfigModal(ch)}
-              >
-                <Settings2 size={13} /> Config Credentials
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Rate Parity Grid */}

@@ -146,9 +146,25 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         if (parsed.guestRequests) setGuestRequests(parsed.guestRequests.filter((r: any) => r.id !== "req_001"));
         if (parsed.payments) setPayments(parsed.payments.filter((p: any) => p.id !== "pay_001"));
         if (parsed.expenses) setExpenses(parsed.expenses.filter((e: any) => e.id !== "exp_001"));
-        if (parsed.activity) setActivity(parsed.activity.filter((a: any) => a.id !== "act_001"));
         if (parsed.staff?.length) setStaff(parsed.staff);
-        if (parsed.channels?.length) setChannels(parsed.channels);
+        if (parsed.channels?.length) {
+          const cleanedChannels = parsed.channels.map((ch: any) => {
+            if (ch.revenueThisMonth === 485000 || ch.revenueThisMonth === 312000 || ch.revenueThisMonth === 198000 || ch.bookingsThisMonth === 42 || ch.bookingsThisMonth === 28) {
+              return {
+                ...ch,
+                status: "NOT_CONNECTED",
+                roomsPushed: 0,
+                bookingsThisMonth: 0,
+                revenueThisMonth: 0,
+                apiKeyConfigured: false,
+                webhookActive: false,
+                lastSync: undefined,
+              };
+            }
+            return ch;
+          });
+          setChannels(cleanedChannels);
+        }
         if (parsed.currentUser) setCurrentUser(parsed.currentUser);
       } else {
         // Default Owner session for initial access
