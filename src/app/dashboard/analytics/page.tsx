@@ -1,7 +1,7 @@
 import AnalyticsClient from "./AnalyticsClient";
 
 export const metadata = {
-  title: "Analytics & Revenue KPIs — StaySphere",
+  title: "Analytics & Revenue KPIs — KaizerStays",
 };
 
 export default function AnalyticsPage() {

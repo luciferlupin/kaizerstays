@@ -1,7 +1,7 @@
 import SettingsClient from "./SettingsClient";
 
 export const metadata = {
-  title: "Property Settings — StaySphere",
+  title: "Property Settings — KaizerStays",
 };
 
 export default function SettingsPage() {

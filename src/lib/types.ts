@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════
-// StaySphere — Shared TypeScript Types (Fail-Safe)
+// KaizerStays — Shared TypeScript Types (Fail-Safe)
 // ═══════════════════════════════════════════════════
 
 export type RoomStatus = "AVAILABLE" | "OCCUPIED" | "DIRTY" | "CLEANING" | "MAINTENANCE" | "RESERVED" | "OUT_OF_SERVICE" | "INSPECTED";

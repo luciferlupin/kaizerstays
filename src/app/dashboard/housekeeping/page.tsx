@@ -1,7 +1,7 @@
 import HousekeepingClient from "./HousekeepingClient";
 
 export const metadata = {
-  title: "Housekeeping Management — StaySphere",
+  title: "Housekeeping Management — KaizerStays",
 };
 
 export default function HousekeepingPage() {

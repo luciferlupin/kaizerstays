@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════
-// StaySphere — Restaurant POS Data
+// KaizerStays — Restaurant POS Data
 // Menu items, tables, kitchen orders for Hotel Shemron
 // ═══════════════════════════════════════════════════
 

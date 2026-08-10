@@ -57,7 +57,12 @@ export default function LoginClient() {
   const handleQuickRole = (roleEmail: string, roleName: string) => {
     setEmailOrId(roleEmail);
     setPassword("12345");
-    handleLogin(null as any, roleEmail, "12345");
+    setError(false);
+    if (loginUser(roleEmail, "12345")) {
+      router.push(roleName.toLowerCase().includes("house") ? "/employee" : "/dashboard");
+    } else {
+      setError(true);
+    }
   };
 
   return (
@@ -106,7 +111,7 @@ export default function LoginClient() {
             <Building2 size={26} />
           </div>
           <h1 style={{ fontSize: "22px", fontWeight: 800, color: "#1D1D1F", letterSpacing: "-0.02em" }}>
-            StaySphere OS
+            KaizerStays OS
           </h1>
           <p style={{ fontSize: "13px", color: "#6E6E73", marginTop: "4px" }}>
             <strong>{demoProperty.name}</strong> • Staff & Owner Authentication
@@ -210,7 +215,7 @@ export default function LoginClient() {
         {/* Quick Role Access Shortcuts */}
         <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: "1px solid rgba(0,0,0,0.08)" }}>
           <span style={{ fontSize: "11px", fontWeight: 700, color: "#86868B", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: "10px", textAlign: "center" }}>
-            ⚡ 1-Tap Quick Staff Role Access
+            Preview role access (passcode 12345)
           </span>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>

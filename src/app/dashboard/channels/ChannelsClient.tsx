@@ -109,7 +109,7 @@ export default function ChannelsClient() {
             Partner verification is required
           </h3>
           <p className="text-sm text-secondary" style={{ margin: 0, lineHeight: 1.55 }}>
-            StaySphere does not store OTA usernames or passwords and cannot
+            KaizerStays does not store OTA usernames or passwords and cannot
             turn a normal extranet login into a production two-way API. Live
             sync must use an approved Booking.com/Agoda connectivity API or a
             contracted channel manager. Until then, property IDs, rates,

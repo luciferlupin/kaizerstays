@@ -3,33 +3,47 @@
 import { useState } from "react";
 import { demoRoomTypes, demoProperty } from "@/lib/demo-data";
 import { formatCurrency, formatDate, getToday } from "@/lib/utils";
+import { useAppState } from "@/context/AppStateContext";
+import { PromoCode, promoCodes } from "@/lib/channels-data";
+import { getAverageRateForStay, getDateKeys, getRestrictionKey, loadRateRestrictions, toDateKey } from "@/lib/rates";
 import {
-  Hotel,
-  Calendar,
-  Users,
   CheckCircle2,
-  Tag,
   Star,
   MapPin,
   Check,
   ShieldCheck,
-  CreditCard,
 } from "lucide-react";
 
+function loadAvailablePromos(): PromoCode[] {
+  const starterPromos = promoCodes.map((promo) => ({ ...promo, usedCount: 0 }));
+  if (typeof window === "undefined") return starterPromos;
+  try {
+    const stored = localStorage.getItem("kaizerstays_promo_codes_v1");
+    return stored
+      ? JSON.parse(stored).map((promo: PromoCode) => ({ ...promo, validFrom: new Date(promo.validFrom), validTo: new Date(promo.validTo) }))
+      : starterPromos;
+  } catch {
+    return starterPromos;
+  }
+}
+
 export default function BookingClient() {
+  const { roomTypes, rooms, reservations, addReservation } = useAppState();
   const today = getToday();
   const defaultCheckOut = new Date(today);
   defaultCheckOut.setDate(today.getDate() + 2);
 
-  const [checkIn, setCheckIn] = useState<Date>(today);
-  const [checkOut, setCheckOut] = useState<Date>(defaultCheckOut);
+  const [checkIn, setCheckIn] = useState<string>(() => toDateKey(today));
+  const [checkOut, setCheckOut] = useState<string>(() => toDateKey(defaultCheckOut));
   const [adults, setAdults] = useState(2);
   const [selectedRoom, setSelectedRoom] = useState<typeof demoRoomTypes[0] | null>(null);
 
   // Promo code
   const [promoInput, setPromoInput] = useState("");
-  const [discountPercent, setDiscountPercent] = useState(0);
+  const [activePromo, setActivePromo] = useState<PromoCode | null>(null);
+  const [availablePromos] = useState<PromoCode[]>(loadAvailablePromos);
   const [promoSuccess, setPromoSuccess] = useState(false);
+  const [promoError, setPromoError] = useState("");
 
   // Guest details form state
   const [step, setStep] = useState<"SELECT_ROOM" | "GUEST_INFO" | "CONFIRMATION">("SELECT_ROOM");
@@ -37,19 +51,16 @@ export default function BookingClient() {
   const [guestEmail, setGuestEmail] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
   const [confirmationNo, setConfirmationNo] = useState("");
+  const [assignedRoomNumber, setAssignedRoomNumber] = useState("");
 
-  const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 3600 * 24)));
+  const nights = getDateKeys(checkIn, checkOut).length;
 
   const applyPromo = () => {
-    if (promoInput.trim().toUpperCase() === "WELCOME20") {
-      setDiscountPercent(20);
-      setPromoSuccess(true);
-    } else if (promoInput.trim().toUpperCase() === "SHEMRON15") {
-      setDiscountPercent(15);
-      setPromoSuccess(true);
-    } else {
-      alert("Invalid promo code. Try 'WELCOME20' for 20% discount!");
-    }
+    const now = new Date();
+    const promo = availablePromos.find((item) => item.code === promoInput.trim().toUpperCase() && item.isActive && new Date(item.validFrom) <= now && new Date(item.validTo) >= now && (!item.usageLimit || item.usedCount < item.usageLimit));
+    setActivePromo(promo || null);
+    setPromoSuccess(Boolean(promo));
+    setPromoError(promo ? "" : "This promo code is invalid, inactive or outside its validity period.");
   };
 
   const handleSelectRoom = (room: typeof demoRoomTypes[0]) => {
@@ -58,15 +69,62 @@ export default function BookingClient() {
   };
 
   const handleCompleteBooking = () => {
-    if (!guestName.trim() || !guestEmail.trim()) return;
-    const conf = `SS-SHM-${formatDate(new Date(), "yyyyMMdd")}-${Math.floor(Math.random() * 9000 + 1000)}`;
-    setConfirmationNo(conf);
+    if (!guestName.trim() || !guestEmail.trim() || !guestPhone.trim() || !selectedRoom) return;
+    const availableRooms = getAvailableRoomsForStay(selectedRoom.id);
+    const roomNumber = availableRooms[0]?.number;
+    if (!roomNumber) return;
+    const stayRate = getAverageRateForStay(selectedRoom.id, checkIn, checkOut, selectedRoom.baseRate);
+    const total = getFinalTotal(selectedRoom);
+    const subtotalAfterDiscount = Math.round(total / 1.12);
+    const tax = total - subtotalAfterDiscount;
+    const booking = addReservation({
+      guestId: `guest_web_${guestEmail.trim().toLowerCase()}`,
+      guestName: guestName.trim(),
+      guestEmail: guestEmail.trim(),
+      guestPhone: guestPhone.trim(),
+      status: "CONFIRMED",
+      checkIn: new Date(`${checkIn}T12:00:00`),
+      checkOut: new Date(`${checkOut}T12:00:00`),
+      nights,
+      roomNumber,
+      roomType: selectedRoom.name,
+      adults,
+      children: 0,
+      bookingSource: "WEBSITE",
+      roomRate: stayRate.averageRate,
+      totalAmount: total,
+      taxAmount: tax,
+      paidAmount: 0,
+      balanceAmount: total,
+      notes: activePromo ? `Direct booking promo: ${activePromo.code}` : "Direct website booking",
+    });
+    setConfirmationNo(booking.confirmationNumber);
+    setAssignedRoomNumber(roomNumber);
     setStep("CONFIRMATION");
   };
 
-  const getFinalTotal = (baseRate: number) => {
-    const subtotal = baseRate * nights;
-    const discount = Math.round(subtotal * (discountPercent / 100));
+  const getAvailableRoomsForStay = (roomTypeId: string) => {
+    if (!nights) return [];
+    const requestedStart = new Date(`${checkIn}T12:00:00`);
+    const requestedEnd = new Date(`${checkOut}T12:00:00`);
+    const restrictions = loadRateRestrictions();
+    const dateKeys = getDateKeys(checkIn, checkOut);
+    if (dateKeys.some((date) => restrictions[getRestrictionKey(roomTypeId, date)]?.stopSell)) return [];
+    const physical = rooms.filter((room) => {
+      if (room.roomTypeId !== roomTypeId || !room.isActive || ["OCCUPIED", "MAINTENANCE", "OUT_OF_SERVICE"].includes(room.status)) return false;
+      return !reservations.some((reservation) => reservation.roomNumber === room.number && !["CANCELLED", "CHECKED_OUT"].includes(reservation.status) && requestedStart < new Date(reservation.checkOut) && requestedEnd > new Date(reservation.checkIn));
+    });
+    const caps = dateKeys.map((date) => restrictions[getRestrictionKey(roomTypeId, date)]?.availabilityCap).filter((cap): cap is number => typeof cap === "number");
+    const cap = caps.length ? Math.min(...caps) : physical.length;
+    return physical.slice(0, Math.max(0, cap));
+  };
+
+  const getFinalTotal = (roomType: typeof demoRoomTypes[0]) => {
+    const stayRate = getAverageRateForStay(roomType.id, checkIn, checkOut, roomType.baseRate);
+    const subtotal = stayRate.averageRate * nights;
+    const discount = activePromo?.discountType === "PERCENTAGE"
+      ? Math.round(subtotal * (activePromo.discountValue / 100))
+      : Math.min(subtotal, activePromo?.discountValue || 0);
     const taxable = subtotal - discount;
     const tax = Math.round(taxable * 0.12);
     return taxable + tax;
@@ -89,9 +147,9 @@ export default function BookingClient() {
               <span className="badge badge-primary" style={{ marginBottom: "8px" }}>
                 Official Direct Booking Engine • Best Rate Guarantee
               </span>
-              <h1 style={{ fontSize: "28px", fontWeight: 900 }}>{demoProperty.name}</h1>
+              <h1 style={{ fontSize: "28px", fontWeight: 900, color: "white" }}>{demoProperty.name}</h1>
               <p style={{ fontSize: "14px", color: "#94A3B8", marginTop: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
-                <MapPin size={14} /> {demoProperty.address}, {demoProperty.city}, {demoProperty.state}
+                <MapPin size={14} /> {demoProperty.address}, {demoProperty.state}
               </p>
             </div>
             <div style={{ display: "flex", gap: "2px", color: "#F59E0B" }}>
@@ -112,8 +170,9 @@ export default function BookingClient() {
               <input
                 type="date"
                 className="form-input"
-                value={checkIn.toISOString().split("T")[0]}
-                onChange={(e) => setCheckIn(new Date(e.target.value))}
+                min={toDateKey(today)}
+                value={checkIn}
+                onChange={(e) => { setCheckIn(e.target.value); setStep("SELECT_ROOM"); setSelectedRoom(null); }}
               />
             </div>
             <div className="form-group" style={{ margin: 0 }}>
@@ -121,8 +180,9 @@ export default function BookingClient() {
               <input
                 type="date"
                 className="form-input"
-                value={checkOut.toISOString().split("T")[0]}
-                onChange={(e) => setCheckOut(new Date(e.target.value))}
+                min={checkIn}
+                value={checkOut}
+                onChange={(e) => { setCheckOut(e.target.value); setStep("SELECT_ROOM"); setSelectedRoom(null); }}
               />
             </div>
             <div className="form-group" style={{ margin: 0 }}>
@@ -153,17 +213,20 @@ export default function BookingClient() {
 
           {promoSuccess && (
             <div style={{ marginTop: "12px", color: "var(--green-600)", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
-              <CheckCircle2 size={16} /> Promo Code Applied! {discountPercent}% Direct Booking Discount Active.
+              <CheckCircle2 size={16} /> Promo code applied: {activePromo?.discountType === "PERCENTAGE" ? `${activePromo.discountValue}% off` : `${formatCurrency(activePromo?.discountValue || 0)} off`}.
             </div>
           )}
+          {promoError && <div className="text-sm text-danger" style={{ marginTop: "10px" }}>{promoError}</div>}
         </div>
 
         {/* STEP 1: ROOM SELECTION */}
         {step === "SELECT_ROOM" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             <h2 style={{ fontSize: "20px", fontWeight: 800 }}>Select Available Room Categories ({nights} Nights)</h2>
-            {demoRoomTypes.map((rt) => {
-              const total = getFinalTotal(rt.baseRate);
+            {roomTypes.map((rt) => {
+              const total = getFinalTotal(rt);
+              const availability = getAvailableRoomsForStay(rt.id).length;
+              const stayRate = getAverageRateForStay(rt.id, checkIn, checkOut, rt.baseRate);
               return (
                 <div key={rt.id} className="card" style={{ padding: "24px", display: "grid", gridTemplateColumns: "1fr 220px", gap: "20px", alignItems: "center" }}>
                   <div>
@@ -183,10 +246,12 @@ export default function BookingClient() {
                     <div className="mono font-bold text-primary" style={{ fontSize: "22px", margin: "4px 0" }}>
                       {formatCurrency(total)}
                     </div>
-                    {discountPercent > 0 && (
-                      <div className="text-xs text-success font-semibold">Includes {discountPercent}% Promo Discount</div>
+                    <div className={`text-xs font-semibold ${availability ? "text-success" : "text-danger"}`}>{availability ? `${availability} room${availability === 1 ? "" : "s"} available` : "Sold out or stop-sold"}</div>
+                    {activePromo && (
+                      <div className="text-xs text-success font-semibold">Includes promo discount</div>
                     )}
-                    <button className="btn btn-primary w-full" style={{ marginTop: "12px" }} onClick={() => handleSelectRoom(rt)}>
+                    {nights < stayRate.minStay && <div className="text-xs text-warning">Minimum stay: {stayRate.minStay} nights</div>}
+                    <button className="btn btn-primary w-full" style={{ marginTop: "12px" }} onClick={() => handleSelectRoom(rt)} disabled={!availability || !nights || nights < stayRate.minStay}>
                       Book This Room
                     </button>
                   </div>
@@ -226,14 +291,14 @@ export default function BookingClient() {
                 <div style={{ background: "var(--color-bg-tertiary)", padding: "16px", borderRadius: "var(--radius-md)", margin: "8px 0" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", fontWeight: 700 }}>
                     <span>Total Payable Amount</span>
-                    <span className="mono text-primary">{formatCurrency(getFinalTotal(selectedRoom.baseRate))}</span>
+                    <span className="mono text-primary">{formatCurrency(getFinalTotal(selectedRoom))}</span>
                   </div>
                   <span className="text-xs text-secondary" style={{ marginTop: "4px", display: "block" }}>
                     No advance payment needed. Pay at hotel during check-in.
                   </span>
                 </div>
 
-                <button className="btn btn-success w-full" onClick={handleCompleteBooking} disabled={!guestName.trim() || !guestEmail.trim()}>
+                <button className="btn btn-success w-full" onClick={handleCompleteBooking} disabled={!guestName.trim() || !guestEmail.trim() || !guestPhone.trim()}>
                   <ShieldCheck size={18} /> Confirm Reservation Now
                 </button>
               </div>
@@ -260,19 +325,19 @@ export default function BookingClient() {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
                 <span className="text-xs text-tertiary">Room Reserved</span>
-                <span className="font-semibold">{selectedRoom.name}</span>
+                <span className="font-semibold">{selectedRoom.name} · Room #{assignedRoomNumber}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
                 <span className="text-xs text-tertiary">Check-In Date</span>
-                <span className="font-semibold">{formatDate(checkIn, "dd MMM yyyy")}</span>
+                <span className="font-semibold">{formatDate(new Date(`${checkIn}T12:00:00`), "dd MMM yyyy")}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span className="text-xs text-tertiary">Total Amount</span>
-                <span className="mono font-bold text-success">{formatCurrency(getFinalTotal(selectedRoom.baseRate))}</span>
+                <span className="mono font-bold text-success">{formatCurrency(getFinalTotal(selectedRoom))}</span>
               </div>
             </div>
 
-            <p className="text-xs text-tertiary">A confirmation SMS & WhatsApp email has been dispatched to {guestPhone}.</p>
+            <p className="text-xs text-tertiary">The reservation is saved in KaizerStays and visible to the front desk. Automated SMS, WhatsApp and email delivery are not connected yet.</p>
           </div>
         )}
       </div>

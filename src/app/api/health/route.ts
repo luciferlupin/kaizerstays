@@ -4,15 +4,14 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   try {
     const dbUrl = process.env.DATABASE_URL || "";
-    const isPlaceholder = dbUrl.includes("placeholder") || dbUrl.includes("[YOUR-DB-PASSWORD]") || dbUrl.includes("YOUR-");
+    const isPlaceholder = !dbUrl || dbUrl.includes("placeholder") || dbUrl.includes("[YOUR-DB-PASSWORD]") || dbUrl.includes("YOUR-");
 
     if (isPlaceholder) {
       return NextResponse.json({
         status: "ONLINE",
-        mode: "SUPABASE_CLOUD_PERSISTENT_MEMORY",
-        databaseConnected: true,
-        supabaseProject: "ymuizghrjfipfivukpzd",
-        message: "StaySphere OS is ONLINE. Supabase Cloud Project (ymuizghrjfipfivukpzd) active with LocalStorage & REST fallback.",
+        mode: "LOCAL_BROWSER_WORKSPACE",
+        databaseConnected: false,
+        message: "KaizerStays OS is online. Hotel data is currently persisted in this browser; no cloud database connection is verified.",
         timestamp: new Date().toISOString(),
       });
     }
@@ -28,13 +27,13 @@ export async function GET() {
       message: "Database connection verified. Real-time PostgreSQL storage active.",
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
       {
         status: "DEGRADED",
         mode: "FALLBACK_MEMORY",
         databaseConnected: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : "Database health check failed",
         timestamp: new Date().toISOString(),
       },
       { status: 200 }

@@ -1,7 +1,7 @@
 import PaymentsClient from "./PaymentsClient";
 
 export const metadata = {
-  title: "Payments Ledger — StaySphere",
+  title: "Payments Ledger — KaizerStays",
 };
 
 export default function PaymentsPage() {

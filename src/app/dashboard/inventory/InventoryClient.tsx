@@ -194,7 +194,7 @@ export default function InventoryClient() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `StaySphere_Hotel_Shemron_Inventory_${formatDate(new Date(), "yyyy-MM-dd")}.csv`;
+    a.download = `KaizerStays_Hotel_Shemron_Inventory_${formatDate(new Date(), "yyyy-MM-dd")}.csv`;
     a.click();
   };
 

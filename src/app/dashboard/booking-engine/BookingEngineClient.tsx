@@ -1,24 +1,36 @@
 "use client";
 
-import { useState } from "react";
-import { promoCodes, bookingEngineStats, PromoCode } from "@/lib/channels-data";
+import { useMemo, useState } from "react";
+import { promoCodes, PromoCode } from "@/lib/channels-data";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { useAppState } from "@/context/AppStateContext";
 import {
   Globe,
   Plus,
   ExternalLink,
   Copy,
   Check,
-  Percent,
   Tag,
-  BarChart3,
-  CheckCircle2,
   X,
 } from "lucide-react";
 import Link from "next/link";
 
+function loadPromos(): PromoCode[] {
+  const starterPromos = promoCodes.map((promo) => ({ ...promo, usedCount: 0 }));
+  if (typeof window === "undefined") return starterPromos;
+  try {
+    const stored = localStorage.getItem("kaizerstays_promo_codes_v1");
+    return stored
+      ? JSON.parse(stored).map((promo: PromoCode) => ({ ...promo, validFrom: new Date(promo.validFrom), validTo: new Date(promo.validTo) }))
+      : starterPromos;
+  } catch {
+    return starterPromos;
+  }
+}
+
 export default function BookingEngineClient() {
-  const [promos, setPromos] = useState<PromoCode[]>(promoCodes);
+  const { reservations, addActivity } = useAppState();
+  const [promos, setPromos] = useState<PromoCode[]>(loadPromos);
   const [copied, setCopied] = useState(false);
   const [showAddPromo, setShowAddPromo] = useState(false);
 
@@ -28,10 +40,21 @@ export default function BookingEngineClient() {
   const [discountValue, setDiscountValue] = useState(15);
   const [saved, setSaved] = useState(false);
 
-  const directUrl = "https://staysphere.app/book/hotel-shemron";
+  const directUrl = "/book";
+
+  const directReservations = useMemo(
+    () => reservations.filter((reservation) => reservation.bookingSource === "WEBSITE" && reservation.status !== "CANCELLED"),
+    [reservations]
+  );
+  const directRevenue = directReservations.reduce((total, reservation) => total + reservation.totalAmount, 0);
+
+  const persistPromos = (nextPromos: PromoCode[]) => {
+    setPromos(nextPromos);
+    localStorage.setItem("kaizerstays_promo_codes_v1", JSON.stringify(nextPromos));
+  };
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(directUrl);
+    navigator.clipboard.writeText(`${window.location.origin}${directUrl}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -49,7 +72,8 @@ export default function BookingEngineClient() {
       usedCount: 0,
       isActive: true,
     };
-    setPromos([...promos, newP]);
+    persistPromos([...promos, newP]);
+    addActivity("Promo Code Created", "booking_engine", newP.id, `${newP.code} published for direct bookings`);
     setSaved(true);
     setTimeout(() => {
       setShowAddPromo(false);
@@ -59,7 +83,8 @@ export default function BookingEngineClient() {
   };
 
   const togglePromo = (id: string) => {
-    setPromos(promos.map((p) => (p.id === id ? { ...p, isActive: !p.isActive } : p)));
+    const nextPromos = promos.map((p) => (p.id === id ? { ...p, isActive: !p.isActive } : p));
+    persistPromos(nextPromos);
   };
 
   return (
@@ -107,20 +132,20 @@ export default function BookingEngineClient() {
       <div className="stats-grid">
         <div className="stat-card">
           <span className="stat-card-label">Direct Bookings This Month</span>
-          <div className="stat-card-value text-primary">{bookingEngineStats.directBookings}</div>
-          <span className="text-xs text-success" style={{ marginTop: "4px" }}>23% of total bookings</span>
+          <div className="stat-card-value text-primary">{directReservations.length}</div>
+          <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>Saved website reservations</span>
         </div>
 
         <div className="stat-card">
           <span className="stat-card-label">Direct Revenue Saved</span>
-          <div className="stat-card-value text-success">{formatCurrency(bookingEngineStats.directRevenue)}</div>
-          <span className="text-xs text-success" style={{ marginTop: "4px" }}>Saved ₹63,750 in OTA commission</span>
+          <div className="stat-card-value text-success">{formatCurrency(directRevenue)}</div>
+          <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>No commission claim is estimated</span>
         </div>
 
         <div className="stat-card">
-          <span className="stat-card-label">Website Conversion Rate</span>
-          <div className="stat-card-value text-warning">{bookingEngineStats.conversionRate}%</div>
-          <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>Industry avg: 2.1%</span>
+          <span className="stat-card-label">Web Analytics</span>
+          <div className="stat-card-value text-warning">Not connected</div>
+          <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>Add analytics before reporting conversion</span>
         </div>
 
         <div className="stat-card">
@@ -218,7 +243,7 @@ export default function BookingEngineClient() {
                       <select
                         className="form-select"
                         value={discountType}
-                        onChange={(e) => setDiscountType(e.target.value as any)}
+                        onChange={(e) => setDiscountType(e.target.value as "PERCENTAGE" | "FLAT")}
                       >
                         <option value="PERCENTAGE">Percentage (%)</option>
                         <option value="FLAT">Flat Amount (₹)</option>

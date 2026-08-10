@@ -1,7 +1,7 @@
 import RevenueClient from "./RevenueClient";
 
 export const metadata = {
-  title: "AI Revenue Manager & Dynamic Pricing — StaySphere",
+  title: "Revenue Planner — KaizerStays",
 };
 
 export default function RevenuePage() {

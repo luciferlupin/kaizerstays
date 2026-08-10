@@ -50,7 +50,7 @@ export default function AnalyticsClient() {
   const directPercent = Math.max(0, 100 - (bcomPercent + agodaPercent));
 
   const exportAnalyticsReport = () => {
-    const csvContent = `StaySphere OS — Hotel Shemron Executive Analytics Report
+    const csvContent = `KaizerStays OS — Hotel Shemron Executive Analytics Report
 Period: ${period}
 Filter: ${departmentFilter}
 Generated At: ${new Date().toISOString()}
@@ -75,7 +75,7 @@ Agoda: ${agodaPercent}% (INR ${agodaRevenue})
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `StaySphere_Executive_Analytics_${formatDate(new Date(), "yyyy-MM-dd")}.csv`;
+    a.download = `KaizerStays_Executive_Analytics_${formatDate(new Date(), "yyyy-MM-dd")}.csv`;
     a.click();
   };
 

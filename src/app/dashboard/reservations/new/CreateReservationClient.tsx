@@ -1,52 +1,82 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAppState } from "@/context/AppStateContext";
 import { formatCurrency, calculateNights, calculateRoomCharges } from "@/lib/utils";
-import { Check, ArrowRight, ArrowLeft, Calendar, User, CreditCard, Sparkles, Building } from "lucide-react";
+import { getAverageRateForStay, toDateKey } from "@/lib/rates";
+import { Check, ArrowRight, ArrowLeft, AlertTriangle } from "lucide-react";
+
+function futureDate(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return toDateKey(date);
+}
 
 export default function CreateReservationClient() {
   const router = useRouter();
-  const { roomTypes, rooms, addReservation } = useAppState();
+  const { roomTypes, rooms, reservations, addReservation } = useAppState();
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
 
   // Form State
-  const [checkIn, setCheckIn] = useState<string>("2026-08-08");
-  const [checkOut, setCheckOut] = useState<string>("2026-08-11");
+  const [checkIn, setCheckIn] = useState<string>(() => futureDate(1));
+  const [checkOut, setCheckOut] = useState<string>(() => futureDate(2));
   const [adults, setAdults] = useState<number>(2);
   const [children, setChildren] = useState<number>(0);
 
-  const [selectedRoomTypeId, setSelectedRoomTypeId] = useState<string>("rt_deluxe");
-  const [selectedRoomNumber, setSelectedRoomNumber] = useState<string>("301");
+  const [selectedRoomTypeId, setSelectedRoomTypeId] = useState<string>(() => roomTypes[0]?.id || "");
+  const [selectedRoomNumber, setSelectedRoomNumber] = useState<string>("");
 
-  const [firstName, setFirstName] = useState<string>("Rohan");
-  const [lastName, setLastName] = useState<string>("Verma");
-  const [email, setEmail] = useState<string>("rohan.verma@gmail.com");
-  const [phone, setPhone] = useState<string>("+91 98765 12345");
+  const [firstName, setFirstName] = useState<string>("");
+  const [lastName, setLastName] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+  const [phone, setPhone] = useState<string>("");
   const [idType, setIdType] = useState<string>("AADHAAR");
-  const [idNumber, setIdNumber] = useState<string>("9876 5432 1098");
+  const [idNumber, setIdNumber] = useState<string>("");
 
   const [bookingSource, setBookingSource] = useState<string>("DIRECT");
   const [paymentMethod, setPaymentMethod] = useState<string>("UPI");
-  const [depositAmount, setDepositAmount] = useState<number>(5000);
-  const [notes, setNotes] = useState<string>("Late arrival expected around 6 PM.");
+  const [depositAmount, setDepositAmount] = useState<number>(0);
+  const [notes, setNotes] = useState<string>("");
   const [createdResId, setCreatedResId] = useState<string>("");
 
-  const selectedRoomType = roomTypes.find((rt) => rt.id === selectedRoomTypeId) || roomTypes[1];
+  const selectedRoomType = roomTypes.find((rt) => rt.id === selectedRoomTypeId) || roomTypes[0];
   const nights = calculateNights(new Date(checkIn), new Date(checkOut));
-  const pricing = calculateRoomCharges(selectedRoomType.baseRate, nights, 12);
+  const stayRate = getAverageRateForStay(selectedRoomType.id, checkIn, checkOut, selectedRoomType.baseRate);
+  const pricing = calculateRoomCharges(stayRate.averageRate, nights, 12);
+  const datesValid = Boolean(checkIn && checkOut && new Date(checkOut) > new Date(checkIn));
+  const stayAllowed = datesValid && stayRate.blockedDates.length === 0 && nights >= stayRate.minStay;
+
+  const availableRooms = useMemo(() => {
+    if (!datesValid) return [];
+    const requestedStart = new Date(`${checkIn}T12:00:00`);
+    const requestedEnd = new Date(`${checkOut}T12:00:00`);
+    return rooms.filter((room) => {
+      if (room.roomTypeId !== selectedRoomTypeId || !room.isActive) return false;
+      if (["OCCUPIED", "MAINTENANCE", "OUT_OF_SERVICE"].includes(room.status)) return false;
+      return !reservations.some((reservation) => {
+        if (reservation.roomNumber !== room.number || ["CANCELLED", "CHECKED_OUT"].includes(reservation.status)) return false;
+        const existingStart = new Date(reservation.checkIn);
+        const existingEnd = new Date(reservation.checkOut);
+        return requestedStart < existingEnd && requestedEnd > existingStart;
+      });
+    });
+  }, [checkIn, checkOut, datesValid, reservations, rooms, selectedRoomTypeId]);
+
+  const effectiveSelectedRoomNumber = availableRooms.some((room) => room.number === selectedRoomNumber)
+    ? selectedRoomNumber
+    : availableRooms[0]?.number || "";
 
   const handleComplete = () => {
     const newRes = addReservation({
-      guestId: `guest_${Date.now()}`,
+      guestId: `guest_direct_${email.trim().toLowerCase()}`,
       guestName: `${firstName} ${lastName}`,
       status: "CONFIRMED",
       checkIn: new Date(checkIn),
       checkOut: new Date(checkOut),
       nights,
-      roomNumber: selectedRoomNumber,
+      roomNumber: effectiveSelectedRoomNumber,
       roomType: selectedRoomType.name,
       adults,
       children,
@@ -56,6 +86,11 @@ export default function CreateReservationClient() {
       taxAmount: pricing.tax,
       paidAmount: depositAmount,
       balanceAmount: Math.max(0, pricing.total - depositAmount),
+      guestEmail: email.trim(),
+      guestPhone: phone.trim(),
+      guestIdType: idType,
+      guestIdNumber: idNumber.trim(),
+      notes: notes.trim(),
     });
 
     setCreatedResId(newRes.id);
@@ -108,11 +143,11 @@ export default function CreateReservationClient() {
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">Check-In Date *</label>
-              <input type="date" className="form-input" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} />
+              <input type="date" className="form-input" min={futureDate(0)} value={checkIn} onChange={(e) => setCheckIn(e.target.value)} />
             </div>
             <div className="form-group">
               <label className="form-label">Check-Out Date *</label>
-              <input type="date" className="form-input" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} />
+              <input type="date" className="form-input" min={checkIn || futureDate(0)} value={checkOut} onChange={(e) => setCheckOut(e.target.value)} />
             </div>
           </div>
           <div className="form-row">
@@ -129,8 +164,18 @@ export default function CreateReservationClient() {
               </select>
             </div>
           </div>
+          {!stayAllowed && (
+            <div className="text-sm text-warning" style={{ display: "flex", gap: "8px", alignItems: "center", marginTop: "14px" }}>
+              <AlertTriangle size={16} />
+              {!datesValid
+                ? "Check-out must be after check-in."
+                : stayRate.blockedDates.length
+                  ? `Selected room type is stop-sold on ${stayRate.blockedDates.join(", ")}.`
+                  : `This rate plan requires a minimum stay of ${stayRate.minStay} nights.`}
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "20px" }}>
-            <button className="btn btn-primary" onClick={() => setStep(2)}>
+            <button className="btn btn-primary" onClick={() => setStep(2)} disabled={!stayAllowed}>
               Next: Select Room <ArrowRight size={16} />
             </button>
           </div>
@@ -143,7 +188,8 @@ export default function CreateReservationClient() {
           <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "16px" }}>2. Select Room Category & Number</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px", marginBottom: "20px" }}>
             {roomTypes.map((rt) => (
-              <div
+              <button
+                type="button"
                 key={rt.id}
                 onClick={() => setSelectedRoomTypeId(rt.id)}
                 style={{
@@ -152,28 +198,32 @@ export default function CreateReservationClient() {
                   border: selectedRoomTypeId === rt.id ? "2px solid var(--color-primary)" : "1px solid var(--color-border)",
                   background: selectedRoomTypeId === rt.id ? "var(--color-primary-light)" : "white",
                   cursor: "pointer",
+                  textAlign: "left",
                 }}
               >
                 <div style={{ fontWeight: 700 }}>{rt.name}</div>
                 <div className="mono font-bold text-primary" style={{ marginTop: "4px" }}>{formatCurrency(rt.baseRate)}/n</div>
-              </div>
+              </button>
             ))}
           </div>
 
           <div className="form-group">
             <label className="form-label">Assign Specific Room Number</label>
-            <select className="form-select" value={selectedRoomNumber} onChange={(e) => setSelectedRoomNumber(e.target.value)}>
-              {rooms.map((r) => (
+            <select className="form-select" value={effectiveSelectedRoomNumber} onChange={(e) => setSelectedRoomNumber(e.target.value)}>
+              {availableRooms.map((r) => (
                 <option key={r.id} value={r.number}>
-                  Room #{r.number} ({r.typeName}) — {r.status}
+                  Room #{r.number} ({r.typeName}) — available
                 </option>
               ))}
             </select>
+            <div className="text-xs text-secondary" style={{ marginTop: "6px" }}>
+              {availableRooms.length} room{availableRooms.length === 1 ? "" : "s"} available for these dates.
+            </div>
           </div>
 
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px" }}>
             <button className="btn btn-secondary" onClick={() => setStep(1)}><ArrowLeft size={16} /> Back</button>
-            <button className="btn btn-primary" onClick={() => setStep(3)}>Next: Guest Info <ArrowRight size={16} /></button>
+            <button className="btn btn-primary" onClick={() => setStep(3)} disabled={!effectiveSelectedRoomNumber}>Next: Guest Info <ArrowRight size={16} /></button>
           </div>
         </div>
       )}
@@ -194,6 +244,18 @@ export default function CreateReservationClient() {
           </div>
           <div className="form-row">
             <div className="form-group">
+              <label className="form-label">Identity document type</label>
+              <select className="form-select" value={idType} onChange={(e) => setIdType(e.target.value)}>
+                <option value="AADHAAR">Aadhaar</option><option value="PASSPORT">Passport</option><option value="DRIVING_LICENSE">Driving licence</option><option value="OTHER">Other</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Identity document number</label>
+              <input type="text" className="form-input" value={idNumber} onChange={(e) => setIdNumber(e.target.value)} autoComplete="off" />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
               <label className="form-label">Email *</label>
               <input type="email" className="form-input" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
@@ -204,7 +266,7 @@ export default function CreateReservationClient() {
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px" }}>
             <button className="btn btn-secondary" onClick={() => setStep(2)}><ArrowLeft size={16} /> Back</button>
-            <button className="btn btn-primary" onClick={() => setStep(4)}>Next: Source & Notes <ArrowRight size={16} /></button>
+            <button className="btn btn-primary" onClick={() => setStep(4)} disabled={!firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim()}>Next: Source & Notes <ArrowRight size={16} /></button>
           </div>
         </div>
       )}
@@ -241,13 +303,13 @@ export default function CreateReservationClient() {
           <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "16px" }}>5. Deposit Settlement</h3>
           <div style={{ background: "var(--color-bg-tertiary)", padding: "16px", borderRadius: "var(--radius-md)", marginBottom: "16px" }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>Total Tariff ({nights} nights + 12% GST):</span>
+              <span>Total Tariff ({nights} nights at average {formatCurrency(stayRate.averageRate)} + 12% GST):</span>
               <span className="mono font-bold text-primary">{formatCurrency(pricing.total)}</span>
             </div>
           </div>
           <div className="form-group">
             <label className="form-label">Advance Deposit Collected (₹)</label>
-            <input type="number" className="form-input" value={depositAmount} onChange={(e) => setDepositAmount(Number(e.target.value))} />
+            <input type="number" className="form-input" min={0} max={pricing.total} value={depositAmount} onChange={(e) => setDepositAmount(Math.min(pricing.total, Math.max(0, Number(e.target.value))))} />
           </div>
           <div className="form-group">
             <label className="form-label">Payment Method</label>
@@ -275,7 +337,7 @@ export default function CreateReservationClient() {
           </div>
           <h2 style={{ fontSize: "22px", fontWeight: 800 }}>Reservation Created Successfully!</h2>
           <p className="text-sm text-secondary" style={{ marginTop: "4px" }}>
-            Guest {firstName} {lastName} is confirmed for Room #{selectedRoomNumber}.
+            Guest {firstName} {lastName} is confirmed for Room #{effectiveSelectedRoomNumber}.
           </p>
           <div style={{ display: "flex", gap: "12px", justifyContent: "center", marginTop: "24px" }}>
             <button className="btn btn-primary" onClick={() => router.push(`/dashboard/reservations/${createdResId}`)}>

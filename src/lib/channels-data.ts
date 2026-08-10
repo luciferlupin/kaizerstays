@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════
-// StaySphere — Channel Manager & Revenue Data
+// KaizerStays — Channel Manager & Revenue Data
 // OTA integrations, pricing, and competitor analytics
 // ═══════════════════════════════════════════════════
 

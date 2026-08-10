@@ -44,6 +44,11 @@ export interface ExtendedReservation {
   taxAmount: number;
   paidAmount: number;
   balanceAmount: number;
+  guestEmail?: string;
+  guestPhone?: string;
+  guestIdType?: string;
+  guestIdNumber?: string;
+  notes?: string;
   folio?: FolioItem[];
 }
 
@@ -151,6 +156,7 @@ interface AppStateContextType {
   updateInventoryStock: (itemId: string, adjustmentQty: number, reason?: string) => void;
   addRequisition: (req: Omit<StockRequisition, "id" | "reqNumber" | "date">) => void;
   updateRequisitionStatus: (reqId: string, status: StockRequisition["status"]) => void;
+  updatePropertySettings: (updates: Partial<typeof demoProperty>) => void;
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
@@ -191,6 +197,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem("staysphere_app_state_v1");
       if (saved) {
         const parsed = JSON.parse(saved);
+        if (parsed.property) setProperty((current) => ({ ...current, ...parsed.property }));
         if (parsed.rooms?.length) setRooms(parsed.rooms);
         if (parsed.reservations) setReservations(parsed.reservations.filter((r: any) =>
           r.id !== "res_001" &&
@@ -236,6 +243,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const stateToSave = {
+        property,
         rooms,
         reservations,
         guests,
@@ -254,14 +262,25 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.warn("LocalStorage state save failed:", e);
     }
-  }, [rooms, reservations, guests, housekeepingTasks, guestRequests, payments, expenses, activity, staff, channels, currentUser, inventoryItems, requisitions]);
+  }, [property, rooms, reservations, guests, housekeepingTasks, guestRequests, payments, expenses, activity, staff, channels, currentUser, inventoryItems, requisitions]);
+
+  const updatePropertySettings = (updates: Partial<typeof demoProperty>) => {
+    setProperty((current) => ({ ...current, ...updates }));
+  };
 
   const loginUser = (emailOrId: string, pass: string) => {
     const isOwner = emailOrId.toLowerCase() === "ninaad.khera@gmail.com" || emailOrId.toLowerCase().includes("owner") || emailOrId.toLowerCase().includes("ninaad");
     const found = staff.find((s) => s.email.toLowerCase() === emailOrId.toLowerCase() || s.id.toLowerCase() === emailOrId.toLowerCase());
+    const previewUsers: Record<string, { name: string; role: string; email: string; staffId: string }> = {
+      "sunil.fd@hotelshemron.com": { name: "Sunil Sharma", role: "Front Desk Manager", email: "sunil.fd@hotelshemron.com", staffId: "PREVIEW-FD" },
+      "meena.hk@hotelshemron.com": { name: "Meena Kumari", role: "Housekeeping Supervisor", email: "meena.hk@hotelshemron.com", staffId: "PREVIEW-HK" },
+      "arun.kitchen@hotelshemron.com": { name: "Arun Kumar", role: "Kitchen & POS", email: "arun.kitchen@hotelshemron.com", staffId: "PREVIEW-POS" },
+    };
+    const previewUser = previewUsers[emailOrId.toLowerCase()];
+    const isPreviewPass = pass === "12345";
 
-    if (isOwner || found || emailOrId.toLowerCase().includes("emp") || emailOrId.toLowerCase().includes("admin")) {
-      const userObj = {
+    if (isPreviewPass && (isOwner || found || previewUser || emailOrId.toLowerCase().includes("emp") || emailOrId.toLowerCase().includes("admin"))) {
+      const userObj = previewUser || {
         name: isOwner ? "Ninaad Khera" : found ? `${found.firstName} ${found.lastName}` : "Staff Member",
         role: isOwner ? "Property Owner & GM" : found ? found.role : "Hotel Staff",
         email: isOwner ? "Ninaad.khera@gmail.com" : found ? found.email : emailOrId,
@@ -327,7 +346,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   // ─── Add Reservation (connected to Guest CRM, Room Status, & Activity) ───
   const addReservation = (resData: Omit<ExtendedReservation, "id" | "confirmationNumber">) => {
     const newId = `res_${Date.now()}`;
-    const confNo = `SS-SHM-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const confNo = `KZ-SHM-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const newRes: ExtendedReservation = {
       ...resData,
@@ -364,8 +383,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           id: resData.guestId || `guest_${Date.now()}`,
           firstName: nameParts[0] || resData.guestName,
           lastName: nameParts.slice(1).join(" ") || "",
-          email: `${nameParts[0]?.toLowerCase()}@example.com`,
-          phone: "+91 98000 00000",
+          email: resData.guestEmail || "",
+          phone: resData.guestPhone || "",
           city: "New Delhi",
           country: "IN",
           isVip: false,
@@ -613,7 +632,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       taxCollected: tax,
       openFolios: reservations.filter((r) => r.status === "CHECKED_IN" && r.balanceAmount > 0).length,
       discrepancies: 0,
-      runBy: "Sunil Manager",
+      runBy: currentUser?.name || "Hotel user",
       completedAt: new Date(),
     };
 
@@ -1117,6 +1136,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         updateInventoryStock,
         addRequisition,
         updateRequisitionStatus,
+        updatePropertySettings,
       }}
     >
       {children}

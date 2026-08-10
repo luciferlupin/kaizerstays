@@ -30,6 +30,7 @@ import {
   Crown,
   Boxes,
   LogOut,
+  CalendarRange,
 } from "lucide-react";
 import { classNames } from "@/lib/utils";
 
@@ -57,6 +58,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Globe,
   Crown,
   Boxes,
+  CalendarRange,
 };
 
 interface NavItemDef {
@@ -83,6 +85,7 @@ const NAV_GROUPS: NavGroupDef[] = [
       { label: "Rooms", href: "/dashboard/rooms", icon: "DoorOpen" },
       { label: "Housekeeping", href: "/dashboard/housekeeping", icon: "Sparkles", badge: 5 },
       { label: "Guest Requests", href: "/dashboard/requests", icon: "MessageSquare", badge: 2 },
+      { label: "Guest Inbox", href: "/dashboard/messages", icon: "MessageSquare" },
       { label: "Stock & Inventory", href: "/dashboard/inventory", icon: "Boxes" },
       { label: "Night Audit", href: "/dashboard/night-audit", icon: "Moon" },
       { label: "Restaurant POS", href: "/dashboard/pos", icon: "Utensils" },
@@ -94,6 +97,7 @@ const NAV_GROUPS: NavGroupDef[] = [
       { label: "Payments", href: "/dashboard/payments", icon: "CreditCard" },
       { label: "Expenses", href: "/dashboard/expenses", icon: "Receipt" },
       { label: "Invoices", href: "/dashboard/invoices", icon: "FileText" },
+      { label: "Rates & Availability", href: "/dashboard/rates", icon: "CalendarRange" },
       { label: "Revenue Manager", href: "/dashboard/revenue", icon: "TrendingUp" },
       { label: "Channel Manager", href: "/dashboard/channels", icon: "Radio" },
       { label: "Booking Engine", href: "/dashboard/booking-engine", icon: "Globe" },
@@ -136,7 +140,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     user.role.toLowerCase().includes("manager") ||
     user.role.toLowerCase().includes("gm");
 
-  const isFrontDesk = user.role.toLowerCase().includes("desk");
   const isHousekeeping = user.role.toLowerCase().includes("house");
 
   const isActive = (href: string) => {
@@ -168,8 +171,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     <aside className={classNames("sidebar", isOpen && "open")}>
       {/* Logo & Mobile Close */}
       <div className="sidebar-logo">
-        <div className="sidebar-logo-icon">S</div>
-        <span>StaySphere</span>
+        <div className="sidebar-logo-icon">K</div>
+        <span>KaizerStays</span>
 
         {/* Mobile close button */}
         {onClose && (

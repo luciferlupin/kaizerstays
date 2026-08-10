@@ -1,7 +1,7 @@
 import BookingEngineClient from "./BookingEngineClient";
 
 export const metadata = {
-  title: "Direct Booking Engine & Promo Codes — StaySphere",
+  title: "Direct Booking Engine & Promo Codes — KaizerStays",
 };
 
 export default function BookingEngineAdminPage() {

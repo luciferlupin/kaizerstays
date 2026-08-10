@@ -1,23 +1,34 @@
 "use client";
 
 import { useState } from "react";
-import { demoProperty } from "@/lib/demo-data";
-import { Building, Settings, Save, Check } from "lucide-react";
+import Link from "next/link";
+import { useAppState } from "@/context/AppStateContext";
+import { Save, Check } from "lucide-react";
+
+function loadPolicies() {
+  const defaults = { checkInTime: "14:00", checkOutTime: "11:00", taxRate: 12, wifiNetwork: "ShemronGuest_WiFi", wifiPass: "" };
+  if (typeof window === "undefined") return defaults;
+  try {
+    const policies = localStorage.getItem("kaizerstays_property_policies_v1");
+    return policies ? { ...defaults, ...JSON.parse(policies) } : defaults;
+  } catch {
+    return defaults;
+  }
+}
 
 export default function SettingsClient() {
-  const [name, setName] = useState(demoProperty.name);
-  const [phone, setPhone] = useState(demoProperty.phone);
-  const [email, setEmail] = useState(demoProperty.email);
-  const [address, setAddress] = useState(demoProperty.address);
-  const [gstin, setGstin] = useState(demoProperty.gstin);
-  const [checkInTime, setCheckInTime] = useState("14:00");
-  const [checkOutTime, setCheckOutTime] = useState("11:00");
-  const [taxRate, setTaxRate] = useState(12);
-  const [wifiNetwork, setWifiNetwork] = useState("ShemronGuest_WiFi");
-  const [wifiPass, setWifiPass] = useState("Shemron2026");
+  const { property, updatePropertySettings, addActivity } = useAppState();
+  const [initialPolicies] = useState(loadPolicies);
+  const [checkInTime, setCheckInTime] = useState(initialPolicies.checkInTime);
+  const [checkOutTime, setCheckOutTime] = useState(initialPolicies.checkOutTime);
+  const [taxRate, setTaxRate] = useState(initialPolicies.taxRate);
+  const [wifiNetwork, setWifiNetwork] = useState(initialPolicies.wifiNetwork);
+  const [wifiPass, setWifiPass] = useState(initialPolicies.wifiPass);
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
+    localStorage.setItem("kaizerstays_property_policies_v1", JSON.stringify({ checkInTime, checkOutTime, taxRate, wifiNetwork, wifiPass }));
+    addActivity("Property Settings Updated", "settings", property.id, "Hotel profile and operating policies were updated");
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -47,26 +58,26 @@ export default function SettingsClient() {
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div className="form-group">
               <label className="form-label">Hotel Name</label>
-              <input type="text" className="form-input" value={name} onChange={(e) => setName(e.target.value)} />
+              <input type="text" className="form-input" value={property.name} onChange={(e) => updatePropertySettings({ name: e.target.value })} />
             </div>
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Phone Number</label>
-                <input type="text" className="form-input" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                <input type="text" className="form-input" value={property.phone} onChange={(e) => updatePropertySettings({ phone: e.target.value })} />
               </div>
               <div className="form-group">
                 <label className="form-label">Front Desk Email</label>
-                <input type="email" className="form-input" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <input type="email" className="form-input" value={property.email} onChange={(e) => updatePropertySettings({ email: e.target.value })} />
               </div>
             </div>
             <div className="form-group">
               <label className="form-label">Address & Location</label>
-              <input type="text" className="form-input" value={address} onChange={(e) => setAddress(e.target.value)} />
+              <input type="text" className="form-input" value={property.address} onChange={(e) => updatePropertySettings({ address: e.target.value })} />
             </div>
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">GSTIN / Tax ID</label>
-                <input type="text" className="form-input" value={gstin} onChange={(e) => setGstin(e.target.value)} />
+                <input type="text" className="form-input" value={property.gstin} onChange={(e) => updatePropertySettings({ gstin: e.target.value })} />
               </div>
               <div className="form-group">
                 <label className="form-label">Currency</label>
@@ -107,9 +118,15 @@ export default function SettingsClient() {
             </div>
             <div className="form-group">
               <label className="form-label">WiFi Password</label>
-              <input type="text" className="form-input" value={wifiPass} onChange={(e) => setWifiPass(e.target.value)} />
+              <input type="password" className="form-input" value={wifiPass} onChange={(e) => setWifiPass(e.target.value)} autoComplete="new-password" />
             </div>
           </div>
+        </div>
+
+        <div className="card" style={{ padding: "20px" }}>
+          <h3 className="card-title" style={{ marginBottom: "8px" }}>Integration Status</h3>
+          <p className="text-sm text-secondary" style={{ marginBottom: "14px" }}>Booking.com and Agoda require approved connectivity. Email, WhatsApp and payment providers are not configured in this browser workspace.</p>
+          <Link href="/dashboard/channels" className="btn btn-secondary">Review OTA mapping & connections</Link>
         </div>
 
       </div>

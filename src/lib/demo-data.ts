@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════
-// StaySphere — Production Data for Hotel Shemron, Neemrana
+// KaizerStays — Production Data for Hotel Shemron, Neemrana
 // Provides realistic hotel data without requiring a database
 // ═══════════════════════════════════════════════════
 
