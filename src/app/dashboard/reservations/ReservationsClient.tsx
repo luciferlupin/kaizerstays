@@ -100,7 +100,6 @@ export default function ReservationsClient() {
               <option value="WALK_IN">Walk-In</option>
               <option value="WEBSITE">Website</option>
               <option value="BOOKING_COM">Booking.com</option>
-              <option value="MAKEMYTRIP">MakeMyTrip</option>
               <option value="AGODA">Agoda</option>
             </select>
           </div>
@@ -115,7 +114,7 @@ export default function ReservationsClient() {
               <Calendar size={36} className="text-tertiary" style={{ margin: "0 auto 12px auto" }} />
               <h3 style={{ fontSize: "16px", fontWeight: 700 }}>No Reservations Found</h3>
               <p className="text-xs text-secondary" style={{ marginTop: "4px", marginBottom: "16px" }}>
-                Create a new direct walk-in reservation or sync with OTA Extranets (Booking.com, MMT) to import bookings.
+                Create a new direct walk-in reservation or sync with OTA Extranets (Booking.com, Agoda) to import bookings.
               </p>
               <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
                 <Link href="/dashboard/reservations/new" className="btn btn-primary btn-sm">

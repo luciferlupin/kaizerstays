@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   CalendarCheck,
@@ -29,6 +29,7 @@ import {
   Globe,
   Crown,
   Boxes,
+  LogOut,
 } from "lucide-react";
 import { classNames } from "@/lib/utils";
 
@@ -120,7 +121,8 @@ import { useAppState } from "@/context/AppStateContext";
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const { currentUser } = useAppState();
+  const router = useRouter();
+  const { currentUser, logoutUser } = useAppState();
 
   const user = currentUser || {
     name: "Ninaad Khera",
@@ -140,6 +142,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
     return pathname.startsWith(href);
+  };
+
+  const handleLogout = () => {
+    logoutUser();
+    router.push("/login");
   };
 
   const filteredNavGroups = NAV_GROUPS.map((group) => {
@@ -213,23 +220,44 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Footer */}
+      {/* Footer with User Card & Logout Option */}
       <div className="sidebar-footer">
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div
-            className="avatar avatar-sm"
-            style={{ background: isOwnerOrGM ? "#0071E3" : "#34C759", color: "white" }}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0, flex: 1 }}>
+            <div
+              className="avatar avatar-sm"
+              style={{ background: isOwnerOrGM ? "#0071E3" : "#34C759", color: "white", flexShrink: 0 }}
+            >
+              {user.name.split(" ").map((n) => n[0]).join("")}
+            </div>
+            <div style={{ overflow: "hidden", minWidth: 0 }}>
+              <div style={{ fontSize: "13px", fontWeight: 600, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                {user.name}
+              </div>
+              <div style={{ fontSize: "11px", color: "var(--color-text-tertiary)", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                {user.role}
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleLogout}
+            title="Logout / Sign Out"
+            className="btn btn-ghost btn-icon btn-sm"
+            style={{
+              color: "var(--color-text-tertiary)",
+              flexShrink: 0,
+              width: "32px",
+              height: "32px",
+              borderRadius: "6px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+            }}
           >
-            {user.name.split(" ").map((n) => n[0]).join("")}
-          </div>
-          <div style={{ overflow: "hidden" }}>
-            <div style={{ fontSize: "13px", fontWeight: 600, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
-              {user.name}
-            </div>
-            <div style={{ fontSize: "11px", color: "var(--color-text-tertiary)", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
-              {user.role}
-            </div>
-          </div>
+            <LogOut size={16} />
+          </button>
         </div>
       </div>
     </aside>

@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Bell, Command, Menu } from "lucide-react";
+import { Search, Bell, Command, Menu, LogOut } from "lucide-react";
 import { formatDate, getToday } from "@/lib/utils";
+import { useAppState } from "@/context/AppStateContext";
+import { useRouter } from "next/navigation";
 
 interface HeaderProps {
   onToggleMobileMenu?: () => void;
@@ -10,7 +12,14 @@ interface HeaderProps {
 
 export default function Header({ onToggleMobileMenu }: HeaderProps) {
   const [searchOpen, setSearchOpen] = useState(false);
+  const { currentUser, logoutUser } = useAppState();
+  const router = useRouter();
   const todayFormatted = formatDate(getToday(), "EEE, d MMM yyyy");
+
+  const handleLogout = () => {
+    logoutUser();
+    router.push("/login");
+  };
 
   return (
     <header className="main-header">
@@ -66,9 +75,9 @@ export default function Header({ onToggleMobileMenu }: HeaderProps) {
         </button>
       </div>
 
-      <div className="main-header-right">
+      <div className="main-header-right" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         {/* Notifications */}
-        <button className="btn btn-ghost btn-icon notification-bell">
+        <button className="btn btn-ghost btn-icon notification-bell" title="Notifications">
           <Bell size={18} />
           <span className="notification-dot" />
         </button>
@@ -85,6 +94,26 @@ export default function Header({ onToggleMobileMenu }: HeaderProps) {
           }}
         >
           {todayFormatted}
+        </div>
+
+        {/* User quick status & Logout button */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", paddingLeft: "8px", borderLeft: "1px solid var(--color-border)" }}>
+          <button
+            onClick={handleLogout}
+            className="btn btn-ghost btn-sm"
+            style={{
+              gap: "6px",
+              fontSize: "12px",
+              fontWeight: 500,
+              color: "var(--color-text-secondary)",
+              padding: "4px 8px",
+              borderRadius: "6px",
+            }}
+            title="Logout / Sign Out"
+          >
+            <LogOut size={14} />
+            <span className="hide-on-mobile">Logout</span>
+          </button>
         </div>
       </div>
     </header>

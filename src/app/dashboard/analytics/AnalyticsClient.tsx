@@ -41,14 +41,13 @@ export default function AnalyticsClient() {
 
   // Channel Breakdown
   const bcomRevenue = reservations.filter((r) => r.bookingSource === "BOOKING_COM").reduce((sum, r) => sum + r.totalAmount, 0);
-  const directRevenue = reservations.filter((r) => r.bookingSource === "DIRECT" || r.bookingSource === "WEBSITE" || r.bookingSource === "WALK_IN").reduce((sum, r) => sum + r.totalAmount, 0);
-  const mmtRevenue = reservations.filter((r) => r.bookingSource === "MAKEMYTRIP" || r.bookingSource === "GOIBIBO").reduce((sum, r) => sum + r.totalAmount, 0);
+  const agodaRevenue = reservations.filter((r) => r.bookingSource === "AGODA").reduce((sum, r) => sum + r.totalAmount, 0);
+  const directRevenue = reservations.filter((r) => r.bookingSource === "DIRECT" || r.bookingSource === "WEBSITE" || r.bookingSource === "WALK_IN" || r.bookingSource === "CORPORATE").reduce((sum, r) => sum + r.totalAmount, 0);
   const totalResRevenue = reservations.reduce((sum, r) => sum + r.totalAmount, 0) || 1;
 
   const bcomPercent = Math.round((bcomRevenue / totalResRevenue) * 100);
-  const directPercent = Math.round((directRevenue / totalResRevenue) * 100);
-  const mmtPercent = Math.round((mmtRevenue / totalResRevenue) * 100);
-  const otherPercent = Math.max(0, 100 - (bcomPercent + directPercent + mmtPercent));
+  const agodaPercent = Math.round((agodaRevenue / totalResRevenue) * 100);
+  const directPercent = Math.max(0, 100 - (bcomPercent + agodaPercent));
 
   const exportAnalyticsReport = () => {
     const csvContent = `StaySphere OS — Hotel Shemron Executive Analytics Report
@@ -69,8 +68,7 @@ Gross Operating Profit (GOP): INR ${netGOP}
 === CHANNEL REVENUE BREAKDOWN ===
 Direct Bookings: ${directPercent}% (INR ${directRevenue})
 Booking.com: ${bcomPercent}% (INR ${bcomRevenue})
-MakeMyTrip / Goibibo: ${mmtPercent}% (INR ${mmtRevenue})
-Other OTAs: ${otherPercent}% (INR 0)
+Agoda: ${agodaPercent}% (INR ${agodaRevenue})
 `;
 
     const blob = new Blob([csvContent], { type: "text/csv" });
@@ -214,21 +212,11 @@ Other OTAs: ${otherPercent}% (INR 0)
 
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                <span className="font-semibold">MakeMyTrip / Goibibo</span>
-                <span className="mono font-bold">{mmtPercent}% ({formatCurrency(mmtRevenue)})</span>
+                <span className="font-semibold">Agoda</span>
+                <span className="mono font-bold">{agodaPercent}% ({formatCurrency(agodaRevenue)})</span>
               </div>
               <div style={{ width: "100%", height: "8px", background: "var(--gray-100)", borderRadius: "4px" }}>
-                <div style={{ width: `${mmtPercent}%`, height: "100%", background: "var(--amber-500)", borderRadius: "4px" }} />
-              </div>
-            </div>
-
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                <span className="font-semibold">Other OTAs</span>
-                <span className="mono font-bold">{otherPercent}% ({formatCurrency(0)})</span>
-              </div>
-              <div style={{ width: "100%", height: "8px", background: "var(--gray-100)", borderRadius: "4px" }}>
-                <div style={{ width: `${otherPercent}%`, height: "100%", background: "var(--purple-500)", borderRadius: "4px" }} />
+                <div style={{ width: `${agodaPercent}%`, height: "100%", background: "var(--amber-500)", borderRadius: "4px" }} />
               </div>
             </div>
           </div>
