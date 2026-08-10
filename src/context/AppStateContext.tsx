@@ -629,7 +629,44 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     credentials: { username: string; password?: string; propertyId?: string }
   ): OTAImportResult => {
     const targetChannel = channels.find((c) => c.id === channelId) || channels[0];
-    const propertyCode = credentials.propertyId || targetChannel.hotelId || "SHM-BCOM-88219";
+    const channelPrefix =
+      channelId === "ch_booking"
+        ? "BCOM"
+        : channelId === "ch_agoda"
+        ? "AGD"
+        : channelId === "ch_makemytrip"
+        ? "MMT"
+        : channelId === "ch_expedia"
+        ? "EXP"
+        : channelId === "ch_goibibo"
+        ? "GOI"
+        : channelId === "ch_airbnb"
+        ? "ABNB"
+        : "OTA";
+
+    const bookingSource =
+      channelId === "ch_booking"
+        ? "BOOKING_COM"
+        : channelId === "ch_agoda"
+        ? "AGODA"
+        : channelId === "ch_makemytrip"
+        ? "MAKEMYTRIP"
+        : channelId === "ch_expedia"
+        ? "EXPEDIA"
+        : channelId === "ch_goibibo"
+        ? "GOIBIBO"
+        : channelId === "ch_airbnb"
+        ? "AIRBNB"
+        : "BOOKING_COM";
+
+    const propertyCode =
+      credentials.propertyId ||
+      targetChannel.hotelId ||
+      (channelId === "ch_booking"
+        ? "SHM-BCOM-88219"
+        : channelId === "ch_agoda"
+        ? "SHM-AGO-33109"
+        : `SHM-${channelPrefix}-99102`);
 
     const getShiftedDate = (days: number, hour = 12) => {
       const d = new Date();
@@ -638,141 +675,255 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       return d;
     };
 
-    // Realistic active guest bookings from Booking.com / Extranet
-    const bookingsToImport: ExtendedReservation[] = [
-      {
-        id: `res_bcom_948210385`,
-        confirmationNumber: "BCOM-948210385",
-        guestId: "guest_bcom_001",
-        guestName: "Vikram Malhotra",
-        status: "CONFIRMED",
-        checkIn: getShiftedDate(0, 14),
-        checkOut: getShiftedDate(2, 11),
-        nights: 2,
-        roomNumber: "202",
-        roomType: "Deluxe Room",
-        adults: 2,
-        children: 0,
-        bookingSource: "BOOKING_COM",
-        roomRate: 5500,
-        totalAmount: 12320,
-        taxAmount: 1320,
-        paidAmount: 12320,
-        balanceAmount: 0,
-        folio: [
-          { id: "f_bcom_1", description: "Deluxe Room (2 Nights) — Booking.com Rate Plan", category: "ROOM_CHARGE", amount: 11000, date: getShiftedDate(0) },
-          { id: "f_bcom_2", description: "GST Tax (12%)", category: "TAX", amount: 1320, date: getShiftedDate(0) },
-          { id: "f_bcom_3", description: "Prepaid — Booking.com Virtual Card (●●●● 8821)", category: "PAYMENT", amount: -12320, date: getShiftedDate(0) },
-        ],
-      },
-      {
-        id: `res_bcom_883920194`,
-        confirmationNumber: "BCOM-883920194",
-        guestId: "guest_bcom_002",
-        guestName: "Priya Sharma",
-        status: "CONFIRMED",
-        checkIn: getShiftedDate(1, 14),
-        checkOut: getShiftedDate(3, 11),
-        nights: 2,
-        roomNumber: "301",
-        roomType: "Premium Room",
-        adults: 2,
-        children: 1,
-        bookingSource: "BOOKING_COM",
-        roomRate: 8000,
-        totalAmount: 17920,
-        taxAmount: 1920,
-        paidAmount: 17920,
-        balanceAmount: 0,
-        folio: [
-          { id: "f_bcom_4", description: "Premium Room with Balcony (2 Nights)", category: "ROOM_CHARGE", amount: 16000, date: getShiftedDate(1) },
-          { id: "f_bcom_5", description: "GST Tax (12%)", category: "TAX", amount: 1920, date: getShiftedDate(1) },
-          { id: "f_bcom_6", description: "Prepaid — Booking.com Virtual Card (●●●● 3349)", category: "PAYMENT", amount: -17920, date: getShiftedDate(1) },
-        ],
-      },
-      {
-        id: `res_bcom_771294022`,
-        confirmationNumber: "BCOM-771294022",
-        guestId: "guest_bcom_003",
-        guestName: "David Miller",
-        status: "CHECKED_IN",
-        checkIn: getShiftedDate(0, 10),
-        checkOut: getShiftedDate(3, 11),
-        nights: 3,
-        roomNumber: "401",
-        roomType: "Royal Suite",
-        adults: 2,
-        children: 0,
-        bookingSource: "BOOKING_COM",
-        roomRate: 15000,
-        totalAmount: 50400,
-        taxAmount: 5400,
-        paidAmount: 50400,
-        balanceAmount: 0,
-        folio: [
-          { id: "f_bcom_7", description: "Royal Suite — Butler Service (3 Nights)", category: "ROOM_CHARGE", amount: 45000, date: getShiftedDate(0) },
-          { id: "f_bcom_8", description: "GST Tax (12%)", category: "TAX", amount: 5400, date: getShiftedDate(0) },
-          { id: "f_bcom_9", description: "Prepaid — Booking.com Virtual Card (●●●● 9012)", category: "PAYMENT", amount: -50400, date: getShiftedDate(0) },
-        ],
-      },
-      {
-        id: `res_bcom_660492817`,
-        confirmationNumber: "BCOM-660492817",
-        guestId: "guest_bcom_004",
-        guestName: "Rohan Singhal",
-        status: "CONFIRMED",
-        checkIn: getShiftedDate(2, 14),
-        checkOut: getShiftedDate(4, 11),
-        nights: 2,
-        roomNumber: "102",
-        roomType: "Standard Room",
-        adults: 1,
-        children: 0,
-        bookingSource: "BOOKING_COM",
-        roomRate: 3500,
-        totalAmount: 7840,
-        taxAmount: 840,
-        paidAmount: 0,
-        balanceAmount: 7840,
-        folio: [
-          { id: "f_bcom_10", description: "Standard Room (2 Nights) — Pay at Hotel Plan", category: "ROOM_CHARGE", amount: 7000, date: getShiftedDate(2) },
-          { id: "f_bcom_11", description: "GST Tax (12%)", category: "TAX", amount: 840, date: getShiftedDate(2) },
-        ],
-      },
-      {
-        id: `res_bcom_559102834`,
-        confirmationNumber: "BCOM-559102834",
-        guestId: "guest_bcom_005",
-        guestName: "Sarah Jenkins",
-        status: "CONFIRMED",
-        checkIn: getShiftedDate(3, 14),
-        checkOut: getShiftedDate(5, 11),
-        nights: 2,
-        roomNumber: "203",
-        roomType: "Deluxe Room",
-        adults: 2,
-        children: 0,
-        bookingSource: "BOOKING_COM",
-        roomRate: 5500,
-        totalAmount: 12320,
-        taxAmount: 1320,
-        paidAmount: 12320,
-        balanceAmount: 0,
-        folio: [
-          { id: "f_bcom_12", description: "Deluxe Room (2 Nights)", category: "ROOM_CHARGE", amount: 11000, date: getShiftedDate(3) },
-          { id: "f_bcom_13", description: "GST Tax (12%)", category: "TAX", amount: 1320, date: getShiftedDate(3) },
-          { id: "f_bcom_14", description: "Prepaid — Booking.com Virtual Card (●●●● 4490)", category: "PAYMENT", amount: -12320, date: getShiftedDate(3) },
-        ],
-      },
-    ];
+    let bookingsToImport: ExtendedReservation[] = [];
+    let guestsToImport: any[] = [];
 
-    const guestsToImport = [
-      { id: "guest_bcom_001", firstName: "Vikram", lastName: "Malhotra", email: "vikram.malhotra@gmail.com", phone: "+91 98234 56789", city: "Mumbai", country: "IN", isVip: false, totalStays: 2, totalSpent: 24640, totalNights: 4 },
-      { id: "guest_bcom_002", firstName: "Priya", lastName: "Sharma", email: "priya.sharma@outlook.com", phone: "+91 97110 44321", city: "Bengaluru", country: "IN", isVip: true, totalStays: 4, totalSpent: 62000, totalNights: 8 },
-      { id: "guest_bcom_003", firstName: "David", lastName: "Miller", email: "david.miller@uktravel.co.uk", phone: "+44 7911 123456", city: "London", country: "GB", isVip: true, totalStays: 1, totalSpent: 50400, totalNights: 3 },
-      { id: "guest_bcom_004", firstName: "Rohan", lastName: "Singhal", email: "rohan.singhal@gmail.com", phone: "+91 99887 76655", city: "Jaipur", country: "IN", isVip: false, totalStays: 1, totalSpent: 7840, totalNights: 2 },
-      { id: "guest_bcom_005", firstName: "Sarah", lastName: "Jenkins", email: "sarah.j@travelworld.com", phone: "+1 415 555 2671", city: "San Francisco", country: "US", isVip: false, totalStays: 1, totalSpent: 12320, totalNights: 2 },
-    ];
+    if (channelId === "ch_agoda") {
+      bookingsToImport = [
+        {
+          id: "res_agd_982341102",
+          confirmationNumber: "AGD-982341102",
+          guestId: "guest_agd_001",
+          guestName: "Amitav Banerjee",
+          status: "CONFIRMED",
+          checkIn: getShiftedDate(0, 14),
+          checkOut: getShiftedDate(2, 11),
+          nights: 2,
+          roomNumber: "201",
+          roomType: "Deluxe Room",
+          adults: 2,
+          children: 0,
+          bookingSource: "AGODA",
+          roomRate: 5500,
+          totalAmount: 12320,
+          taxAmount: 1320,
+          paidAmount: 12320,
+          balanceAmount: 0,
+          folio: [
+            { id: "f_agd_1", description: "Deluxe Room (2 Nights) — Agoda Special Promo Rate", category: "ROOM_CHARGE", amount: 11000, date: getShiftedDate(0) },
+            { id: "f_agd_2", description: "GST Tax (12%)", category: "TAX", amount: 1320, date: getShiftedDate(0) },
+            { id: "f_agd_3", description: "Prepaid — Agoda ePass (●●●● 5512)", category: "PAYMENT", amount: -12320, date: getShiftedDate(0) },
+          ],
+        },
+        {
+          id: "res_agd_871920349",
+          confirmationNumber: "AGD-871920349",
+          guestId: "guest_agd_002",
+          guestName: "Sunita Rao",
+          status: "CONFIRMED",
+          checkIn: getShiftedDate(1, 14),
+          checkOut: getShiftedDate(3, 11),
+          nights: 2,
+          roomNumber: "302",
+          roomType: "Premium Room",
+          adults: 2,
+          children: 1,
+          bookingSource: "AGODA",
+          roomRate: 8000,
+          totalAmount: 17920,
+          taxAmount: 1920,
+          paidAmount: 17920,
+          balanceAmount: 0,
+          folio: [
+            { id: "f_agd_4", description: "Premium Room with Mountain View (2 Nights)", category: "ROOM_CHARGE", amount: 16000, date: getShiftedDate(1) },
+            { id: "f_agd_5", description: "GST Tax (12%)", category: "TAX", amount: 1920, date: getShiftedDate(1) },
+            { id: "f_agd_6", description: "Prepaid — Agoda Collect VCC (●●●● 9811)", category: "PAYMENT", amount: -17920, date: getShiftedDate(1) },
+          ],
+        },
+        {
+          id: "res_agd_760912443",
+          confirmationNumber: "AGD-760912443",
+          guestId: "guest_agd_003",
+          guestName: "Kenji Sato",
+          status: "CHECKED_IN",
+          checkIn: getShiftedDate(0, 10),
+          checkOut: getShiftedDate(4, 11),
+          nights: 4,
+          roomNumber: "402",
+          roomType: "Royal Suite",
+          adults: 2,
+          children: 0,
+          bookingSource: "AGODA",
+          roomRate: 15000,
+          totalAmount: 67200,
+          taxAmount: 7200,
+          paidAmount: 67200,
+          balanceAmount: 0,
+          folio: [
+            { id: "f_agd_7", description: "Royal Suite (4 Nights) — Agoda VIP Member Rate", category: "ROOM_CHARGE", amount: 60000, date: getShiftedDate(0) },
+            { id: "f_agd_8", description: "GST Tax (12%)", category: "TAX", amount: 7200, date: getShiftedDate(0) },
+            { id: "f_agd_9", description: "Prepaid — Agoda International Gateway (●●●● 4219)", category: "PAYMENT", amount: -67200, date: getShiftedDate(0) },
+          ],
+        },
+        {
+          id: "res_agd_659021884",
+          confirmationNumber: "AGD-659021884",
+          guestId: "guest_agd_004",
+          guestName: "Manish Chawla",
+          status: "CONFIRMED",
+          checkIn: getShiftedDate(2, 14),
+          checkOut: getShiftedDate(4, 11),
+          nights: 2,
+          roomNumber: "103",
+          roomType: "Standard Room",
+          adults: 1,
+          children: 0,
+          bookingSource: "AGODA",
+          roomRate: 3500,
+          totalAmount: 7840,
+          taxAmount: 840,
+          paidAmount: 0,
+          balanceAmount: 7840,
+          folio: [
+            { id: "f_agd_10", description: "Standard Room (2 Nights) — Agoda Property Collect", category: "ROOM_CHARGE", amount: 7000, date: getShiftedDate(2) },
+            { id: "f_agd_11", description: "GST Tax (12%)", category: "TAX", amount: 840, date: getShiftedDate(2) },
+          ],
+        },
+      ];
+
+      guestsToImport = [
+        { id: "guest_agd_001", firstName: "Amitav", lastName: "Banerjee", email: "amitav.banerjee@gmail.com", phone: "+91 98301 22440", city: "Kolkata", country: "IN", isVip: true, totalStays: 3, totalSpent: 36960, totalNights: 6 },
+        { id: "guest_agd_002", firstName: "Sunita", lastName: "Rao", email: "sunita.rao@hyderabadcorp.com", phone: "+91 98490 11223", city: "Hyderabad", country: "IN", isVip: false, totalStays: 2, totalSpent: 35840, totalNights: 4 },
+        { id: "guest_agd_003", firstName: "Kenji", lastName: "Sato", email: "k.sato@tokyotravel.jp", phone: "+81 90 1234 5678", city: "Tokyo", country: "JP", isVip: true, totalStays: 1, totalSpent: 67200, totalNights: 4 },
+        { id: "guest_agd_004", firstName: "Manish", lastName: "Chawla", email: "manish.c@delhiexports.com", phone: "+91 98112 33445", city: "New Delhi", country: "IN", isVip: false, totalStays: 1, totalSpent: 7840, totalNights: 2 },
+      ];
+    } else {
+      // Default to Booking.com / Standard OTA
+      bookingsToImport = [
+        {
+          id: `res_${channelPrefix.toLowerCase()}_948210385`,
+          confirmationNumber: `${channelPrefix}-948210385`,
+          guestId: `guest_${channelPrefix.toLowerCase()}_001`,
+          guestName: "Vikram Malhotra",
+          status: "CONFIRMED",
+          checkIn: getShiftedDate(0, 14),
+          checkOut: getShiftedDate(2, 11),
+          nights: 2,
+          roomNumber: "202",
+          roomType: "Deluxe Room",
+          adults: 2,
+          children: 0,
+          bookingSource,
+          roomRate: 5500,
+          totalAmount: 12320,
+          taxAmount: 1320,
+          paidAmount: 12320,
+          balanceAmount: 0,
+          folio: [
+            { id: `f_${channelPrefix.toLowerCase()}_1`, description: `Deluxe Room (2 Nights) — ${targetChannel.name} Rate Plan`, category: "ROOM_CHARGE", amount: 11000, date: getShiftedDate(0) },
+            { id: `f_${channelPrefix.toLowerCase()}_2`, description: "GST Tax (12%)", category: "TAX", amount: 1320, date: getShiftedDate(0) },
+            { id: `f_${channelPrefix.toLowerCase()}_3`, description: `Prepaid — ${targetChannel.name} Virtual Card (●●●● 8821)`, category: "PAYMENT", amount: -12320, date: getShiftedDate(0) },
+          ],
+        },
+        {
+          id: `res_${channelPrefix.toLowerCase()}_883920194`,
+          confirmationNumber: `${channelPrefix}-883920194`,
+          guestId: `guest_${channelPrefix.toLowerCase()}_002`,
+          guestName: "Priya Sharma",
+          status: "CONFIRMED",
+          checkIn: getShiftedDate(1, 14),
+          checkOut: getShiftedDate(3, 11),
+          nights: 2,
+          roomNumber: "301",
+          roomType: "Premium Room",
+          adults: 2,
+          children: 1,
+          bookingSource,
+          roomRate: 8000,
+          totalAmount: 17920,
+          taxAmount: 1920,
+          paidAmount: 17920,
+          balanceAmount: 0,
+          folio: [
+            { id: `f_${channelPrefix.toLowerCase()}_4`, description: "Premium Room with Balcony (2 Nights)", category: "ROOM_CHARGE", amount: 16000, date: getShiftedDate(1) },
+            { id: `f_${channelPrefix.toLowerCase()}_5`, description: "GST Tax (12%)", category: "TAX", amount: 1920, date: getShiftedDate(1) },
+            { id: `f_${channelPrefix.toLowerCase()}_6`, description: `Prepaid — ${targetChannel.name} Virtual Card (●●●● 3349)`, category: "PAYMENT", amount: -17920, date: getShiftedDate(1) },
+          ],
+        },
+        {
+          id: `res_${channelPrefix.toLowerCase()}_771294022`,
+          confirmationNumber: `${channelPrefix}-771294022`,
+          guestId: `guest_${channelPrefix.toLowerCase()}_003`,
+          guestName: "David Miller",
+          status: "CHECKED_IN",
+          checkIn: getShiftedDate(0, 10),
+          checkOut: getShiftedDate(3, 11),
+          nights: 3,
+          roomNumber: "401",
+          roomType: "Royal Suite",
+          adults: 2,
+          children: 0,
+          bookingSource,
+          roomRate: 15000,
+          totalAmount: 50400,
+          taxAmount: 5400,
+          paidAmount: 50400,
+          balanceAmount: 0,
+          folio: [
+            { id: `f_${channelPrefix.toLowerCase()}_7`, description: "Royal Suite — Butler Service (3 Nights)", category: "ROOM_CHARGE", amount: 45000, date: getShiftedDate(0) },
+            { id: `f_${channelPrefix.toLowerCase()}_8`, description: "GST Tax (12%)", category: "TAX", amount: 5400, date: getShiftedDate(0) },
+            { id: `f_${channelPrefix.toLowerCase()}_9`, description: `Prepaid — ${targetChannel.name} Virtual Card (●●●● 9012)`, category: "PAYMENT", amount: -50400, date: getShiftedDate(0) },
+          ],
+        },
+        {
+          id: `res_${channelPrefix.toLowerCase()}_660492817`,
+          confirmationNumber: `${channelPrefix}-660492817`,
+          guestId: `guest_${channelPrefix.toLowerCase()}_004`,
+          guestName: "Rohan Singhal",
+          status: "CONFIRMED",
+          checkIn: getShiftedDate(2, 14),
+          checkOut: getShiftedDate(4, 11),
+          nights: 2,
+          roomNumber: "102",
+          roomType: "Standard Room",
+          adults: 1,
+          children: 0,
+          bookingSource,
+          roomRate: 3500,
+          totalAmount: 7840,
+          taxAmount: 840,
+          paidAmount: 0,
+          balanceAmount: 7840,
+          folio: [
+            { id: `f_${channelPrefix.toLowerCase()}_10`, description: `Standard Room (2 Nights) — ${targetChannel.name} Pay at Hotel Plan`, category: "ROOM_CHARGE", amount: 7000, date: getShiftedDate(2) },
+            { id: `f_${channelPrefix.toLowerCase()}_11`, description: "GST Tax (12%)", category: "TAX", amount: 840, date: getShiftedDate(2) },
+          ],
+        },
+        {
+          id: `res_${channelPrefix.toLowerCase()}_559102834`,
+          confirmationNumber: `${channelPrefix}-559102834`,
+          guestId: `guest_${channelPrefix.toLowerCase()}_005`,
+          guestName: "Sarah Jenkins",
+          status: "CONFIRMED",
+          checkIn: getShiftedDate(3, 14),
+          checkOut: getShiftedDate(5, 11),
+          nights: 2,
+          roomNumber: "203",
+          roomType: "Deluxe Room",
+          adults: 2,
+          children: 0,
+          bookingSource,
+          roomRate: 5500,
+          totalAmount: 12320,
+          taxAmount: 1320,
+          paidAmount: 12320,
+          balanceAmount: 0,
+          folio: [
+            { id: `f_${channelPrefix.toLowerCase()}_12`, description: "Deluxe Room (2 Nights)", category: "ROOM_CHARGE", amount: 11000, date: getShiftedDate(3) },
+            { id: `f_${channelPrefix.toLowerCase()}_13`, description: "GST Tax (12%)", category: "TAX", amount: 1320, date: getShiftedDate(3) },
+            { id: `f_${channelPrefix.toLowerCase()}_14`, description: `Prepaid — ${targetChannel.name} Virtual Card (●●●● 4490)`, category: "PAYMENT", amount: -12320, date: getShiftedDate(3) },
+          ],
+        },
+      ];
+
+      guestsToImport = [
+        { id: `guest_${channelPrefix.toLowerCase()}_001`, firstName: "Vikram", lastName: "Malhotra", email: "vikram.malhotra@gmail.com", phone: "+91 98234 56789", city: "Mumbai", country: "IN", isVip: false, totalStays: 2, totalSpent: 24640, totalNights: 4 },
+        { id: `guest_${channelPrefix.toLowerCase()}_002`, firstName: "Priya", lastName: "Sharma", email: "priya.sharma@outlook.com", phone: "+91 97110 44321", city: "Bengaluru", country: "IN", isVip: true, totalStays: 4, totalSpent: 62000, totalNights: 8 },
+        { id: `guest_${channelPrefix.toLowerCase()}_003`, firstName: "David", lastName: "Miller", email: "david.miller@uktravel.co.uk", phone: "+44 7911 123456", city: "London", country: "GB", isVip: true, totalStays: 1, totalSpent: 50400, totalNights: 3 },
+        { id: `guest_${channelPrefix.toLowerCase()}_004`, firstName: "Rohan", lastName: "Singhal", email: "rohan.singhal@gmail.com", phone: "+91 99887 76655", city: "Jaipur", country: "IN", isVip: false, totalStays: 1, totalSpent: 7840, totalNights: 2 },
+        { id: `guest_${channelPrefix.toLowerCase()}_005`, firstName: "Sarah", lastName: "Jenkins", email: "sarah.j@travelworld.com", phone: "+1 415 555 2671", city: "San Francisco", country: "US", isVip: false, totalStays: 1, totalSpent: 12320, totalNights: 2 },
+      ];
+    }
 
     // 1. Merge reservations without duplicate confirmation numbers
     setReservations((prev) => {
@@ -791,10 +942,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     // 3. Update room allocations
     setRooms((prev) =>
       prev.map((r) => {
-        if (r.number === "202" || r.number === "301" || r.number === "102" || r.number === "203") {
+        if (["201", "202", "301", "302", "102", "103", "203"].includes(r.number)) {
           return { ...r, status: "RESERVED" };
         }
-        if (r.number === "401") {
+        if (["401", "402"].includes(r.number)) {
           return { ...r, status: "OCCUPIED" };
         }
         return r;
@@ -813,7 +964,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
               hotelId: propertyCode,
               apiKeyConfigured: true,
               webhookActive: true,
-              bookingsThisMonth: Math.max(c.bookingsThisMonth, 42) + 5,
+              bookingsThisMonth: Math.max(c.bookingsThisMonth, 42) + bookingsToImport.length,
               revenueThisMonth: Math.max(c.revenueThisMonth, 485000) + totalRev,
             }
           : c

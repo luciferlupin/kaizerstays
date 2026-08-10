@@ -127,8 +127,8 @@ export default function ChannelsClient() {
     setSelectedConfigChannel(ch);
     setConfigMethod("EXTRANET");
     setConfigHotelId(ch.hotelId || `SHM-${ch.name.substring(0, 3).toUpperCase()}-99102`);
-    setConfigExtranetUser(`shemron.${ch.name.toLowerCase().replace(/\s/g, "")}@gmail.com`);
-    setConfigExtranetPass("●●●●●●●●");
+    setConfigExtranetUser("sharma.anand.2701@gmail.com");
+    setConfigExtranetPass("Hotel@Shemronn@2025");
     setConfigApiKey(ch.apiKeyConfigured ? "●●●●●●●●●●●●●●●●" : `sk_live_shemron_${ch.id}_${Math.floor(100000 + Math.random() * 900000)}`);
     setConfigIcalUrl(`https://admin.${ch.name.toLowerCase().replace(/\s/g, "")}.com/ical/shemron/${ch.id}.ics`);
     setConfigCommission(ch.commission);
