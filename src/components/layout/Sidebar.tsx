@@ -82,7 +82,7 @@ const NAV_GROUPS: NavGroupDef[] = [
       { label: "Rooms", href: "/dashboard/rooms", icon: "DoorOpen" },
       { label: "Housekeeping", href: "/dashboard/housekeeping", icon: "Sparkles", badge: 5 },
       { label: "Guest Requests", href: "/dashboard/requests", icon: "MessageSquare", badge: 2 },
-      { label: "Department Ordering", href: "/dashboard/inventory", icon: "Boxes" },
+      { label: "Stock & Inventory", href: "/dashboard/inventory", icon: "Boxes" },
       { label: "Night Audit", href: "/dashboard/night-audit", icon: "Moon" },
       { label: "Restaurant POS", href: "/dashboard/pos", icon: "Utensils" },
     ],

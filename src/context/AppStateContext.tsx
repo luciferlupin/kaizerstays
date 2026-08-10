@@ -61,6 +61,52 @@ export interface OTAImportResult {
   timestamp: Date;
 }
 
+export interface StockInventoryItem {
+  id: string;
+  code: string;
+  name: string;
+  category: "HOUSEKEEPING" | "FNB_KITCHEN" | "FRONT_OFFICE" | "ENGINEERING" | "BAR_BEVERAGE" | "AMENITIES";
+  department: string;
+  quantity: number;
+  unit: string;
+  minThreshold: number;
+  unitPrice: number;
+  location: string;
+  supplier: string;
+  lastRestocked?: Date;
+}
+
+export interface StockRequisition {
+  id: string;
+  reqNumber: string;
+  department: string;
+  requestedBy: string;
+  item: string;
+  quantity: number;
+  unit: string;
+  priority: "NORMAL" | "URGENT";
+  status: "PENDING_APPROVAL" | "APPROVED" | "ISSUED" | "REJECTED";
+  date: Date;
+}
+
+export const initialStockItems: StockInventoryItem[] = [
+  { id: "inv_101", code: "HK-LIN-001", name: "Premium King Bed Sheets", category: "HOUSEKEEPING", department: "Housekeeping", quantity: 18, unit: "Pcs", minThreshold: 30, unitPrice: 1200, location: "Main Linen Room", supplier: "Rajasthan Textile Mills" },
+  { id: "inv_102", code: "HK-TOW-002", name: "Bath Towels 600 GSM", category: "HOUSEKEEPING", department: "Housekeeping", quantity: 45, unit: "Pcs", minThreshold: 40, unitPrice: 450, location: "Main Linen Room", supplier: "CleanPro Linens" },
+  { id: "inv_103", code: "HK-AMN-003", name: "Luxury Guest Shampoo & Body Wash 50ml", category: "AMENITIES", department: "Housekeeping", quantity: 180, unit: "Pcs", minThreshold: 100, unitPrice: 35, location: "Housekeeping Store", supplier: "Forest Essentials" },
+  { id: "inv_104", code: "FB-DAI-001", name: "Amul Butter 500g", category: "FNB_KITCHEN", department: "Restaurant Kitchen", quantity: 24, unit: "Packs", minThreshold: 15, unitPrice: 275, location: "Cold Store #1", supplier: "Amul Dairy Neemrana" },
+  { id: "inv_105", code: "FB-PNE-002", name: "Fresh Cottage Cheese (Paneer)", category: "FNB_KITCHEN", department: "Restaurant Kitchen", quantity: 8, unit: "Kg", minThreshold: 10, unitPrice: 340, location: "Cold Store #2", supplier: "Fresh Farms Dairy" },
+  { id: "inv_106", code: "FB-BEV-003", name: "Premium Tea Leaves & Coffee Sachets", category: "FNB_KITCHEN", department: "Restaurant Kitchen", quantity: 85, unit: "Packs", minThreshold: 50, unitPrice: 120, location: "Dry Pantry", supplier: "Tata Tea Supplies" },
+  { id: "inv_107", code: "FO-KEY-001", name: "RFID Key Cards (Hotel Branded)", category: "FRONT_OFFICE", department: "Front Desk", quantity: 120, unit: "Cards", minThreshold: 50, unitPrice: 85, location: "Front Desk Store", supplier: "SmartCard Tech" },
+  { id: "inv_108", code: "FO-STA-002", name: "Guest Registration Cards & Key Wallets", category: "FRONT_OFFICE", department: "Front Desk", quantity: 250, unit: "Pcs", minThreshold: 100, unitPrice: 15, location: "Front Desk Store", supplier: "PrintPro Neemrana" },
+  { id: "inv_109", code: "ENG-BUL-001", name: "LED Warm White Bulbs 9W", category: "ENGINEERING", department: "Maintenance", quantity: 12, unit: "Pcs", minThreshold: 20, unitPrice: 140, location: "Engineering Workshop", supplier: "Havells India" },
+  { id: "inv_110", code: "ENG-PLM-002", name: "Faucet Aerators & Plumbing Washers", category: "ENGINEERING", department: "Maintenance", quantity: 35, unit: "Pcs", minThreshold: 15, unitPrice: 80, location: "Engineering Store", supplier: "Jaquar Supplies" },
+];
+
+export const initialRequisitions: StockRequisition[] = [
+  { id: "req_1", reqNumber: "MR-2026-0042", department: "Housekeeping", requestedBy: "Meena Manager", item: "Premium King Bed Sheets", quantity: 12, unit: "Pcs", priority: "URGENT", status: "PENDING_APPROVAL", date: new Date() },
+  { id: "req_2", reqNumber: "MR-2026-0041", department: "Restaurant Kitchen", requestedBy: "Arun Chef", item: "Fresh Cottage Cheese (Paneer)", quantity: 5, unit: "Kg", priority: "NORMAL", status: "APPROVED", date: new Date(Date.now() - 3600000 * 4) },
+];
+
 interface AppStateContextType {
   property: typeof demoProperty;
   rooms: typeof demoRooms;
@@ -78,6 +124,8 @@ interface AppStateContextType {
   otaChannels: typeof otaChannels;
   nightAudits: NightAuditRecord[];
   currentUser: { name: string; role: string; email: string; staffId: string } | null;
+  inventoryItems: StockInventoryItem[];
+  requisitions: StockRequisition[];
 
   // Actions connecting everything
   loginUser: (emailOrId: string, password: string) => boolean;
@@ -101,6 +149,10 @@ interface AppStateContextType {
   updateOTAChannel: (channelId: string, updates: Partial<typeof otaChannels[0]>) => void;
   connectAllChannelsToCRM: () => void;
   fetchAndImportOTAExtranet: (channelId: string, credentials: { username: string; password?: string; propertyId?: string }) => OTAImportResult;
+  addInventoryItem: (item: Omit<StockInventoryItem, "id">) => void;
+  updateInventoryStock: (itemId: string, adjustmentQty: number, reason?: string) => void;
+  addRequisition: (req: Omit<StockRequisition, "id" | "reqNumber" | "date">) => void;
+  updateRequisitionStatus: (reqId: string, status: StockRequisition["status"]) => void;
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
@@ -132,6 +184,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [channels, setChannels] = useState(otaChannels);
   const [nightAudits, setNightAudits] = useState(nightAuditHistory);
   const [currentUser, setCurrentUser] = useState<{ name: string; role: string; email: string; staffId: string } | null>(null);
+  const [inventoryItems, setInventoryItems] = useState<StockInventoryItem[]>(initialStockItems);
+  const [requisitions, setRequisitions] = useState<StockRequisition[]>(initialRequisitions);
 
   // ─── LocalStorage Hydration & Persistence (Zero Data Loss) ───
   useEffect(() => {
@@ -147,6 +201,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         if (parsed.payments) setPayments(parsed.payments.filter((p: any) => p.id !== "pay_001"));
         if (parsed.expenses) setExpenses(parsed.expenses.filter((e: any) => e.id !== "exp_001"));
         if (parsed.staff?.length) setStaff(parsed.staff);
+        if (parsed.inventoryItems?.length) setInventoryItems(parsed.inventoryItems);
+        if (parsed.requisitions?.length) setRequisitions(parsed.requisitions);
         if (parsed.channels?.length) {
           const cleanedChannels = parsed.channels.map((ch: any) => {
             if (ch.revenueThisMonth === 485000 || ch.revenueThisMonth === 312000 || ch.revenueThisMonth === 198000 || ch.bookingsThisMonth === 42 || ch.bookingsThisMonth === 28) {
@@ -194,12 +250,14 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         staff,
         channels,
         currentUser,
+        inventoryItems,
+        requisitions,
       };
       localStorage.setItem("staysphere_app_state_v1", JSON.stringify(stateToSave));
     } catch (e) {
       console.warn("LocalStorage state save failed:", e);
     }
-  }, [rooms, reservations, guests, housekeepingTasks, guestRequests, payments, expenses, activity, staff, channels, currentUser]);
+  }, [rooms, reservations, guests, housekeepingTasks, guestRequests, payments, expenses, activity, staff, channels, currentUser, inventoryItems, requisitions]);
 
   const loginUser = (emailOrId: string, pass: string) => {
     const isOwner = emailOrId.toLowerCase() === "ninaad.khera@gmail.com" || emailOrId.toLowerCase().includes("owner");
@@ -819,6 +877,55 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     addActivity("All OTA Channels Connected", "ota", "all_ota", "Established 2-way real-time rate & inventory sync for Hotel Shemron across all 12 OTA platforms");
   };
 
+  // ─── Stock & Inventory Handlers ───
+  const addInventoryItem = (item: Omit<StockInventoryItem, "id">) => {
+    const newItem: StockInventoryItem = {
+      ...item,
+      id: `inv_${Date.now()}`,
+      lastRestocked: new Date(),
+    };
+    setInventoryItems((prev) => [newItem, ...prev]);
+    addActivity("Stock Item Added", "inventory", newItem.id, `${newItem.name} (${newItem.code}) added with ${newItem.quantity} ${newItem.unit} to stock inventory`);
+  };
+
+  const updateInventoryStock = (itemId: string, adjustmentQty: number, reason?: string) => {
+    setInventoryItems((prev) =>
+      prev.map((i) => {
+        if (i.id === itemId) {
+          const newQty = Math.max(0, i.quantity + adjustmentQty);
+          return { ...i, quantity: newQty, lastRestocked: adjustmentQty > 0 ? new Date() : i.lastRestocked };
+        }
+        return i;
+      })
+    );
+    const target = inventoryItems.find((i) => i.id === itemId);
+    if (target) {
+      const actionLabel = adjustmentQty > 0 ? `+${adjustmentQty}` : `${adjustmentQty}`;
+      addActivity("Stock Adjusted", "inventory", itemId, `Adjusted ${actionLabel} ${target.unit} of ${target.name}. Reason: ${reason || "Stock inventory audit"}`);
+    }
+  };
+
+  const addRequisition = (req: Omit<StockRequisition, "id" | "reqNumber" | "date">) => {
+    const newReq: StockRequisition = {
+      ...req,
+      id: `req_${Date.now()}`,
+      reqNumber: `MR-2026-00${Math.floor(50 + Math.random() * 50)}`,
+      date: new Date(),
+    };
+    setRequisitions((prev) => [newReq, ...prev]);
+    addActivity("Requisition Created", "inventory", newReq.id, `${newReq.department} submitted material requisition for ${newReq.quantity} ${newReq.unit} of ${newReq.item}`);
+  };
+
+  const updateRequisitionStatus = (reqId: string, status: StockRequisition["status"]) => {
+    setRequisitions((prev) =>
+      prev.map((r) => (r.id === reqId ? { ...r, status } : r))
+    );
+    const target = requisitions.find((r) => r.id === reqId);
+    if (target) {
+      addActivity("Requisition Updated", "inventory", reqId, `Requisition ${target.reqNumber} (${target.item}) marked as ${status}`);
+    }
+  };
+
   return (
     <AppStateContext.Provider
       value={{
@@ -838,6 +945,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         otaChannels: channels,
         nightAudits,
         currentUser,
+        inventoryItems,
+        requisitions,
         loginUser,
         logoutUser,
         addStaffMember,
@@ -859,6 +968,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         updateOTAChannel,
         connectAllChannelsToCRM,
         fetchAndImportOTAExtranet,
+        addInventoryItem,
+        updateInventoryStock,
+        addRequisition,
+        updateRequisitionStatus,
       }}
     >
       {children}
