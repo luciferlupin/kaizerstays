@@ -53,6 +53,8 @@ export async function GET() {
   }
 
   const liveBookings = await client.fetchLiveReservations(targetHotelId);
+  const demandForecast = await client.fetchDemandForecast(targetHotelId);
+  const commissions = await client.fetchCommissionReport(targetHotelId);
 
   const todayRates = liveRates?.[todayStr]?.rates || [
     { roomId: "deluxe-room", rate: 2800, rateplanId: "deluxe-room-d-ep", occupancy: "D" },
@@ -90,6 +92,8 @@ export async function GET() {
     liveRates: todayRates,
     liveInventory: todayInv,
     liveBookings,
+    demandForecast,
+    commissions,
     syncedAt: new Date().toISOString(),
   });
 }

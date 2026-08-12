@@ -25,6 +25,27 @@ export interface AiosellLiveSummary {
   occupiedRooms: number;
   occupancyPercentage: number;
   todayRevenue: number;
+  liveReservations: AiosellReservationItem[];
+  demandForecast?: {
+    segments?: unknown[];
+    datewise_data?: Record<string, {
+      expected_pickup?: number;
+      forecasted_bob?: number;
+      curr_bar?: number;
+      demand?: string;
+      forecasted_occ?: number;
+    }>;
+  };
+  commissions?: {
+    totalDict?: {
+      totalrns?: number;
+      totalPer?: number;
+      totalComm?: number;
+      toatalArr?: number;
+      totalRev?: number;
+    };
+    data?: unknown[];
+  };
   syncedAt: string;
 }
 
@@ -133,6 +154,9 @@ export async function fetchLiveAiosellSummary(): Promise<AiosellLiveSummary> {
   const hotelDetails = await client.getHotelDetails(hotelId);
   const todayStr = new Date().toISOString().split("T")[0];
   const liveInventory = await client.getLiveInventory(todayStr, todayStr, hotelId);
+  const liveReservations = await client.fetchLiveReservations(hotelId);
+  const demandForecast = await client.fetchDemandForecast(hotelId);
+  const commissions = await client.fetchCommissionReport(hotelId);
 
   const todayInv = liveInventory?.[todayStr]?.split || { "deluxe-room": 26, "twin-room": 2, "suite-room": 2 };
   
@@ -172,6 +196,9 @@ export async function fetchLiveAiosellSummary(): Promise<AiosellLiveSummary> {
     occupiedRooms,
     occupancyPercentage,
     todayRevenue: occupiedRooms * 2800,
+    liveReservations,
+    demandForecast,
+    commissions,
     syncedAt: new Date().toISOString(),
   };
 }
