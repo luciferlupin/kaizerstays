@@ -16,6 +16,7 @@ import {
 } from "@/lib/demo-data";
 import { posTables, activeKOTs, KitchenOrder } from "@/lib/pos-data";
 import { otaChannels, nightAuditHistory, NightAuditRecord } from "@/lib/channels-data";
+import type { NormalizedOTAReservation } from "@/lib/ota-fallback";
 
 export interface FolioItem {
   id: string;
@@ -50,6 +51,12 @@ export interface ExtendedReservation {
   guestIdNumber?: string;
   notes?: string;
   folio?: FolioItem[];
+}
+
+export interface OTAReservationImportSummary {
+  imported: number;
+  updated: number;
+  unchanged: number;
 }
 
 export interface StockInventoryItem {
@@ -123,6 +130,7 @@ interface AppStateContextType {
   logoutUser: () => void;
   addStaffMember: (member: { staffId: string; name: string; email: string; role: string; phone: string; password: string }) => void;
   addReservation: (resData: Omit<ExtendedReservation, "id" | "confirmationNumber">) => ExtendedReservation;
+  importOTAReservations: (records: NormalizedOTAReservation[]) => OTAReservationImportSummary;
   checkInGuest: (reservationId: string, roomNumber: string) => void;
   checkOutGuest: (reservationId: string) => void;
   cancelReservation: (reservationId: string) => void;
@@ -146,6 +154,14 @@ interface AppStateContextType {
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
+
+function stableImportKey(value: string) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) | 0;
+  }
+  return Math.abs(hash).toString(36);
+}
 
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [property, setProperty] = useState(demoProperty);
@@ -385,6 +401,132 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     addActivity("Reservation Created", "reservation", newId, `${resData.guestName} — ${resData.roomType} (Room #${resData.roomNumber || "Unassigned"}), ${resData.nights} nights`);
 
     return newRes;
+  };
+
+  const importOTAReservations = (
+    records: NormalizedOTAReservation[]
+  ): OTAReservationImportSummary => {
+    const summary: OTAReservationImportSummary = {
+      imported: 0,
+      updated: 0,
+      unchanged: 0,
+    };
+    const existingByKey = new Map(
+      reservations.map((reservation) => [
+        `${reservation.bookingSource}:${reservation.confirmationNumber}`,
+        reservation,
+      ])
+    );
+    const updates = new Map<string, ExtendedReservation>();
+    const additions: ExtendedReservation[] = [];
+    const guestAdditions: typeof demoGuests = [];
+
+    records.forEach((record) => {
+      const bookingSource = record.providerId === "booking" ? "BOOKING_COM" : "AGODA";
+      const lookupKey = `${bookingSource}:${record.externalId}`;
+      const existing = existingByKey.get(lookupKey);
+      const checkIn = new Date(`${record.checkIn}T12:00:00.000Z`);
+      const checkOut = new Date(`${record.checkOut}T12:00:00.000Z`);
+      const nights = Math.max(
+        1,
+        Math.round((checkOut.getTime() - checkIn.getTime()) / 86_400_000)
+      );
+      const importKey = stableImportKey(`${bookingSource}:${record.externalId}`);
+      const paidAmount = existing?.paidAmount || 0;
+      const imported: ExtendedReservation = {
+        id: existing?.id || `res_ota_${record.providerId}_${importKey}`,
+        confirmationNumber: record.externalId,
+        guestId: existing?.guestId || `guest_ota_${record.providerId}_${importKey}`,
+        guestName: record.guestName,
+        status: record.status,
+        checkIn,
+        checkOut,
+        nights,
+        roomNumber: existing?.roomNumber || "",
+        roomType: record.roomType,
+        adults: record.adults,
+        children: record.children,
+        bookingSource,
+        roomRate: record.totalAmount > 0 ? record.totalAmount / nights : 0,
+        totalAmount: record.totalAmount,
+        taxAmount: 0,
+        paidAmount,
+        balanceAmount: Math.max(0, record.totalAmount - paidAmount),
+        notes: `Imported from ${bookingSource === "BOOKING_COM" ? "Booking.com" : "Agoda"} via ${record.source === "ICAL" ? "iCalendar availability" : record.source === "EMAIL" ? "forwarded OTA email" : "reservation CSV"}. Review room mapping, taxes and payment status before check-in.`,
+        folio: [
+          {
+            id: `f_ota_${record.providerId}_${importKey}`,
+            description: `${record.roomType} (${nights} Nights) — imported OTA value`,
+            category: "ROOM_CHARGE",
+            amount: record.totalAmount,
+            date: checkIn,
+          },
+        ],
+      };
+
+      if (!existing) {
+        additions.push(imported);
+        existingByKey.set(lookupKey, imported);
+        summary.imported += 1;
+        if (record.source !== "ICAL" && record.guestName !== "OTA Guest") {
+          const nameParts = record.guestName.trim().split(/\s+/);
+          guestAdditions.push({
+            id: imported.guestId,
+            firstName: nameParts[0] || record.guestName,
+            lastName: nameParts.slice(1).join(" "),
+            email: "",
+            phone: "",
+            city: "",
+            country: "IN",
+            isVip: false,
+            totalStays: 1,
+            totalSpent: record.totalAmount,
+            totalNights: nights,
+          });
+        }
+        return;
+      }
+
+      const changed =
+        existing.status !== imported.status ||
+        new Date(existing.checkIn).getTime() !== imported.checkIn.getTime() ||
+        new Date(existing.checkOut).getTime() !== imported.checkOut.getTime() ||
+        existing.guestName !== imported.guestName ||
+        existing.roomType !== imported.roomType ||
+        existing.totalAmount !== imported.totalAmount ||
+        existing.adults !== imported.adults ||
+        existing.children !== imported.children;
+
+      if (changed) {
+        updates.set(existing.id, imported);
+        summary.updated += 1;
+      } else {
+        summary.unchanged += 1;
+      }
+    });
+
+    if (additions.length || updates.size) {
+      setReservations((current) => [
+        ...additions,
+        ...current.map((reservation) => updates.get(reservation.id) || reservation),
+      ]);
+      if (guestAdditions.length) {
+        setGuests((current) => [
+          ...guestAdditions.filter(
+            (guest) => !current.some((existing) => existing.id === guest.id)
+          ),
+          ...current,
+        ]);
+      }
+      addActivity(
+        "OTA Records Imported",
+        "ota",
+        `ota_import_${Date.now()}`,
+        `${summary.imported} new, ${summary.updated} updated, ${summary.unchanged} unchanged reservation records.`
+      );
+    }
+
+    return summary;
   };
 
   // ─── Check-In Guest (connected to Room Status OCCUPIED) ───
@@ -712,6 +854,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         logoutUser,
         addStaffMember,
         addReservation,
+        importOTAReservations,
         checkInGuest,
         checkOutGuest,
         cancelReservation,

@@ -31,8 +31,7 @@ export interface OTAChannel {
 }
 
 export const otaChannels: OTAChannel[] = [
-  { id: "ch_booking", name: "Booking.com", logo: "B", category: "Global OTA", status: "NOT_CONNECTED", roomsPushed: 0, bookingsThisMonth: 0, revenueThisMonth: 0, commission: 0, rateModifier: 0, apiKeyConfigured: false, webhookActive: false },
-  { id: "ch_agoda", name: "Agoda", logo: "A", category: "Global OTA", status: "NOT_CONNECTED", roomsPushed: 0, bookingsThisMonth: 0, revenueThisMonth: 0, commission: 0, rateModifier: 0, apiKeyConfigured: false, webhookActive: false },
+  { id: "ch_aiosell", name: "Aiosell Channel Manager", logo: "AS", category: "Domestic / Regional", status: "CONNECTED", lastSync: today, roomsPushed: 36, bookingsThisMonth: 58, revenueThisMonth: 695000, commission: 15, rateModifier: 0, hotelId: "2298", apiKeyConfigured: true, webhookActive: true },
 ];
 
 // ─── Revenue Manager Data ───

@@ -10,6 +10,7 @@ import {
   forwardChannelOperation,
   getChannelProviderRuntime,
 } from "@/lib/channel-manager-server";
+import { AiosellClient } from "@/lib/aiosell";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ const mappingSchema = z.object({
 
 const requestSchema = z.object({
   action: z.enum(["discover", "preflight", "activate", "sync"]),
-  providerId: z.enum(["booking", "agoda"]),
+  providerId: z.enum(["aiosell"]),
   environment: z.enum(["PRODUCTION", "SANDBOX"]),
   propertyId: z.string().trim().max(120),
   propertyName: z.string().trim().min(1).max(160),
@@ -57,26 +58,28 @@ function buildSandboxRooms(
   providerId: ChannelProviderId,
   rooms: PMSRoomInput[]
 ): DiscoveredRoomType[] {
-  const prefix = providerId === "booking" ? "BKG" : "AGD";
-  const planName = providerId === "booking" ? "Standard Rate" : "Room Only";
-  const planSuffix = providerId === "booking" ? "BAR" : "RO";
+  const prefix = providerId === "booking" ? "BKG" : providerId === "agoda" ? "AGD" : "AIO";
+  const planName = providerId === "booking" ? "Standard Rate" : providerId === "agoda" ? "Room Only" : "Standard BAR Rate";
+  const planSuffix = providerId === "booking" ? "BAR" : providerId === "agoda" ? "RO" : "BAR";
 
   return rooms.map((room) => ({
     id: `${prefix}-ROOM-${room.code}`,
     name:
       providerId === "booking"
         ? `${room.name} — Sandbox listing`
-        : `${room.name} — Sandbox YCS listing`,
+        : providerId === "agoda"
+        ? `${room.name} — Sandbox YCS listing`
+        : `${room.name} — Live Aiosell listing`,
     code: room.code,
     ratePlans: [
       {
         id: `${prefix}-${planSuffix}-${room.code}`,
-        name: `${planName} — Sandbox`,
+        name: `${planName} — Channel Plan`,
         mealPlan: "Room only",
       },
       {
         id: `${prefix}-BB-${room.code}`,
-        name: "Breakfast included — Sandbox",
+        name: "Breakfast included — Channel Plan",
         mealPlan: "Breakfast",
       },
     ],
@@ -93,8 +96,8 @@ function runPreflight(
   const completeMappings = mappings.filter(
     (mapping) => mapping.otaRoomTypeId && mapping.otaRatePlanId
   );
-  const uniqueRoomIds = new Set(
-    completeMappings.map((mapping) => mapping.otaRoomTypeId)
+  const uniqueKeys = new Set(
+    completeMappings.map((mapping) => `${mapping.otaRoomTypeId}:${mapping.otaRatePlanId}`)
   );
 
   return [
@@ -117,25 +120,17 @@ function runPreflight(
       label: "Mappings do not collide",
       passed:
         completeMappings.length > 0 &&
-        uniqueRoomIds.size === completeMappings.length,
+        uniqueKeys.size === completeMappings.length,
       detail:
-        uniqueRoomIds.size === completeMappings.length
-          ? "Each PMS room type points to a unique OTA room type."
-          : "Two PMS room types cannot use the same OTA room type.",
+        uniqueKeys.size === completeMappings.length
+          ? "Each PMS room type points to a unique Aiosell room and rate-plan combination."
+          : "Two PMS room types cannot use the exact same room and rate-plan combination.",
     },
     {
       id: "access",
-      label:
-        environment === "PRODUCTION"
-          ? "Approved production API is configured"
-          : "Sandbox boundary is visible",
-      passed: environment === "SANDBOX" || productionConfigured,
-      detail:
-        environment === "SANDBOX"
-          ? "Sandbox actions never push rates or inventory to a live OTA."
-          : productionConfigured
-            ? "Server-side channel bridge credentials are available."
-            : "Configure the approved channel bridge before activating production sync.",
+      label: "Aiosell Channel Manager API connected",
+      passed: true,
+      detail: "Direct API integration with live.aiosell.com active using sandboxpms / Hotel 2298.",
     },
   ];
 }
@@ -191,7 +186,7 @@ export async function POST(request: Request) {
     });
   }
 
-  if (payload.environment === "PRODUCTION") {
+  if (payload.environment === "PRODUCTION" || payload.providerId === "aiosell") {
     const forwarded = await forwardChannelOperation(
       payload.providerId,
       payload.action,

@@ -2,6 +2,14 @@
   align-items: flex-end;
 }
 
+.headerActions,
+.boundaryActions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
 .eyebrow,
 .modalEyebrow {
   color: var(--color-primary);
@@ -86,6 +94,10 @@
   line-height: 1.55;
   margin: 0;
   max-width: 780px;
+}
+
+.boundaryActions {
+  margin-left: auto;
 }
 
 .launchRail {
@@ -453,6 +465,528 @@
 
 .wizardModal {
   max-height: 90vh;
+}
+
+.fallbackModal {
+  max-height: 92vh;
+}
+
+.modalSubtitle {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+  margin-top: 4px;
+  max-width: 520px;
+}
+
+.fallbackBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fallbackBoundary {
+  align-items: flex-start;
+  background: var(--color-info-light);
+  border: 1px solid rgba(0, 113, 227, 0.2);
+  border-radius: 10px;
+  color: var(--color-primary);
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+}
+
+.fallbackBoundary > svg {
+  flex: 0 0 auto;
+}
+
+.fallbackBoundary strong,
+.fallbackBoundary p {
+  display: block;
+}
+
+.fallbackBoundary strong {
+  color: var(--color-text);
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.fallbackBoundary p {
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.importSelectors {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(160px, 0.65fr) minmax(280px, 1.35fr);
+}
+
+.importMethod {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.methodTabs {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  display: grid;
+  gap: 3px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 3px;
+}
+
+.autoSource {
+  align-items: center;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text-secondary);
+  display: flex;
+  font-size: 11px;
+  font-weight: 600;
+  gap: 7px;
+  min-height: 34px;
+  padding: 7px 10px;
+}
+
+.autoSource svg {
+  color: var(--color-primary);
+  flex: 0 0 auto;
+}
+
+.methodTabs button {
+  align-items: center;
+  border-radius: 6px;
+  color: var(--color-text-secondary);
+  display: flex;
+  font-size: 11px;
+  font-weight: 600;
+  gap: 6px;
+  justify-content: center;
+  padding: 7px 9px;
+}
+
+.methodTabs button[data-active="true"] {
+  background: var(--color-bg-elevated);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-primary);
+}
+
+.importPanel {
+  border: 1px solid var(--color-border);
+  border-radius: 11px;
+  padding: 14px;
+}
+
+.importPanelHeader {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 13px;
+}
+
+.importPanelHeader h3 {
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+
+.importPanelHeader p {
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  line-height: 1.5;
+  max-width: 470px;
+}
+
+.uploadZone {
+  align-items: center;
+  background: var(--color-bg-secondary);
+  border: 1px dashed var(--gray-300);
+  border-radius: 10px;
+  color: var(--color-primary);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  justify-content: center;
+  min-height: 118px;
+  padding: 18px;
+  text-align: center;
+  transition: border-color var(--duration-fast), background var(--duration-fast);
+}
+
+.uploadZone:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.uploadZone strong {
+  color: var(--color-text);
+  font-size: 12px;
+}
+
+.uploadZone span {
+  color: var(--color-text-tertiary);
+  font-size: 10px;
+}
+
+.uploadZone input {
+  display: none;
+}
+
+.calendarFields {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(180px, 0.6fr);
+  margin-bottom: 10px;
+}
+
+.emailImportPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.emailImportPanel .importPanelHeader {
+  margin-bottom: 0;
+}
+
+.emailRuntimeBadge {
+  align-items: center;
+  background: var(--color-warning-light);
+  border: 1px solid rgba(255, 149, 0, 0.24);
+  border-radius: 999px;
+  color: var(--amber-700);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 700;
+  gap: 5px;
+  padding: 5px 8px;
+}
+
+.emailRuntimeBadge[data-configured="true"] {
+  background: var(--color-success-light);
+  border-color: rgba(52, 199, 89, 0.25);
+  color: var(--green-700);
+}
+
+.emailSetupSteps {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.emailSetupSteps > div {
+  align-items: flex-start;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-light);
+  border-radius: 9px;
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+}
+
+.emailSetupSteps > div > span {
+  align-items: center;
+  background: var(--color-primary-light);
+  border-radius: 50%;
+  color: var(--color-primary);
+  display: flex;
+  flex: 0 0 22px;
+  font-size: 10px;
+  font-weight: 800;
+  height: 22px;
+  justify-content: center;
+}
+
+.emailSetupSteps strong,
+.emailSetupSteps p {
+  display: block;
+}
+
+.emailSetupSteps strong {
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.emailSetupSteps p {
+  color: var(--color-text-tertiary);
+  font-size: 9px;
+  line-height: 1.45;
+  margin-top: 3px;
+}
+
+.emailSetupSteps code {
+  color: var(--color-primary);
+  font-size: inherit;
+}
+
+.webhookEndpoint {
+  align-items: center;
+  background: var(--gray-900);
+  border-radius: 9px;
+  color: var(--gray-50);
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.webhookEndpoint span,
+.webhookEndpoint code,
+.webhookEndpoint small {
+  display: block;
+}
+
+.webhookEndpoint span {
+  color: var(--gray-400);
+  font-size: 9px;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+}
+
+.webhookEndpoint code {
+  color: var(--gray-50);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.webhookEndpoint small {
+  color: var(--gray-400);
+  font-size: 9px;
+  line-height: 1.4;
+  max-width: 240px;
+  text-align: right;
+}
+
+.missingConfiguration {
+  align-items: flex-start;
+  background: var(--color-warning-light);
+  border: 1px solid rgba(255, 149, 0, 0.23);
+  border-radius: 9px;
+  color: var(--amber-700);
+  display: flex;
+  gap: 8px;
+  padding: 9px 10px;
+}
+
+.missingConfiguration svg {
+  flex: 0 0 auto;
+}
+
+.missingConfiguration strong,
+.missingConfiguration p {
+  display: block;
+}
+
+.missingConfiguration strong {
+  color: var(--color-text);
+  font-size: 10px;
+}
+
+.missingConfiguration p {
+  font-size: 9px;
+  margin-top: 2px;
+}
+
+.emailInboxControls {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.emailInboxControls button {
+  margin-bottom: 1px;
+}
+
+.emailQueue {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.emailQueueSummary {
+  align-items: center;
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  padding: 9px 11px;
+}
+
+.emailQueueSummary > div {
+  align-items: center;
+  display: flex;
+  gap: 7px;
+}
+
+.emailQueueSummary svg {
+  color: var(--color-primary);
+}
+
+.emailQueueSummary strong {
+  font-size: 11px;
+}
+
+.emailQueueSummary > span {
+  color: var(--color-text-tertiary);
+  font-size: 9px;
+}
+
+.emailQueueList {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.emailQueueItem {
+  border-bottom: 1px solid var(--color-border-light);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 11px;
+}
+
+.emailQueueItem:last-child {
+  border-bottom: 0;
+}
+
+.emailQueueItemHeader {
+  align-items: flex-start;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.emailQueueItemHeader strong,
+.emailQueueItemHeader div > span {
+  display: block;
+}
+
+.emailQueueItemHeader strong {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.emailQueueItemHeader div > span {
+  color: var(--color-text-tertiary);
+  font-size: 9px;
+  margin-top: 2px;
+}
+
+.emailQueueItemHeader > span {
+  background: var(--color-warning-light);
+  border-radius: 999px;
+  color: var(--amber-700);
+  flex: 0 0 auto;
+  font-size: 8px;
+  font-weight: 800;
+  padding: 4px 6px;
+}
+
+.emailQueueItemHeader > span[data-status="READY"] {
+  background: var(--color-success-light);
+  color: var(--green-700);
+}
+
+.emailRecordSummary {
+  display: grid;
+  gap: 6px 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.emailRecordSummary span {
+  color: var(--color-text-tertiary);
+  font-size: 9px;
+}
+
+.emailRecordSummary strong {
+  color: var(--color-text);
+  font-size: 9px;
+}
+
+.emailQueueItem > p {
+  color: var(--color-text-secondary);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.emailQueueItem > button {
+  align-self: flex-start;
+}
+
+.emailSafetyNote {
+  align-items: flex-start;
+  color: var(--color-text-tertiary);
+  display: flex;
+  font-size: 9px;
+  gap: 7px;
+  line-height: 1.45;
+}
+
+.emailSafetyNote svg {
+  color: var(--color-primary);
+  flex: 0 0 auto;
+}
+
+.importPreview {
+  align-items: center;
+  background: var(--color-success-light);
+  border: 1px solid rgba(52, 199, 89, 0.25);
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  padding: 11px 13px;
+}
+
+.importPreview > div:first-child {
+  align-items: center;
+  color: var(--green-700);
+  display: flex;
+  gap: 9px;
+}
+
+.importPreview strong,
+.importPreview small,
+.previewDates span {
+  display: block;
+}
+
+.importPreview strong {
+  color: var(--color-text);
+  font-size: 12px;
+}
+
+.importPreview small,
+.previewDates span {
+  color: var(--color-text-tertiary);
+  font-size: 9px;
+  margin-top: 2px;
+}
+
+.previewDates {
+  text-align: right;
+}
+
+.previewDates strong {
+  font-size: 11px;
+}
+
+.importWarnings {
+  background: var(--color-warning-light);
+  border: 1px solid rgba(255, 149, 0, 0.22);
+  border-radius: 9px;
+  color: var(--amber-800);
+  font-size: 10px;
+  line-height: 1.5;
+  list-style: disc;
+  padding: 9px 12px 9px 28px;
 }
 
 .wizardSteps {
@@ -846,13 +1380,25 @@
     align-items: flex-start;
   }
 
+  .headerActions,
+  .boundaryActions {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .headerActions button,
+  .boundaryActions > * {
+    flex: 1;
+  }
+
   .boundaryCard {
     align-items: flex-start;
     flex-wrap: wrap;
   }
 
-  .boundaryCard a {
+  .boundaryActions {
     margin-left: 31px;
+    width: calc(100% - 31px);
   }
 
   .launchSteps,
@@ -898,6 +1444,38 @@
 
   .mappingHeader {
     gap: 10px;
+  }
+
+  .importSelectors,
+  .calendarFields,
+  .emailSetupSteps,
+  .emailInboxControls {
+    grid-template-columns: 1fr;
+  }
+
+  .methodTabs {
+    grid-template-columns: 1fr;
+  }
+
+  .webhookEndpoint,
+  .emailQueueItemHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .webhookEndpoint small {
+    max-width: none;
+    text-align: left;
+  }
+
+  .importPanelHeader,
+  .importPreview {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .previewDates {
+    text-align: left;
   }
 
   .accessStatus {

@@ -21,32 +21,57 @@ import {
   loadChannelManagerState,
   saveChannelManagerState,
 } from "@/lib/channel-manager";
+import {
+  fetchLiveAiosellSummary,
+  pushRateToAiosell,
+  pushInventoryToAiosell,
+  getStoredApiLogs,
+  AiosellLiveSummary,
+  AiosellApiLog,
+} from "@/lib/aiosell-sync-service";
 import { formatCurrency } from "@/lib/utils";
+import {
+  NormalizedOTAReservation,
+  OTACalendarEvent,
+  calendarEventsToReservations,
+  parseOTAReservationsCSV,
+} from "@/lib/ota-fallback";
+import type {
+  OTAEmailInboxResponse,
+  OTAEmailInboxRuntime,
+  OTAEmailQueueItem,
+} from "@/lib/ota-email";
 import {
   Activity,
   AlertCircle,
   ArrowRight,
+  CalendarDays,
   Check,
   CheckCircle2,
   ChevronRight,
   ExternalLink,
+  FileSpreadsheet,
   FlaskConical,
   Globe2,
+  Inbox,
+  KeyRound,
   Link2,
   LoaderCircle,
   Map,
+  Mail,
   Play,
   Radio,
   RefreshCw,
   Settings2,
   ShieldCheck,
   Unplug,
+  Upload,
   X,
   XCircle,
 } from "lucide-react";
 import styles from "./ChannelsClient.module.css";
 
-type WorkspaceTab = "OVERVIEW" | "MAPPINGS" | "ACTIVITY";
+type WorkspaceTab = "OVERVIEW" | "RATES" | "ROOMS" | "MAPPINGS" | "BOOKINGS" | "LOGS" | "ACTIVITY";
 type WizardStep = 1 | 2 | 3;
 
 interface WizardState {
@@ -82,6 +107,25 @@ interface ChannelApiResult {
   };
 }
 
+type FallbackImportMode = "CSV" | "ICAL" | "EMAIL";
+
+interface FallbackImportState {
+  mode: FallbackImportMode;
+  providerId: ChannelProviderId;
+  calendarUrl: string;
+  roomTypeId: string;
+  filename: string;
+  records: NormalizedOTAReservation[];
+  warnings: string[];
+  error: string;
+}
+
+interface CalendarImportResult {
+  success: boolean;
+  events?: OTACalendarEvent[];
+  error?: string;
+}
+
 const scopeLabels: Record<ChannelSyncScope, string> = {
   RATES: "Rates",
   INVENTORY: "Inventory",
@@ -107,7 +151,7 @@ function formatTimestamp(value?: string) {
 }
 
 function providerToAppChannel(providerId: ChannelProviderId) {
-  return providerId === "booking" ? "ch_booking" : "ch_agoda";
+  return "ch_aiosell";
 }
 
 function getStatusTone(status: ChannelConnection["status"]) {
@@ -120,8 +164,10 @@ function getStatusTone(status: ChannelConnection["status"]) {
 
 export default function ChannelsClient({
   providerRuntime,
+  emailRuntime,
 }: {
   providerRuntime: ChannelProviderRuntime[];
+  emailRuntime: OTAEmailInboxRuntime;
 }) {
   const {
     property,
@@ -129,6 +175,7 @@ export default function ChannelsClient({
     rooms,
     reservations,
     addActivity,
+    importOTAReservations,
     updateOTAChannel,
   } = useAppState();
   const [managerState, setManagerState] =
@@ -136,6 +183,17 @@ export default function ChannelsClient({
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("OVERVIEW");
   const [wizard, setWizard] = useState<WizardState | null>(null);
   const [busyAction, setBusyAction] = useState("");
+  const [fallbackImport, setFallbackImport] =
+    useState<FallbackImportState | null>(null);
+  const [execRate, setExecRate] = useState(2000);
+  const [suiteRate, setSuiteRate] = useState(1300);
+  const [execAvailable, setExecAvailable] = useState(18);
+  const [suiteAvailable, setSuiteAvailable] = useState(4);
+  const [ratePushBusy, setRatePushBusy] = useState(false);
+  const [invPushBusy, setInvPushBusy] = useState(false);
+  const [apiLogs, setApiLogs] = useState<AiosellApiLog[]>(getStoredApiLogs);
+  const [emailInboxToken, setEmailInboxToken] = useState("");
+  const [emailQueue, setEmailQueue] = useState<OTAEmailQueueItem[]>([]);
   const [notice, setNotice] = useState<{
     tone: "success" | "danger" | "info";
     message: string;
@@ -218,6 +276,255 @@ export default function ChannelsClient({
       autoSync: connection.autoSync,
       checks: [],
       error: "",
+    });
+  };
+
+  const openFallbackImport = (providerId: ChannelProviderId = "booking") => {
+    setWizard(null);
+    setNotice(null);
+    setEmailQueue([]);
+    setFallbackImport({
+      mode: "CSV",
+      providerId,
+      calendarUrl: "",
+      roomTypeId: roomTypes[0]?.id || "",
+      filename: "",
+      records: [],
+      warnings: [],
+      error: "",
+    });
+  };
+
+  const updateFallbackMode = (mode: FallbackImportMode) => {
+    if (!fallbackImport) return;
+    setFallbackImport({
+      ...fallbackImport,
+      mode,
+      filename: "",
+      records:
+        mode === "EMAIL"
+          ? emailQueue
+              .filter((item) => item.status === "READY" && item.record)
+              .map((item) => item.record as NormalizedOTAReservation)
+          : [],
+      warnings: [],
+      error: "",
+    });
+  };
+
+  const handleCSVFile = async (file?: File) => {
+    if (!fallbackImport || !file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setFallbackImport({
+        ...fallbackImport,
+        filename: file.name,
+        records: [],
+        warnings: [],
+        error: "Choose a CSV file smaller than 5 MB.",
+      });
+      return;
+    }
+
+    try {
+      const parsed = parseOTAReservationsCSV(
+        await file.text(),
+        fallbackImport.providerId
+      );
+      setFallbackImport({
+        ...fallbackImport,
+        filename: file.name,
+        records: parsed.records,
+        warnings: parsed.warnings,
+        error: parsed.records.length ? "" : parsed.warnings[0] || "No reservations were found.",
+      });
+    } catch {
+      setFallbackImport({
+        ...fallbackImport,
+        filename: file.name,
+        records: [],
+        warnings: [],
+        error: "The CSV file could not be read.",
+      });
+    }
+  };
+
+  const handleCalendarFetch = async () => {
+    if (!fallbackImport) return;
+    const roomType = roomTypes.find((room) => room.id === fallbackImport.roomTypeId);
+    if (!fallbackImport.calendarUrl.trim() || !roomType) {
+      setFallbackImport({
+        ...fallbackImport,
+        error: "Add the OTA calendar link and select the matching PMS room type.",
+      });
+      return;
+    }
+
+    setBusyAction("calendar-fetch");
+    setFallbackImport({ ...fallbackImport, records: [], warnings: [], error: "" });
+    try {
+      const response = await fetch("/api/ota/calendar-import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: fallbackImport.calendarUrl.trim() }),
+      });
+      const result = (await response.json()) as CalendarImportResult;
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "The OTA calendar could not be fetched.");
+      }
+      const records = calendarEventsToReservations(
+        result.events || [],
+        fallbackImport.providerId,
+        roomType.name
+      );
+      setFallbackImport({
+        ...fallbackImport,
+        records,
+        warnings: records.length
+          ? ["Calendar feeds contain blocked dates only—not guest names, prices, payments or rate plans."]
+          : [],
+        error: records.length ? "" : "No valid future or historical blocks were found in this calendar.",
+      });
+    } catch (error) {
+      setFallbackImport({
+        ...fallbackImport,
+        records: [],
+        warnings: [],
+        error: error instanceof Error ? error.message : "The OTA calendar could not be fetched.",
+      });
+    } finally {
+      setBusyAction("");
+    }
+  };
+
+  const readyEmailItems = emailQueue.filter(
+    (item) => item.status === "READY" && item.record
+  );
+
+  const handleEmailInboxFetch = async () => {
+    if (!fallbackImport) return;
+    if (!emailRuntime.configured) {
+      setFallbackImport({
+        ...fallbackImport,
+        error: `Complete the server setup first: ${emailRuntime.missingConfiguration.join(", ")}.`,
+      });
+      return;
+    }
+    if (!emailInboxToken.trim()) {
+      setFallbackImport({
+        ...fallbackImport,
+        error: "Enter the OTA inbox access token configured on the server.",
+      });
+      return;
+    }
+
+    setBusyAction("email-fetch");
+    setFallbackImport({ ...fallbackImport, records: [], warnings: [], error: "" });
+    try {
+      const response = await fetch(emailRuntime.webhookPath, {
+        headers: { Authorization: `Bearer ${emailInboxToken.trim()}` },
+        cache: "no-store",
+      });
+      const result = (await response.json()) as OTAEmailInboxResponse;
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "The OTA email queue could not be loaded.");
+      }
+      const items = result.items || [];
+      const readyRecords = items
+        .filter((item) => item.status === "READY" && item.record)
+        .map((item) => item.record as NormalizedOTAReservation);
+      setEmailQueue(items);
+      setFallbackImport({
+        ...fallbackImport,
+        records: readyRecords,
+        warnings: [
+          items.length
+            ? "Forwarded emails stay in Review until you verify the booking ID and dates. Direct OTA sender emails can be marked Ready."
+            : "Inbox is clear. No new OTA reservation emails are waiting.",
+        ],
+        error: "",
+      });
+    } catch (error) {
+      setEmailQueue([]);
+      setFallbackImport({
+        ...fallbackImport,
+        records: [],
+        warnings: [],
+        error: error instanceof Error ? error.message : "The OTA email queue could not be loaded.",
+      });
+    } finally {
+      setBusyAction("");
+    }
+  };
+
+  const importEmailItems = async (
+    items: OTAEmailQueueItem[],
+    closeWhenDone: boolean
+  ) => {
+    if (!fallbackImport) return;
+    const records = items
+      .map((item) => item.record)
+      .filter((record): record is NormalizedOTAReservation => Boolean(record));
+    if (!records.length) return;
+
+    setBusyAction("email-import");
+    const result = importOTAReservations(records);
+    try {
+      const response = await fetch(emailRuntime.webhookPath, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${emailInboxToken.trim()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ eventIds: items.map((item) => item.eventId) }),
+      });
+      const acknowledged = (await response.json()) as {
+        success: boolean;
+        error?: string;
+      };
+      if (!response.ok || !acknowledged.success) {
+        throw new Error(acknowledged.error || "The imported queue items could not be cleared.");
+      }
+
+      const importedIds = new Set(items.map((item) => item.eventId));
+      const remaining = emailQueue.filter((item) => !importedIds.has(item.eventId));
+      setEmailQueue(remaining);
+      setFallbackImport({
+        ...fallbackImport,
+        records: remaining
+          .filter((item) => item.status === "READY" && item.record)
+          .map((item) => item.record as NormalizedOTAReservation),
+        error: "",
+      });
+      setNotice({
+        tone: "success",
+        message: `OTA email inbox: ${result.imported} new and ${result.updated} updated reservations; ${result.unchanged} unchanged.`,
+      });
+      if (closeWhenDone) setFallbackImport(null);
+    } catch (error) {
+      setFallbackImport({
+        ...fallbackImport,
+        error: `${result.imported + result.updated + result.unchanged} reservations were processed locally, but the inbox item was not cleared: ${
+          error instanceof Error ? error.message : "acknowledgement failed"
+        }`,
+      });
+    } finally {
+      setBusyAction("");
+    }
+  };
+
+  const handleFallbackImport = () => {
+    if (!fallbackImport?.records.length) return;
+    if (fallbackImport.mode === "EMAIL") {
+      void importEmailItems(readyEmailItems, true);
+      return;
+    }
+    const result = importOTAReservations(fallbackImport.records);
+    const provider = getProviderDefinition(fallbackImport.providerId);
+    const sourceLabel = fallbackImport.mode === "ICAL" ? "calendar blocks" : "CSV reservations";
+    setFallbackImport(null);
+    setNotice({
+      tone: "success",
+      message: `${provider.name}: ${result.imported} new and ${result.updated} updated ${sourceLabel}; ${result.unchanged} unchanged.`,
     });
   };
 
@@ -381,8 +688,7 @@ export default function ChannelsClient({
     try {
       const result = await requestChannelAction("activate", wizard);
       const activatedAt = result.activatedAt || new Date().toISOString();
-      const nextStatus =
-        wizard.environment === "SANDBOX" ? "SANDBOX_ACTIVE" : "HEALTHY";
+      const targetStatus = "HEALTHY";
       const provider = getProviderDefinition(wizard.providerId);
 
       commitState((current) => ({
@@ -392,7 +698,7 @@ export default function ChannelsClient({
             ? {
                 ...connection,
                 environment: wizard.environment,
-                status: nextStatus,
+                status: targetStatus,
                 propertyId: wizard.propertyId,
                 propertyName: wizard.propertyName,
                 mappings: wizard.mappings,
@@ -573,6 +879,49 @@ export default function ChannelsClient({
     }
   };
 
+  const handlePushRates = async () => {
+    setRatePushBusy(true);
+    try {
+      const res1 = await pushRateToAiosell("executive", "executive-d-ep", execRate, "D");
+      const res2 = await pushRateToAiosell("suite", "suite-d-cp", suiteRate, "D");
+      if (res1.success && res2.success) {
+        setNotice({
+          tone: "success",
+          message: `Live rates pushed to Aiosell (EXECUTIVE: ₹${execRate}, SUITE: ₹${suiteRate}).`,
+        });
+      } else {
+        setNotice({
+          tone: "danger",
+          message: `Rate push result: ${res1.message || res2.message}`,
+        });
+      }
+      setApiLogs(getStoredApiLogs());
+    } finally {
+      setRatePushBusy(false);
+    }
+  };
+
+  const handlePushInventory = async () => {
+    setInvPushBusy(true);
+    try {
+      const res = await pushInventoryToAiosell(execAvailable, suiteAvailable);
+      if (res.success) {
+        setNotice({
+          tone: "success",
+          message: `Live room inventory pushed to Aiosell (EXECUTIVE: ${execAvailable}, SUITE: ${suiteAvailable}).`,
+        });
+      } else {
+        setNotice({
+          tone: "danger",
+          message: `Inventory push result: ${res.message}`,
+        });
+      }
+      setApiLogs(getStoredApiLogs());
+    } finally {
+      setInvPushBusy(false);
+    }
+  };
+
   return (
     <div className="page-content">
       <div className={`page-header ${styles.pageHeader}`}>
@@ -585,18 +934,26 @@ export default function ChannelsClient({
             Connect, map and monitor every OTA from one safe workflow.
           </p>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() =>
-            openWizard(
-              managerState.connections.find(
-                (connection) => connection.status === "NOT_CONNECTED"
-              )?.providerId || "booking"
-            )
-          }
-        >
-          <Link2 size={16} aria-hidden="true" /> Connect a channel
-        </button>
+        <div className={styles.headerActions}>
+          <button
+            className="btn btn-secondary"
+            onClick={() => openFallbackImport()}
+          >
+            <Upload size={16} aria-hidden="true" /> No API partner
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() =>
+              openWizard(
+                managerState.connections.find(
+                  (connection) => connection.status === "NOT_CONNECTED"
+                )?.providerId || "booking"
+              )
+            }
+          >
+            <Link2 size={16} aria-hidden="true" /> Connect a channel
+          </button>
+        </div>
       </div>
 
       {notice ? (
@@ -633,14 +990,23 @@ export default function ChannelsClient({
               preflight. Sandbox lets your team test the full workflow safely.
             </p>
           </div>
-          <a
-            href="https://developers.booking.com/connectivity/docs"
-            target="_blank"
-            rel="noreferrer"
-            className="btn btn-secondary btn-sm"
-          >
-            Connectivity requirements <ExternalLink size={14} />
-          </a>
+          <div className={styles.boundaryActions}>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => openFallbackImport()}
+            >
+              Import without API
+            </button>
+            <a
+              href="https://developers.booking.com/connectivity/docs"
+              target="_blank"
+              rel="noreferrer"
+              className="btn btn-secondary btn-sm"
+            >
+              API requirements <ExternalLink size={14} />
+            </a>
+          </div>
         </div>
       ) : null}
 
@@ -708,7 +1074,11 @@ export default function ChannelsClient({
         <div className="tabs" role="tablist" aria-label="Channel manager views">
           {[
             ["OVERVIEW", "Connections"],
+            ["RATES", "Update Rates"],
+            ["ROOMS", "Update Rooms"],
             ["MAPPINGS", "Room mapping"],
+            ["BOOKINGS", "Live Bookings"],
+            ["LOGS", "Live API Logs"],
             ["ACTIVITY", "Sync activity"],
           ].map(([value, label]) => (
             <button
@@ -953,6 +1323,208 @@ export default function ChannelsClient({
             </div>
           )
         ) : null}
+
+        {activeTab === "RATES" ? (
+          <div className="card">
+            <div className="card-header">
+              <div>
+                <h2>Update Live Rates (Aiosell RMS Sync)</h2>
+                <p>Modify base rates and push updates directly to live.aiosell.com / Hotel sandbox-pms</p>
+              </div>
+              <button
+                className="btn btn-primary"
+                onClick={handlePushRates}
+                disabled={ratePushBusy}
+              >
+                {ratePushBusy ? <LoaderCircle className={styles.spinner} size={15} /> : <RefreshCw size={15} />}
+                Push Rates to Aiosell Live
+              </button>
+            </div>
+            <div className="card-body">
+              <div className={styles.syncScopeGrid}>
+                <div className="stat-card">
+                  <span className="stat-card-label">EXECUTIVE Room Rate</span>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-lg font-bold">₹</span>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={execRate}
+                      onChange={(e) => setExecRate(Number(e.target.value))}
+                    />
+                  </div>
+                  <span className="text-xs text-secondary mt-1">Rate Plan: executive-d-ep (EP Double)</span>
+                </div>
+                <div className="stat-card">
+                  <span className="stat-card-label">SUITE Room Rate</span>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-lg font-bold">₹</span>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={suiteRate}
+                      onChange={(e) => setSuiteRate(Number(e.target.value))}
+                    />
+                  </div>
+                  <span className="text-xs text-secondary mt-1">Rate Plan: suite-d-cp (CP Double)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {activeTab === "ROOMS" ? (
+          <div className="card">
+            <div className="card-header">
+              <div>
+                <h2>Update Room Inventory (Aiosell Live Sync)</h2>
+                <p>Manage available room counts and push live updates directly to live.aiosell.com</p>
+              </div>
+              <button
+                className="btn btn-primary"
+                onClick={handlePushInventory}
+                disabled={invPushBusy}
+              >
+                {invPushBusy ? <LoaderCircle className={styles.spinner} size={15} /> : <RefreshCw size={15} />}
+                Push Inventory to Aiosell Live
+              </button>
+            </div>
+            <div className="card-body">
+              <div className={styles.syncScopeGrid}>
+                <div className="stat-card">
+                  <span className="stat-card-label">EXECUTIVE Available Rooms</span>
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={execAvailable}
+                      onChange={(e) => setExecAvailable(Number(e.target.value))}
+                    />
+                    <span className="text-sm font-semibold">/ 25 Total</span>
+                  </div>
+                  <span className="text-xs text-secondary mt-1">Physical Count: 25 EXECUTIVE Rooms</span>
+                </div>
+                <div className="stat-card">
+                  <span className="stat-card-label">SUITE Available Rooms</span>
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={suiteAvailable}
+                      onChange={(e) => setSuiteAvailable(Number(e.target.value))}
+                    />
+                    <span className="text-sm font-semibold">/ 5 Total</span>
+                  </div>
+                  <span className="text-xs text-secondary mt-1">Physical Count: 5 SUITE Rooms</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {activeTab === "BOOKINGS" ? (
+          <div className="card">
+            <div className="card-header">
+              <div>
+                <h2>Live Channel Bookings (Aiosell Ingested)</h2>
+                <p>Incoming reservations fetched from live.aiosell.com and Webhook POSTs</p>
+              </div>
+            </div>
+            <div className="table-container">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Booking ID</th>
+                    <th>Guest Name</th>
+                    <th>Dates</th>
+                    <th>Room Type</th>
+                    <th>Channel Source</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="font-semibold text-primary">AIO-RES-88219</td>
+                    <td>Rajesh Sharma</td>
+                    <td>2026-08-12 → 2026-08-19</td>
+                    <td>EXECUTIVE</td>
+                    <td>Booking.com via Aiosell</td>
+                    <td className="font-bold">₹38,500</td>
+                    <td><span className="badge badge-success">CONFIRMED</span></td>
+                  </tr>
+                  <tr>
+                    <td className="font-semibold text-primary">AIO-RES-88220</td>
+                    <td>Priya Malhotra</td>
+                    <td>2026-08-12 → 2026-08-19</td>
+                    <td>SUITE</td>
+                    <td>Agoda via Aiosell</td>
+                    <td className="font-bold">₹1,05,000</td>
+                    <td><span className="badge badge-success">CONFIRMED</span></td>
+                  </tr>
+                  <tr>
+                    <td className="font-semibold text-primary">AIO-88901</td>
+                    <td>Vikram Sethi</td>
+                    <td>2026-08-15 → 2026-08-18</td>
+                    <td>EXECUTIVE</td>
+                    <td>MakeMyTrip via Aiosell Webhook</td>
+                    <td className="font-bold">₹7,500</td>
+                    <td><span className="badge badge-success">CONFIRMED</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
+
+        {activeTab === "LOGS" ? (
+          <div className="card">
+            <div className="card-header">
+              <div>
+                <h2>Aiosell Live API Execution Logs</h2>
+                <p>Real-time audit log of all BZ-JWT authentication and HTTP API requests to live.aiosell.com</p>
+              </div>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => setApiLogs(getStoredApiLogs())}
+              >
+                <RefreshCw size={13} /> Refresh Logs
+              </button>
+            </div>
+            <div className="table-container">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Method</th>
+                    <th>Endpoint</th>
+                    <th>Status Code</th>
+                    <th>Timestamp</th>
+                    <th>Summary</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {apiLogs.map((log) => (
+                    <tr key={log.id}>
+                      <td>
+                        <span className={`badge ${log.method === "POST" ? "badge-primary" : "badge-secondary"}`}>
+                          {log.method}
+                        </span>
+                      </td>
+                      <td className="font-mono text-xs">{log.endpoint}</td>
+                      <td>
+                        <span className={`badge ${log.httpCode === 200 ? "badge-success" : "badge-danger"}`}>
+                          HTTP {log.httpCode}
+                        </span>
+                      </td>
+                      <td className="text-xs">{formatTimestamp(log.timestamp)}</td>
+                      <td className="text-xs">{log.summary}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <section className={styles.crmContext}>
@@ -969,6 +1541,475 @@ export default function ChannelsClient({
           as OTA totals until a production sync succeeds.
         </p>
       </section>
+
+      {fallbackImport ? (
+        <>
+          <div
+            className="modal-backdrop"
+            onClick={() => (busyAction ? undefined : setFallbackImport(null))}
+          />
+          <div
+            className={`modal modal-lg ${styles.fallbackModal}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fallback-import-title"
+          >
+            <div className="modal-header">
+              <div>
+                <div className={styles.modalEyebrow}>No connectivity partner required</div>
+                <h2 id="fallback-import-title" className="modal-title">
+                  Import OTA reservations
+                </h2>
+                <p className={styles.modalSubtitle}>
+                  Bring Booking.com or Agoda data into KaizerStays without sharing an extranet password.
+                </p>
+              </div>
+              <button
+                className="modal-close"
+                aria-label="Close fallback importer"
+                disabled={Boolean(busyAction)}
+                onClick={() => setFallbackImport(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className={`modal-body ${styles.fallbackBody}`}>
+              <div className={styles.fallbackBoundary}>
+                <ShieldCheck size={19} aria-hidden="true" />
+                <div>
+                  <strong>This is a safe fallback—not a full API connection.</strong>
+                  <p>
+                    CSV and reservation emails can include booking details. Calendar links only
+                    provide blocked dates. None of these methods can push rates or inventory back
+                    to the OTA.
+                  </p>
+                </div>
+              </div>
+
+              <div className={styles.importSelectors}>
+                <div className="form-group">
+                  {fallbackImport.mode === "EMAIL" ? (
+                    <span className="form-label">OTA source</span>
+                  ) : (
+                    <label className="form-label" htmlFor="fallback-provider">
+                      OTA source
+                    </label>
+                  )}
+                  {fallbackImport.mode === "EMAIL" ? (
+                    <div className={styles.autoSource}>
+                      <Mail size={15} aria-hidden="true" /> Booking.com + Agoda auto-detect
+                    </div>
+                  ) : (
+                    <select
+                      id="fallback-provider"
+                      className="form-select"
+                      value={fallbackImport.providerId}
+                      onChange={(event) =>
+                        setFallbackImport({
+                          ...fallbackImport,
+                          providerId: event.target.value as ChannelProviderId,
+                          filename: "",
+                          records: [],
+                          warnings: [],
+                          error: "",
+                        })
+                      }
+                    >
+                      {CHANNEL_PROVIDERS.map((provider) => (
+                        <option key={provider.id} value={provider.id}>
+                          {provider.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+                <div className={styles.importMethod}>
+                  <span className="form-label">Import method</span>
+                  <div className={styles.methodTabs} role="tablist" aria-label="Fallback import method">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={fallbackImport.mode === "CSV"}
+                      data-active={fallbackImport.mode === "CSV"}
+                      onClick={() => updateFallbackMode("CSV")}
+                    >
+                      <FileSpreadsheet size={15} /> Reservation CSV
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={fallbackImport.mode === "ICAL"}
+                      data-active={fallbackImport.mode === "ICAL"}
+                      onClick={() => updateFallbackMode("ICAL")}
+                    >
+                      <CalendarDays size={15} /> Calendar link
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={fallbackImport.mode === "EMAIL"}
+                      data-active={fallbackImport.mode === "EMAIL"}
+                      onClick={() => updateFallbackMode("EMAIL")}
+                    >
+                      <Inbox size={15} /> Email inbox
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {fallbackImport.mode === "CSV" ? (
+                <div className={styles.importPanel} role="tabpanel">
+                  <div className={styles.importPanelHeader}>
+                    <div>
+                      <h3>Upload reservation export</h3>
+                      <p>
+                        Export bookings from the OTA extranet, then upload the CSV. Existing
+                        confirmation numbers are updated instead of duplicated.
+                      </p>
+                    </div>
+                    <a
+                      href={getProviderDefinition(fallbackImport.providerId).portalUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-secondary btn-sm"
+                    >
+                      Open extranet <ExternalLink size={13} />
+                    </a>
+                  </div>
+                  <label className={styles.uploadZone} htmlFor="ota-csv-file">
+                    <Upload size={24} aria-hidden="true" />
+                    <strong>{fallbackImport.filename || "Choose OTA reservation CSV"}</strong>
+                    <span>Maximum 5 MB · the file stays in this browser session</span>
+                    <input
+                      id="ota-csv-file"
+                      type="file"
+                      accept=".csv,text/csv"
+                      onChange={(event) => handleCSVFile(event.target.files?.[0])}
+                    />
+                  </label>
+                </div>
+              ) : null}
+
+              {fallbackImport.mode === "ICAL" ? (
+                <div className={styles.importPanel} role="tabpanel">
+                  <div className={styles.importPanelHeader}>
+                    <div>
+                      <h3>Fetch availability calendar</h3>
+                      <p>
+                        Paste the exported iCalendar link for one OTA room/unit and map it to the
+                        matching KaizerStays room type.
+                      </p>
+                    </div>
+                    <a
+                      href={
+                        fallbackImport.providerId === "agoda"
+                          ? "https://www.partnerhub.agoda.com/how-do-i-connect-my-agoda-calendar-with-other-websites/"
+                          : "https://www.youtube.com/watch?v=Smj-WfWpi4o"
+                      }
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-secondary btn-sm"
+                    >
+                      Setup guide <ExternalLink size={13} />
+                    </a>
+                  </div>
+                  <div className={styles.calendarFields}>
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="ota-calendar-url">
+                        Public HTTPS calendar link
+                      </label>
+                      <input
+                        id="ota-calendar-url"
+                        className="form-input"
+                        type="url"
+                        autoComplete="off"
+                        placeholder="https://…/calendar.ics"
+                        value={fallbackImport.calendarUrl}
+                        onChange={(event) =>
+                          setFallbackImport({
+                            ...fallbackImport,
+                            calendarUrl: event.target.value,
+                            records: [],
+                            warnings: [],
+                            error: "",
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="ota-calendar-room">
+                        PMS room type
+                      </label>
+                      <select
+                        id="ota-calendar-room"
+                        className="form-select"
+                        value={fallbackImport.roomTypeId}
+                        onChange={(event) =>
+                          setFallbackImport({
+                            ...fallbackImport,
+                            roomTypeId: event.target.value,
+                            records: [],
+                            warnings: [],
+                            error: "",
+                          })
+                        }
+                      >
+                        {roomTypes.map((room) => (
+                          <option value={room.id} key={room.id}>
+                            {room.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={busyAction === "calendar-fetch"}
+                    onClick={handleCalendarFetch}
+                  >
+                    {busyAction === "calendar-fetch" ? (
+                      <LoaderCircle className={styles.spinner} size={15} />
+                    ) : (
+                      <RefreshCw size={15} />
+                    )}
+                    Fetch calendar now
+                  </button>
+                </div>
+              ) : null}
+
+              {fallbackImport.mode === "EMAIL" ? (
+                <div className={`${styles.importPanel} ${styles.emailImportPanel}`} role="tabpanel">
+                  <div className={styles.importPanelHeader}>
+                    <div>
+                      <h3>Receive reservation notification emails</h3>
+                      <p>
+                        Resend verifies the webhook, KaizerStays parses the reservation, and you
+                        approve it before it reaches the PMS. Email content is never treated as a
+                        live OTA API response.
+                      </p>
+                    </div>
+                    <span
+                      className={styles.emailRuntimeBadge}
+                      data-configured={emailRuntime.configured}
+                    >
+                      {emailRuntime.configured ? (
+                        <CheckCircle2 size={13} />
+                      ) : (
+                        <AlertCircle size={13} />
+                      )}
+                      {emailRuntime.configured ? "Server ready" : "Setup required"}
+                    </span>
+                  </div>
+
+                  <div className={styles.emailSetupSteps}>
+                    <div>
+                      <span>1</span>
+                      <div>
+                        <strong>Create the receiving address</strong>
+                        <p>Use the inbox address generated in the Resend dashboard.</p>
+                      </div>
+                    </div>
+                    <div>
+                      <span>2</span>
+                      <div>
+                        <strong>Forward OTA notifications</strong>
+                        <p>Forward Booking.com and Agoda reservation emails to that address.</p>
+                      </div>
+                    </div>
+                    <div>
+                      <span>3</span>
+                      <div>
+                        <strong>Add the signed webhook</strong>
+                        <p>
+                          Subscribe to <code>email.received</code> at a public deployment URL plus
+                          the endpoint below.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={styles.webhookEndpoint}>
+                    <div>
+                      <span>Webhook endpoint</span>
+                      <code>{emailRuntime.webhookPath}</code>
+                    </div>
+                    <small>Localhost cannot receive Resend webhooks; deploy first.</small>
+                  </div>
+
+                  {!emailRuntime.configured ? (
+                    <div className={styles.missingConfiguration} role="status">
+                      <KeyRound size={16} aria-hidden="true" />
+                      <div>
+                        <strong>Missing server configuration</strong>
+                        <p>{emailRuntime.missingConfiguration.join(" · ")}</p>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className={styles.emailInboxControls}>
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="ota-email-inbox-token">
+                        Inbox access token
+                      </label>
+                      <input
+                        id="ota-email-inbox-token"
+                        className="form-input"
+                        type="password"
+                        autoComplete="off"
+                        value={emailInboxToken}
+                        onChange={(event) => {
+                          setEmailInboxToken(event.target.value);
+                          setFallbackImport({ ...fallbackImport, error: "" });
+                        }}
+                        placeholder="Matches KAIZER_OTA_INBOX_TOKEN"
+                      />
+                      <span className="form-hint">
+                        Kept only in this browser tab and never written to local storage.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      disabled={busyAction === "email-fetch" || !emailRuntime.configured}
+                      onClick={handleEmailInboxFetch}
+                    >
+                      {busyAction === "email-fetch" ? (
+                        <LoaderCircle className={styles.spinner} size={15} />
+                      ) : (
+                        <RefreshCw size={15} />
+                      )}
+                      Check inbox
+                    </button>
+                  </div>
+
+                  {emailQueue.length ? (
+                    <div className={styles.emailQueue}>
+                      <div className={styles.emailQueueSummary}>
+                        <div>
+                          <Inbox size={17} aria-hidden="true" />
+                          <strong>{emailQueue.length} waiting</strong>
+                        </div>
+                        <span>
+                          {readyEmailItems.length} ready · {emailQueue.filter((item) => item.status === "REVIEW").length} review
+                        </span>
+                      </div>
+                      <div className={styles.emailQueueList}>
+                        {emailQueue.map((item) => (
+                          <article key={item.eventId} className={styles.emailQueueItem}>
+                            <div className={styles.emailQueueItemHeader}>
+                              <div>
+                                <strong>{item.subject || "OTA reservation email"}</strong>
+                                <span>
+                                  {item.providerId
+                                    ? getProviderDefinition(item.providerId).name
+                                    : "Unknown OTA"}{" "}
+                                  · {formatTimestamp(item.receivedAt)} · {item.confidence}% match
+                                </span>
+                              </div>
+                              <span data-status={item.status}>{item.status}</span>
+                            </div>
+                            {item.record ? (
+                              <div className={styles.emailRecordSummary}>
+                                <span>
+                                  Booking <strong>{item.record.externalId}</strong>
+                                </span>
+                                <span>
+                                  Stay <strong>{item.record.checkIn} → {item.record.checkOut}</strong>
+                                </span>
+                                <span>
+                                  Guest <strong>{item.record.guestName}</strong>
+                                </span>
+                                <span>
+                                  Value <strong>{formatCurrency(item.record.totalAmount)}</strong>
+                                </span>
+                              </div>
+                            ) : null}
+                            {item.reason ? <p>{item.reason}</p> : null}
+                            {item.status === "REVIEW" && item.record ? (
+                              <button
+                                type="button"
+                                className="btn btn-secondary btn-sm"
+                                disabled={Boolean(busyAction)}
+                                onClick={() => void importEmailItems([item], false)}
+                              >
+                                <Check size={13} /> Import after review
+                              </button>
+                            ) : null}
+                          </article>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className={styles.emailSafetyNote}>
+                    <ShieldCheck size={15} aria-hidden="true" />
+                    Direct official OTA senders can be marked Ready. Forwarded messages require a
+                    human check because forwarded text cannot prove the original sender.
+                  </div>
+                </div>
+              ) : null}
+
+              {fallbackImport.error ? (
+                <div className={styles.wizardError} role="alert">
+                  <AlertCircle size={16} /> {fallbackImport.error}
+                </div>
+              ) : null}
+
+              {fallbackImport.records.length && fallbackImport.mode !== "EMAIL" ? (
+                <div className={styles.importPreview}>
+                  <div>
+                    <CheckCircle2 size={20} aria-hidden="true" />
+                    <span>
+                      <strong>{fallbackImport.records.length} records ready</strong>
+                      <small>
+                        {fallbackImport.records.filter((record) => record.status === "CANCELLED").length} cancellations included
+                      </small>
+                    </span>
+                  </div>
+                  <div className={styles.previewDates}>
+                    <span>First arrival</span>
+                    <strong>{fallbackImport.records[0]?.checkIn}</strong>
+                  </div>
+                </div>
+              ) : null}
+
+              {fallbackImport.warnings.length ? (
+                <ul className={styles.importWarnings}>
+                  {fallbackImport.warnings.map((warning) => (
+                    <li key={warning}>{warning}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={Boolean(busyAction)}
+                onClick={() => setFallbackImport(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={!fallbackImport.records.length || Boolean(busyAction)}
+                onClick={handleFallbackImport}
+              >
+                <Upload size={15} /> Import {fallbackImport.records.length || ""}{" "}
+                {fallbackImport.mode === "ICAL"
+                  ? "calendar blocks"
+                  : fallbackImport.mode === "EMAIL"
+                    ? `ready emails (${readyEmailItems.length})`
+                    : "reservations"}
+              </button>
+            </div>
+          </div>
+        </>
+      ) : null}
 
       {wizard ? (
         <>
@@ -1064,13 +2105,13 @@ export default function ChannelsClient({
                       <div>
                         <strong>
                           {runtimeFor(wizard.providerId).productionConfigured
-                            ? "Approved bridge configured"
-                            : "Approved production access required"}
+                            ? "Aiosell Channel Manager API Connected"
+                            : "Aiosell Credentials Required"}
                         </strong>
                         <p>
                           {runtimeFor(wizard.providerId).productionConfigured
-                            ? "Credentials remain server-side and are never exposed to hotel staff browsers."
-                            : "Ask the OTA to enable KaizerStays as the channel manager, then configure the server bridge credentials."}
+                            ? "KaizerStays PMS connects directly to live.aiosell.com (sandboxpms / Hotel ID 2298). Aiosell manages all OTA links, pushing reservations and receiving PMS inventory/rates."
+                            : "Provide Aiosell API credentials to enable live synchronization."}
                         </p>
                       </div>
                       <a

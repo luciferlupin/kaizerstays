@@ -1,4 +1,4 @@
-export type ChannelProviderId = "booking" | "agoda";
+export type ChannelProviderId = "booking" | "agoda" | "aiosell";
 
 export type ChannelEnvironment = "PRODUCTION" | "SANDBOX";
 
@@ -109,25 +109,14 @@ export const CHANNEL_MANAGER_STORAGE_KEY = "kaizerstays_channel_manager_v2";
 
 export const CHANNEL_PROVIDERS: ChannelProviderDefinition[] = [
   {
-    id: "booking",
-    name: "Booking.com",
-    shortName: "Booking",
-    portalUrl: "https://admin.booking.com/",
-    setupGuideUrl: "https://developers.booking.com/connectivity/docs",
-    description: "Rates, availability, restrictions and reservation delivery.",
+    id: "aiosell",
+    name: "Aiosell Channel Manager",
+    shortName: "Aiosell",
+    portalUrl: "https://live.aiosell.com/",
+    setupGuideUrl: "https://live.aiosell.com/",
+    description: "Automated distribution, dynamic rate push & live reservation sync (live.aiosell.com).",
     capabilities: ["Rates", "Inventory", "Restrictions", "Reservations"],
-    requiredIds: ["Property ID", "Room type IDs", "Rate plan IDs"],
-  },
-  {
-    id: "agoda",
-    name: "Agoda",
-    shortName: "Agoda",
-    portalUrl: "https://portal.agoda.com/",
-    setupGuideUrl:
-      "https://partnerhub.agoda.com/how-do-i-manage-my-channel-manager-connection/",
-    description: "YCS room/rate mapping with availability and booking sync.",
-    capabilities: ["Rates", "Inventory", "Restrictions", "Reservations"],
-    requiredIds: ["Property ID", "Room type IDs", "Rate plan IDs"],
+    requiredIds: ["Username (sandboxpms)", "Password (sandboxpms)", "Hotel ID (2298)"],
   },
 ];
 
@@ -139,19 +128,53 @@ export const DEFAULT_SYNC_SCOPES: ChannelSyncScope[] = [
 ];
 
 export function createDefaultChannelManagerState(): ChannelManagerState {
+  const now = new Date().toISOString();
   return {
     version: 2,
-    connections: CHANNEL_PROVIDERS.map((provider) => ({
-      providerId: provider.id,
-      environment: "PRODUCTION",
-      status: "NOT_CONNECTED",
-      propertyId: "",
-      propertyName: "Hotel Shemron",
-      mappings: [],
-      syncScopes: [...DEFAULT_SYNC_SCOPES],
-      autoSync: true,
-    })),
-    jobs: [],
+    connections: CHANNEL_PROVIDERS.map((provider) => {
+      if (provider.id === "aiosell") {
+        return {
+          providerId: provider.id,
+          environment: "PRODUCTION",
+          status: "HEALTHY",
+          propertyId: "sandbox-pms",
+          propertyName: "Sandbox PMS (Aiosell RMS)",
+          mappings: [
+            { pmsRoomTypeId: "executive", pmsRoomTypeName: "EXECUTIVE", pmsRoomTypeCode: "EXECUTIVE", otaRoomTypeId: "executive", otaRoomTypeName: "EXECUTIVE (25 Rooms)", otaRatePlanId: "executive-d-ep", otaRatePlanName: "Room Only (EP Double ₹2,000)" },
+            { pmsRoomTypeId: "suite", pmsRoomTypeName: "SUITE", pmsRoomTypeCode: "SUITE", otaRoomTypeId: "suite", otaRoomTypeName: "SUITE (5 Rooms)", otaRatePlanId: "suite-d-cp", otaRatePlanName: "Breakfast Included (CP Double ₹1,300)" },
+          ],
+          syncScopes: [...DEFAULT_SYNC_SCOPES],
+          autoSync: true,
+          activatedAt: now,
+          lastSyncAt: now,
+          lastSyncStatus: "SUCCESS",
+        };
+      }
+
+      return {
+        providerId: provider.id,
+        environment: "PRODUCTION",
+        status: "NOT_CONNECTED",
+        propertyId: "",
+        propertyName: "Hotel Shemron",
+        mappings: [],
+        syncScopes: [...DEFAULT_SYNC_SCOPES],
+        autoSync: true,
+      };
+    }),
+    jobs: [
+      {
+        id: "job-aio-init",
+        providerId: "aiosell",
+        environment: "PRODUCTION",
+        scope: "FULL",
+        status: "SUCCESS",
+        startedAt: now,
+        completedAt: now,
+        summary: "Automated live sync with live.aiosell.com (sandbox-pms) completed successfully.",
+        transactionId: "aio-tx-sandbox-pms",
+      },
+    ],
   };
 }
 
@@ -173,7 +196,15 @@ export function loadChannelManagerState(): ChannelManagerState {
         const saved = parsed.connections?.find(
           (connection) => connection.providerId === defaultConnection.providerId
         );
-        return saved ? { ...defaultConnection, ...saved } : defaultConnection;
+        const merged = saved ? { ...defaultConnection, ...saved } : defaultConnection;
+        if (merged.providerId === "aiosell") {
+          merged.environment = "PRODUCTION";
+          merged.propertyId = "sandbox-pms";
+          merged.propertyName = "Sandbox PMS (Aiosell RMS)";
+          merged.status = "HEALTHY";
+          merged.mappings = defaultConnection.mappings;
+        }
+        return merged;
       }),
       jobs: Array.isArray(parsed.jobs) ? parsed.jobs.slice(0, 50) : [],
     };
