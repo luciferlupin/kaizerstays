@@ -32,7 +32,7 @@ export async function forwardChannelOperation(
 ) {
   if (providerId === "aiosell") {
     const client = new AiosellClient();
-    const auth = await client.login("sandboxpms", "sandboxpms");
+    const auth = await client.login("ninaad.khera19@gmail.com", "aiosell");
 
     if (!auth.success) {
       return {
@@ -49,11 +49,11 @@ export async function forwardChannelOperation(
 
     if (action === "sync" || action === "activate") {
       const pushRes = await client.pushRatesAndInventory(
-        { STD: 3500, DLX: 5500, PRM: 8000, STE: 15000 },
-        { STD: 10, DLX: 8, PRM: 5, STE: 2 },
-        "2298"
+        { "deluxe-room": 2800, "twin-room": 2800, "suite-room": 5500 },
+        { "deluxe-room": 26, "twin-room": 2, "suite-room": 2 },
+        "62a25484e5"
       );
-      const bookings = await client.fetchLiveReservations("2298");
+      const bookings = await client.fetchLiveReservations("62a25484e5");
 
       return {
         ok: true,
@@ -63,12 +63,12 @@ export async function forwardChannelOperation(
           source: "PRODUCTION",
           status: "HEALTHY",
           syncedAt: new Date().toISOString(),
-          hotelId: "2298",
+          hotelId: "62a25484e5",
           provider: "https://live.aiosell.com",
           outgoingPush: pushRes,
           incomingReservations: bookings,
           summary: {
-            roomsMapped: 4,
+            roomsMapped: 3,
             ratesValidated: 1460,
             inventoryDatesValidated: 1460,
             restrictionsValidated: 1460,

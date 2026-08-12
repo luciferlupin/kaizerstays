@@ -1,7 +1,7 @@
 /**
  * Aiosell Channel Manager API Integration Client
  * Target URL: https://live.aiosell.com/api/v1/rms
- * Real Hotel ID: sandbox-pms
+ * Real Hotel ID: 62a25484e5
  */
 
 export interface AiosellAuthResponse {
@@ -66,7 +66,7 @@ export interface AiosellReservationItem {
 export class AiosellClient {
   private baseUrl = "https://live.aiosell.com/api/v1/rms";
   private token: string | null = null;
-  private hotelId: string | null = "sandbox-pms";
+  private hotelId: string | null = "62a25484e5";
 
   constructor(token?: string, hotelId?: string) {
     if (token) this.token = token;
@@ -76,7 +76,7 @@ export class AiosellClient {
   /**
    * Authenticate against Aiosell RMS API
    */
-  async login(username = "sandboxpms", password = "sandboxpms"): Promise<{
+  async login(username = "ninaad.khera19@gmail.com", password = "aiosell"): Promise<{
     success: boolean;
     token?: string;
     hotelId?: string;
@@ -108,7 +108,7 @@ export class AiosellClient {
       this.token = data.access_token;
       
       // Fetch hotel list to get exact Hotel ID
-      let resolvedHotelId = "sandbox-pms";
+      let resolvedHotelId = "62a25484e5";
       try {
         const listRes = await fetch(`${this.baseUrl}/hotel-list/?active=true`, {
           headers: { Authorization: `BZ-JWT ${this.token}` },
@@ -121,7 +121,7 @@ export class AiosellClient {
           }
         }
       } catch {
-        // Fallback to sandbox-pms
+        // Fallback to 62a25484e5
       }
 
       this.hotelId = resolvedHotelId;
@@ -143,7 +143,7 @@ export class AiosellClient {
    * Get real hotel details, room types, and rate plans from Aiosell API
    */
   async getHotelDetails(hotelId?: string): Promise<AiosellHotelResponse> {
-    const targetHotelId = hotelId || this.hotelId || "sandbox-pms";
+    const targetHotelId = hotelId || this.hotelId || "62a25484e5";
     if (!this.token) {
       const loginRes = await this.login();
       if (!loginRes.success) throw new Error(loginRes.error || "Not authenticated");
@@ -169,7 +169,7 @@ export class AiosellClient {
    * Fetch real live rates from Aiosell
    */
   async getLiveRates(start: string, end: string, hotelId?: string) {
-    const targetHotelId = hotelId || this.hotelId || "sandbox-pms";
+    const targetHotelId = hotelId || this.hotelId || "62a25484e5";
     if (!this.token) {
       const loginRes = await this.login();
       if (!loginRes.success) throw new Error(loginRes.error || "Not authenticated");
@@ -192,7 +192,7 @@ export class AiosellClient {
    * Fetch real live inventory from Aiosell
    */
   async getLiveInventory(start: string, end: string, hotelId?: string) {
-    const targetHotelId = hotelId || this.hotelId || "sandbox-pms";
+    const targetHotelId = hotelId || this.hotelId || "62a25484e5";
     if (!this.token) {
       const loginRes = await this.login();
       if (!loginRes.success) throw new Error(loginRes.error || "Not authenticated");
@@ -219,7 +219,7 @@ export class AiosellClient {
     inventory: Record<string, number>,
     hotelId?: string
   ): Promise<AiosellSyncResult> {
-    const targetHotelId = hotelId || this.hotelId || "sandbox-pms";
+    const targetHotelId = hotelId || this.hotelId || "62a25484e5";
     if (!this.token) {
       const loginRes = await this.login();
       if (!loginRes.success) throw new Error(loginRes.error || "Not authenticated");
@@ -271,7 +271,7 @@ export class AiosellClient {
    * Ingest incoming live channel reservations from Aiosell
    */
   async fetchLiveReservations(hotelId?: string): Promise<AiosellReservationItem[]> {
-    const targetHotelId = hotelId || this.hotelId || "sandbox-pms";
+    const targetHotelId = hotelId || this.hotelId || "62a25484e5";
     if (!this.token) {
       const loginRes = await this.login();
       if (!loginRes.success) throw new Error(loginRes.error || "Not authenticated");
@@ -288,8 +288,8 @@ export class AiosellClient {
         guestPhone: "+91 98765 43210",
         checkIn: todayStr,
         checkOut: nextWeekStr,
-        roomCode: "executive",
-        roomTypeName: "EXECUTIVE",
+        roomCode: "deluxe-room",
+        roomTypeName: "Deluxe Room",
         totalAmount: 38500,
         channel: "Aiosell Channel Manager (Booking.com)",
         status: "CONFIRMED",
@@ -301,8 +301,8 @@ export class AiosellClient {
         guestPhone: "+91 98123 45678",
         checkIn: todayStr,
         checkOut: nextWeekStr,
-        roomCode: "suite",
-        roomTypeName: "SUITE",
+        roomCode: "suite-room",
+        roomTypeName: "Suite Room",
         totalAmount: 105000,
         channel: "Aiosell Channel Manager (Agoda)",
         status: "CONFIRMED",

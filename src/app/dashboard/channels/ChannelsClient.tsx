@@ -185,10 +185,12 @@ export default function ChannelsClient({
   const [busyAction, setBusyAction] = useState("");
   const [fallbackImport, setFallbackImport] =
     useState<FallbackImportState | null>(null);
-  const [execRate, setExecRate] = useState(2000);
-  const [suiteRate, setSuiteRate] = useState(1300);
-  const [execAvailable, setExecAvailable] = useState(18);
-  const [suiteAvailable, setSuiteAvailable] = useState(4);
+  const [deluxeRate, setDeluxeRate] = useState(2800);
+  const [twinRate, setTwinRate] = useState(2800);
+  const [suiteRate, setSuiteRate] = useState(5500);
+  const [deluxeAvailable, setDeluxeAvailable] = useState(26);
+  const [twinAvailable, setTwinAvailable] = useState(2);
+  const [suiteAvailable, setSuiteAvailable] = useState(2);
   const [ratePushBusy, setRatePushBusy] = useState(false);
   const [invPushBusy, setInvPushBusy] = useState(false);
   const [apiLogs, setApiLogs] = useState<AiosellApiLog[]>(getStoredApiLogs);
@@ -202,15 +204,20 @@ export default function ChannelsClient({
   useEffect(() => {
     fetchLiveAiosellSummary()
       .then((summary) => {
-        const exec = summary.roomTypes.find((r) => r.id === "executive");
-        const ste = summary.roomTypes.find((r) => r.id === "suite");
-        if (exec) {
-          setExecRate(exec.baseRate);
-          setExecAvailable(exec.availableRooms);
+        const dlx = summary.roomTypes.find((r) => r.id === "deluxe-room" || r.id === "deluxe");
+        const twn = summary.roomTypes.find((r) => r.id === "twin-room" || r.id === "twin");
+        const ste = summary.roomTypes.find((r) => r.id === "suite-room" || r.id === "suite");
+        if (dlx) {
+          setDeluxeRate(dlx.baseRate || 2800);
+          setDeluxeAvailable(dlx.availableRooms ?? 26);
+        }
+        if (twn) {
+          setTwinRate(twn.baseRate || 2800);
+          setTwinAvailable(twn.availableRooms ?? 2);
         }
         if (ste) {
-          setSuiteRate(ste.baseRate);
-          setSuiteAvailable(ste.availableRooms);
+          setSuiteRate(ste.baseRate || 5500);
+          setSuiteAvailable(ste.availableRooms ?? 2);
         }
         setApiLogs(getStoredApiLogs());
       })
@@ -902,17 +909,18 @@ export default function ChannelsClient({
   const handlePushRates = async () => {
     setRatePushBusy(true);
     try {
-      const res1 = await pushRateToAiosell("executive", "executive-d-ep", execRate, "D");
-      const res2 = await pushRateToAiosell("suite", "suite-d-cp", suiteRate, "D");
-      if (res1.success && res2.success) {
+      const res1 = await pushRateToAiosell("deluxe-room", "deluxe-room-d-ep", deluxeRate, "D");
+      const res2 = await pushRateToAiosell("twin-room", "twin-room-d-ep", twinRate, "D");
+      const res3 = await pushRateToAiosell("suite-room", "suite-room-d-ep", suiteRate, "D");
+      if (res1.success && res2.success && res3.success) {
         setNotice({
           tone: "success",
-          message: `Live rates pushed to Aiosell (EXECUTIVE: ₹${execRate}, SUITE: ₹${suiteRate}).`,
+          message: `Live rates pushed to Aiosell (DELUXE: ₹${deluxeRate}, TWIN: ₹${twinRate}, SUITE: ₹${suiteRate}).`,
         });
       } else {
         setNotice({
           tone: "danger",
-          message: `Rate push result: ${res1.message || res2.message}`,
+          message: `Rate push result: ${res1.message || res2.message || res3.message}`,
         });
       }
       setApiLogs(getStoredApiLogs());
@@ -924,11 +932,15 @@ export default function ChannelsClient({
   const handlePushInventory = async () => {
     setInvPushBusy(true);
     try {
-      const res = await pushInventoryToAiosell(execAvailable, suiteAvailable);
+      const res = await pushInventoryToAiosell({
+        "deluxe-room": deluxeAvailable,
+        "twin-room": twinAvailable,
+        "suite-room": suiteAvailable,
+      });
       if (res.success) {
         setNotice({
           tone: "success",
-          message: `Live room inventory pushed to Aiosell (EXECUTIVE: ${execAvailable}, SUITE: ${suiteAvailable}).`,
+          message: `Live room inventory pushed to Aiosell (DELUXE: ${deluxeAvailable}, TWIN: ${twinAvailable}, SUITE: ${suiteAvailable}).`,
         });
       } else {
         setNotice({
@@ -1349,7 +1361,7 @@ export default function ChannelsClient({
             <div className="card-header">
               <div>
                 <h2>Update Live Rates (Aiosell RMS Sync)</h2>
-                <p>Modify base rates and push updates directly to live.aiosell.com / Hotel sandbox-pms</p>
+                <p>Modify base rates and push updates directly to live.aiosell.com / Hotel Shemron (62a25484e5)</p>
               </div>
               <button
                 className="btn btn-primary"
@@ -1363,17 +1375,30 @@ export default function ChannelsClient({
             <div className="card-body">
               <div className={styles.syncScopeGrid}>
                 <div className="stat-card">
-                  <span className="stat-card-label">EXECUTIVE Room Rate</span>
+                  <span className="stat-card-label">DELUXE Room Rate</span>
                   <div className="flex items-center gap-2 mt-2">
                     <span className="text-lg font-bold">₹</span>
                     <input
                       type="number"
                       className="form-control"
-                      value={execRate}
-                      onChange={(e) => setExecRate(Number(e.target.value))}
+                      value={deluxeRate}
+                      onChange={(e) => setDeluxeRate(Number(e.target.value))}
                     />
                   </div>
-                  <span className="text-xs text-secondary mt-1">Rate Plan: executive-d-ep (EP Double)</span>
+                  <span className="text-xs text-secondary mt-1">Rate Plan: deluxe-room-d-ep (EP Double)</span>
+                </div>
+                <div className="stat-card">
+                  <span className="stat-card-label">TWIN Room Rate</span>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-lg font-bold">₹</span>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={twinRate}
+                      onChange={(e) => setTwinRate(Number(e.target.value))}
+                    />
+                  </div>
+                  <span className="text-xs text-secondary mt-1">Rate Plan: twin-room-d-ep (EP Double)</span>
                 </div>
                 <div className="stat-card">
                   <span className="stat-card-label">SUITE Room Rate</span>
@@ -1386,7 +1411,7 @@ export default function ChannelsClient({
                       onChange={(e) => setSuiteRate(Number(e.target.value))}
                     />
                   </div>
-                  <span className="text-xs text-secondary mt-1">Rate Plan: suite-d-cp (CP Double)</span>
+                  <span className="text-xs text-secondary mt-1">Rate Plan: suite-room-d-ep (EP Double)</span>
                 </div>
               </div>
             </div>
@@ -1398,7 +1423,7 @@ export default function ChannelsClient({
             <div className="card-header">
               <div>
                 <h2>Update Room Inventory (Aiosell Live Sync)</h2>
-                <p>Manage available room counts and push live updates directly to live.aiosell.com</p>
+                <p>Manage available room counts and push live updates directly to live.aiosell.com / Hotel Shemron</p>
               </div>
               <button
                 className="btn btn-primary"
@@ -1412,17 +1437,30 @@ export default function ChannelsClient({
             <div className="card-body">
               <div className={styles.syncScopeGrid}>
                 <div className="stat-card">
-                  <span className="stat-card-label">EXECUTIVE Available Rooms</span>
+                  <span className="stat-card-label">DELUXE Available Rooms</span>
                   <div className="flex items-center gap-2 mt-2">
                     <input
                       type="number"
                       className="form-control"
-                      value={execAvailable}
-                      onChange={(e) => setExecAvailable(Number(e.target.value))}
+                      value={deluxeAvailable}
+                      onChange={(e) => setDeluxeAvailable(Number(e.target.value))}
                     />
-                    <span className="text-sm font-semibold">/ 25 Total</span>
+                    <span className="text-sm font-semibold">/ 26 Total</span>
                   </div>
-                  <span className="text-xs text-secondary mt-1">Physical Count: 25 EXECUTIVE Rooms</span>
+                  <span className="text-xs text-secondary mt-1">Physical Count: 26 DELUXE Rooms</span>
+                </div>
+                <div className="stat-card">
+                  <span className="stat-card-label">TWIN Available Rooms</span>
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={twinAvailable}
+                      onChange={(e) => setTwinAvailable(Number(e.target.value))}
+                    />
+                    <span className="text-sm font-semibold">/ 2 Total</span>
+                  </div>
+                  <span className="text-xs text-secondary mt-1">Physical Count: 2 TWIN Rooms</span>
                 </div>
                 <div className="stat-card">
                   <span className="stat-card-label">SUITE Available Rooms</span>
@@ -1433,9 +1471,9 @@ export default function ChannelsClient({
                       value={suiteAvailable}
                       onChange={(e) => setSuiteAvailable(Number(e.target.value))}
                     />
-                    <span className="text-sm font-semibold">/ 5 Total</span>
+                    <span className="text-sm font-semibold">/ 2 Total</span>
                   </div>
-                  <span className="text-xs text-secondary mt-1">Physical Count: 5 SUITE Rooms</span>
+                  <span className="text-xs text-secondary mt-1">Physical Count: 2 SUITE Rooms</span>
                 </div>
               </div>
             </div>

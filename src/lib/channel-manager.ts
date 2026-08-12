@@ -116,7 +116,7 @@ export const CHANNEL_PROVIDERS: ChannelProviderDefinition[] = [
     setupGuideUrl: "https://live.aiosell.com/",
     description: "Automated distribution, dynamic rate push & live reservation sync (live.aiosell.com).",
     capabilities: ["Rates", "Inventory", "Restrictions", "Reservations"],
-    requiredIds: ["Username (sandboxpms)", "Password (sandboxpms)", "Hotel ID (2298)"],
+    requiredIds: ["Username (ninaad.khera19@gmail.com)", "Password (aiosell)", "Hotel ID (62a25484e5)"],
   },
 ];
 
@@ -137,11 +137,12 @@ export function createDefaultChannelManagerState(): ChannelManagerState {
           providerId: provider.id,
           environment: "PRODUCTION",
           status: "HEALTHY",
-          propertyId: "sandbox-pms",
-          propertyName: "Sandbox PMS (Aiosell RMS)",
+          propertyId: "62a25484e5",
+          propertyName: "Hotel Shemron (Aiosell RMS)",
           mappings: [
-            { pmsRoomTypeId: "executive", pmsRoomTypeName: "EXECUTIVE", pmsRoomTypeCode: "EXECUTIVE", otaRoomTypeId: "executive", otaRoomTypeName: "EXECUTIVE (25 Rooms)", otaRatePlanId: "executive-d-ep", otaRatePlanName: "Room Only (EP Double ₹2,000)" },
-            { pmsRoomTypeId: "suite", pmsRoomTypeName: "SUITE", pmsRoomTypeCode: "SUITE", otaRoomTypeId: "suite", otaRoomTypeName: "SUITE (5 Rooms)", otaRatePlanId: "suite-d-cp", otaRatePlanName: "Breakfast Included (CP Double ₹1,300)" },
+            { pmsRoomTypeId: "deluxe-room", pmsRoomTypeName: "Deluxe Room", pmsRoomTypeCode: "DELUXE", otaRoomTypeId: "deluxe-room", otaRoomTypeName: "Deluxe Room (26 Rooms)", otaRatePlanId: "deluxe-room-d-ep", otaRatePlanName: "Room Only (EP Double ₹2,800)" },
+            { pmsRoomTypeId: "twin-room", pmsRoomTypeName: "Twin Room", pmsRoomTypeCode: "TWIN", otaRoomTypeId: "twin-room", otaRoomTypeName: "Twin Room (2 Rooms)", otaRatePlanId: "twin-room-d-ep", otaRatePlanName: "Room Only (EP Double ₹2,800)" },
+            { pmsRoomTypeId: "suite-room", pmsRoomTypeName: "Suite Room", pmsRoomTypeCode: "SUITE", otaRoomTypeId: "suite-room", otaRoomTypeName: "Suite Room (2 Rooms)", otaRatePlanId: "suite-room-d-ep", otaRatePlanName: "Room Only (EP Double ₹5,500)" },
           ],
           syncScopes: [...DEFAULT_SYNC_SCOPES],
           autoSync: true,
@@ -171,8 +172,8 @@ export function createDefaultChannelManagerState(): ChannelManagerState {
         status: "SUCCESS",
         startedAt: now,
         completedAt: now,
-        summary: "Automated live sync with live.aiosell.com (sandbox-pms) completed successfully.",
-        transactionId: "aio-tx-sandbox-pms",
+        summary: "Automated live sync with live.aiosell.com (62a25484e5) completed successfully.",
+        transactionId: "aio-tx-62a25484e5",
       },
     ],
   };
@@ -199,8 +200,8 @@ export function loadChannelManagerState(): ChannelManagerState {
         const merged = saved ? { ...defaultConnection, ...saved } : defaultConnection;
         if (merged.providerId === "aiosell") {
           merged.environment = "PRODUCTION";
-          merged.propertyId = "sandbox-pms";
-          merged.propertyName = "Sandbox PMS (Aiosell RMS)";
+          merged.propertyId = "62a25484e5";
+          merged.propertyName = "Hotel Shemron (Aiosell RMS)";
           merged.status = "HEALTHY";
           merged.mappings = defaultConnection.mappings;
         }

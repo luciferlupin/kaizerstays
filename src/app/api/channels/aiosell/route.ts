@@ -6,16 +6,16 @@ export const dynamic = "force-dynamic";
 
 const requestSchema = z.object({
   action: z.enum(["connect", "discover", "sync", "status", "rates", "inventory"]),
-  username: z.string().default("sandboxpms"),
-  password: z.string().default("sandboxpms"),
-  hotelId: z.string().default("sandbox-pms"),
+  username: z.string().default("ninaad.khera19@gmail.com"),
+  password: z.string().default("aiosell"),
+  hotelId: z.string().default("62a25484e5"),
   rates: z.record(z.string(), z.unknown()).optional(),
   inventory: z.record(z.string(), z.unknown()).optional(),
 });
 
 export async function GET() {
   const client = new AiosellClient();
-  const authResult = await client.login("sandboxpms", "sandboxpms");
+  const authResult = await client.login("ninaad.khera19@gmail.com", "aiosell");
 
   if (!authResult.success) {
     return NextResponse.json({
@@ -27,7 +27,7 @@ export async function GET() {
     }, { status: 401 });
   }
 
-  const targetHotelId = authResult.hotelId || "sandbox-pms";
+  const targetHotelId = authResult.hotelId || "62a25484e5";
   const todayStr = new Date().toISOString().split("T")[0];
 
   let hotelDetails = null;
@@ -55,11 +55,24 @@ export async function GET() {
   const liveBookings = await client.fetchLiveReservations(targetHotelId);
 
   const todayRates = liveRates?.[todayStr]?.rates || [
-    { roomId: "executive", rate: 2000, rateplanId: "executive-d-ep", occupancy: "D" },
-    { roomId: "suite", rate: 1300, rateplanId: "suite-d-cp", occupancy: "D" },
+    { roomId: "deluxe-room", rate: 2800, rateplanId: "deluxe-room-d-ep", occupancy: "D" },
+    { roomId: "twin-room", rate: 2800, rateplanId: "twin-room-d-ep", occupancy: "D" },
+    { roomId: "suite-room", rate: 5500, rateplanId: "suite-room-d-ep", occupancy: "D" },
   ];
 
-  const todayInv = liveInventory?.[todayStr]?.split || { executive: 18, suite: 4 };
+  const todayInv = liveInventory?.[todayStr]?.split || { "deluxe-room": 26, "twin-room": 2, "suite-room": 2 };
+
+  const rooms = (hotelDetails?.rooms || [
+    { id: "deluxe-room", displayName: "Deluxe Room", name: "Deluxe Room", totalCount: 26 },
+    { id: "twin-room", displayName: "Twin Room", name: "Twin Room", totalCount: 2 },
+    { id: "suite-room", displayName: "Suite Room", name: "Suite Room", totalCount: 2 },
+  ]).map((r) => ({
+    id: r.id,
+    name: r.displayName || r.name,
+    totalCount: r.totalCount,
+    available: todayInv[r.id] ?? r.totalCount,
+    baseRate: 2800,
+  }));
 
   return NextResponse.json({
     success: true,
@@ -68,15 +81,12 @@ export async function GET() {
     authenticated: true,
     hotelId: targetHotelId,
     hotelDetails: {
-      name: hotelDetails?.name || "Sandbox PMS",
-      city: hotelDetails?.globals?.city || "Bangalore",
+      name: hotelDetails?.name || "Hotel Shemron",
+      city: hotelDetails?.globals?.city || "Shahjahanpur, Neemrana",
       timezone: hotelDetails?.globals?.timezone || "Asia/Kolkata",
       currency: hotelDetails?.globals?.currency || "INR",
     },
-    rooms: [
-      { id: "executive", name: "EXECUTIVE", totalCount: 25, available: todayInv.executive ?? 18, baseRate: 2000 },
-      { id: "suite", name: "SUITE", totalCount: 5, available: todayInv.suite ?? 4, baseRate: 1300 },
-    ],
+    rooms,
     liveRates: todayRates,
     liveInventory: todayInv,
     liveBookings,
@@ -115,7 +125,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const targetHotelId = (hotelId === "2298" || !hotelId) ? "sandbox-pms" : hotelId;
+    const targetHotelId = (hotelId === "2298" || hotelId === "sandbox-pms" || !hotelId) ? (auth.hotelId || "62a25484e5") : hotelId;
     const todayStr = new Date().toISOString().split("T")[0];
 
     if (action === "connect" || action === "status") {
@@ -147,36 +157,47 @@ export async function POST(request: Request) {
 
       const realRooms = hotelData?.rooms?.map((r) => ({
         id: r.id,
-        name: r.displayName || r.name,
+        name: `${r.displayName || r.name} (${r.totalCount} Rooms)`,
         code: r.id.toUpperCase(),
         ratePlans: (hotelData?.rateplans || [])
           .filter((rp) => rp.roomId === r.id)
           .map((rp) => ({
             id: rp.rateplanId,
-            name: `${rp.displayName} (${rp.occupancy === "S" ? "Single" : "Double"} ${rp.mealplan})`,
+            name: `${rp.displayName || rp.rateplanId} (${rp.occupancy === "S" ? "Single" : "Double"} ${rp.mealplan})`,
             mealPlan: rp.mealplan,
           })),
       })) || [
         {
-          id: "executive",
-          name: "EXECUTIVE (25 Rooms)",
-          code: "EXECUTIVE",
+          id: "deluxe-room",
+          name: "Deluxe Room (26 Rooms)",
+          code: "DELUXE",
           ratePlans: [
-            { id: "executive-s-ep", name: "Room Only (EP Single)", mealPlan: "EP" },
-            { id: "executive-d-ep", name: "Room Only (EP Double)", mealPlan: "EP" },
-            { id: "executive-s-cp", name: "Breakfast Included (CP Single)", mealPlan: "CP" },
-            { id: "executive-d-cp", name: "Breakfast Included (CP Double)", mealPlan: "CP" },
+            { id: "deluxe-room-s-ep", name: "EP Single", mealPlan: "EP" },
+            { id: "deluxe-room-d-ep", name: "EP Double", mealPlan: "EP" },
+            { id: "deluxe-room-s-cp", name: "CP Single", mealPlan: "CP" },
+            { id: "deluxe-room-d-cp", name: "CP Double", mealPlan: "CP" },
           ],
         },
         {
-          id: "suite",
-          name: "SUITE (5 Rooms)",
+          id: "twin-room",
+          name: "Twin Room (2 Rooms)",
+          code: "TWIN",
+          ratePlans: [
+            { id: "twin-room-s-ep", name: "EP Single", mealPlan: "EP" },
+            { id: "twin-room-d-ep", name: "EP Double", mealPlan: "EP" },
+            { id: "twin-room-s-cp", name: "CP Single", mealPlan: "CP" },
+            { id: "twin-room-d-cp", name: "CP Double", mealPlan: "CP" },
+          ],
+        },
+        {
+          id: "suite-room",
+          name: "Suite Room (2 Rooms)",
           code: "SUITE",
           ratePlans: [
-            { id: "suite-s-ep", name: "Room Only (EP Single)", mealPlan: "EP" },
-            { id: "suite-d-ep", name: "Room Only (EP Double)", mealPlan: "EP" },
-            { id: "suite-s-cp", name: "Breakfast Included (CP Single)", mealPlan: "CP" },
-            { id: "suite-d-cp", name: "Breakfast Included (CP Double)", mealPlan: "CP" },
+            { id: "suite-room-s-ep", name: "EP Single", mealPlan: "EP" },
+            { id: "suite-room-d-ep", name: "EP Double", mealPlan: "EP" },
+            { id: "suite-room-s-cp", name: "CP Single", mealPlan: "CP" },
+            { id: "suite-room-d-cp", name: "CP Double", mealPlan: "CP" },
           ],
         },
       ];
@@ -189,8 +210,8 @@ export async function POST(request: Request) {
     }
 
     if (action === "sync") {
-      const ratesMap: Record<string, number> = (rates as Record<string, number>) || { executive: 2000, suite: 1300 };
-      const inventoryMap: Record<string, number> = (inventory as Record<string, number>) || { executive: 18, suite: 4 };
+      const ratesMap: Record<string, number> = (rates as Record<string, number>) || { "deluxe-room": 2800, "twin-room": 2800, "suite-room": 5500 };
+      const inventoryMap: Record<string, number> = (inventory as Record<string, number>) || { "deluxe-room": 26, "twin-room": 2, "suite-room": 2 };
 
       // Push rates & inventory to Aiosell
       const syncPushResult = await client.pushRatesAndInventory(ratesMap, inventoryMap, targetHotelId);
@@ -214,8 +235,9 @@ export async function POST(request: Request) {
         provider: "https://live.aiosell.com",
         outgoingPush: syncPushResult,
         verifiedLiveRates: liveRates?.[todayStr]?.rates || [
-          { roomId: "executive", rate: ratesMap.executive || 2000, rateplanId: "executive-d-ep" },
-          { roomId: "suite", rate: ratesMap.suite || 1300, rateplanId: "suite-d-cp" },
+          { roomId: "deluxe-room", rate: ratesMap["deluxe-room"] || 2800, rateplanId: "deluxe-room-d-ep" },
+          { roomId: "twin-room", rate: ratesMap["twin-room"] || 2800, rateplanId: "twin-room-d-ep" },
+          { roomId: "suite-room", rate: ratesMap["suite-room"] || 5500, rateplanId: "suite-room-d-ep" },
         ],
         verifiedLiveInventory: liveInventory?.[todayStr]?.split || inventoryMap,
         incomingReservations: importedBookings,

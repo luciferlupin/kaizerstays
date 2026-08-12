@@ -75,21 +75,21 @@ function getInitialLogs(): AiosellApiLog[] {
       id: "log_init_01",
       timestamp: now,
       method: "POST",
-      endpoint: "https://live.aiosell.com/api/v1/rms/hotels/sandbox-pms/cust-view/inventory",
+      endpoint: "https://live.aiosell.com/api/v1/rms/hotels/62a25484e5/cust-view/inventory",
       status: "SUCCESS",
       httpCode: 200,
-      summary: "Inventory Push: EXECUTIVE set to 18 available, SUITE set to 4 available.",
-      payload: { hotel_id: "sandbox-pms", split: { executive: 18, suite: 4 } },
+      summary: "Inventory Push: DELUXE set to 26, TWIN set to 2, SUITE set to 2 available.",
+      payload: { hotel_id: "62a25484e5", split: { "deluxe-room": 26, "twin-room": 2, "suite-room": 2 } },
     },
     {
       id: "log_init_02",
       timestamp: now,
       method: "POST",
-      endpoint: "https://live.aiosell.com/api/v1/rms/hotels/sandbox-pms/ds-view/rates",
+      endpoint: "https://live.aiosell.com/api/v1/rms/hotels/62a25484e5/ds-view/rates",
       status: "SUCCESS",
       httpCode: 200,
-      summary: "Rates Push: EXECUTIVE set to ₹2,000 (EP Double), SUITE set to ₹1,300 (CP Double).",
-      payload: { hotel_id: "sandbox-pms", rates: [{ roomId: "executive", rate: 2000 }, { roomId: "suite", rate: 1300 }] },
+      summary: "Rates Push: DELUXE set to ₹2,800, TWIN set to ₹2,800, SUITE set to ₹5,500.",
+      payload: { hotel_id: "62a25484e5", rates: [{ roomId: "deluxe-room", rate: 2800 }, { roomId: "twin-room", rate: 2800 }, { roomId: "suite-room", rate: 5500 }] },
     },
     {
       id: "log_init_03",
@@ -98,7 +98,7 @@ function getInitialLogs(): AiosellApiLog[] {
       endpoint: "https://live.aiosell.com/api/v1/rms/auth",
       status: "SUCCESS",
       httpCode: 200,
-      summary: "JWT Authentication: Token issued for sandboxpms (Hotel ID sandbox-pms).",
+      summary: "JWT Authentication: Token issued for ninaad.khera19@gmail.com (Hotel ID 62a25484e5).",
     },
   ];
 }
@@ -120,62 +120,58 @@ export async function fetchLiveAiosellSummary(): Promise<AiosellLiveSummary> {
     throw new Error(loginRes.error || "Aiosell login failed");
   }
 
+  const hotelId = loginRes.hotelId || "62a25484e5";
+
   saveApiLog({
     method: "POST",
     endpoint: "https://live.aiosell.com/api/v1/rms/auth",
     status: "SUCCESS",
     httpCode: 200,
-    summary: "JWT Bearer Token authenticated successfully for Hotel sandbox-pms.",
+    summary: `JWT Bearer Token authenticated successfully for Hotel ${hotelId}.`,
   });
 
-  const hotelDetails = await client.getHotelDetails("sandbox-pms");
+  const hotelDetails = await client.getHotelDetails(hotelId);
   const todayStr = new Date().toISOString().split("T")[0];
-  const liveInventory = await client.getLiveInventory(todayStr, todayStr, "sandbox-pms");
+  const liveInventory = await client.getLiveInventory(todayStr, todayStr, hotelId);
 
-  const todayInv = liveInventory?.[todayStr]?.split || { executive: 18, suite: 4 };
-  const execAvailable = todayInv.executive ?? 18;
-  const suiteAvailable = todayInv.suite ?? 4;
+  const todayInv = liveInventory?.[todayStr]?.split || { "deluxe-room": 26, "twin-room": 2, "suite-room": 2 };
+  
+  const roomTypes = (hotelDetails.rooms || [
+    { id: "deluxe-room", name: "Deluxe Room", displayName: "Deluxe Room", totalCount: 26, maxocc: 2 },
+    { id: "twin-room", name: "Twin Room", displayName: "Twin Room", totalCount: 2, maxocc: 2 },
+    { id: "suite-room", name: "Suite Room", displayName: "Suite Room", totalCount: 2, maxocc: 2 },
+  ]).map((r) => ({
+    id: r.id,
+    name: r.displayName || r.name,
+    code: r.id.toUpperCase(),
+    totalRooms: r.totalCount,
+    availableRooms: typeof todayInv[r.id] === "number" ? todayInv[r.id] : r.totalCount,
+    baseRate: 2800,
+  }));
 
-  const totalRooms = 30; // 25 Executive + 5 Suites
-  const availableRooms = execAvailable + suiteAvailable;
-  const occupiedRooms = totalRooms - availableRooms;
-  const occupancyPercentage = Math.round((occupiedRooms / totalRooms) * 100);
+  const totalRooms = roomTypes.reduce((acc, r) => acc + r.totalRooms, 0);
+  const availableRooms = roomTypes.reduce((acc, r) => acc + r.availableRooms, 0);
+  const occupiedRooms = Math.max(0, totalRooms - availableRooms);
+  const occupancyPercentage = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
 
   return {
-    hotelId: "sandbox-pms",
-    hotelName: hotelDetails.name || "Sandbox PMS (Aiosell RMS)",
+    hotelId,
+    hotelName: hotelDetails.name || "Hotel Shemron (Aiosell RMS)",
     currency: hotelDetails.globals?.currency || "INR",
     timezone: hotelDetails.globals?.timezone || "Asia/Kolkata",
-    roomTypes: [
-      {
-        id: "executive",
-        name: "EXECUTIVE",
-        code: "EXECUTIVE",
-        totalRooms: 25,
-        availableRooms: execAvailable,
-        baseRate: 2000,
-      },
-      {
-        id: "suite",
-        name: "SUITE",
-        code: "SUITE",
-        totalRooms: 5,
-        availableRooms: suiteAvailable,
-        baseRate: 1300,
-      },
-    ],
+    roomTypes,
     ratePlans: (hotelDetails.rateplans || []).map((rp) => ({
       id: rp.rateplanId,
-      name: `${rp.displayName} (${rp.occupancy === "S" ? "Single" : "Double"} ${rp.mealplan})`,
+      name: `${rp.displayName || rp.rateplanId} (${rp.occupancy === "S" ? "Single" : "Double"} ${rp.mealplan})`,
       mealPlan: rp.mealplan,
       roomId: rp.roomId,
-      rate: rp.rate || (rp.roomId === "executive" ? 2000 : 1300),
+      rate: rp.rate || 2800,
     })),
     totalRooms,
     availableRooms,
     occupiedRooms,
     occupancyPercentage,
-    todayRevenue: occupiedRooms * 2500,
+    todayRevenue: occupiedRooms * 2800,
     syncedAt: new Date().toISOString(),
   };
 }
@@ -187,12 +183,14 @@ export async function pushRateToAiosell(
   roomId: string,
   rateplanId: string,
   newRate: number,
-  occupancy: "S" | "D" = "D"
+  occupancy: "S" | "D" = "D",
+  hotelId = "62a25484e5"
 ): Promise<{ success: boolean; message: string }> {
   const client = new AiosellClient();
   const loginRes = await client.login();
   if (!loginRes.success) return { success: false, message: loginRes.error || "Auth failed" };
 
+  const targetHotelId = loginRes.hotelId || hotelId;
   const todayStr = new Date().toISOString().split("T")[0];
   const payload = [
     {
@@ -210,7 +208,7 @@ export async function pushRateToAiosell(
 
   try {
     const res = await fetch(
-      `https://live.aiosell.com/api/v1/rms/hotels/sandbox-pms/ds-view/rates`,
+      `https://live.aiosell.com/api/v1/rms/hotels/${targetHotelId}/ds-view/rates`,
       {
         method: "POST",
         headers: {
@@ -224,7 +222,7 @@ export async function pushRateToAiosell(
     const ok = res.ok;
     saveApiLog({
       method: "POST",
-      endpoint: "https://live.aiosell.com/api/v1/rms/hotels/sandbox-pms/ds-view/rates",
+      endpoint: `https://live.aiosell.com/api/v1/rms/hotels/${targetHotelId}/ds-view/rates`,
       status: ok ? "SUCCESS" : "FAILED",
       httpCode: res.status,
       summary: `Pushed rate ₹${newRate} for ${roomId.toUpperCase()} (${rateplanId}) to Aiosell live RMS.`,
@@ -241,7 +239,7 @@ export async function pushRateToAiosell(
     const msg = err instanceof Error ? err.message : "Network error";
     saveApiLog({
       method: "POST",
-      endpoint: "https://live.aiosell.com/api/v1/rms/hotels/sandbox-pms/ds-view/rates",
+      endpoint: `https://live.aiosell.com/api/v1/rms/hotels/${targetHotelId}/ds-view/rates`,
       status: "FAILED",
       httpCode: 500,
       summary: `Rate push failed: ${msg}`,
@@ -254,13 +252,14 @@ export async function pushRateToAiosell(
  * Execute dynamic room inventory push to live.aiosell.com
  */
 export async function pushInventoryToAiosell(
-  executiveAvailable: number,
-  suiteAvailable: number
+  split: Record<string, number> = { "deluxe-room": 26, "twin-room": 2, "suite-room": 2 },
+  hotelId = "62a25484e5"
 ): Promise<{ success: boolean; message: string }> {
   const client = new AiosellClient();
   const loginRes = await client.login();
   if (!loginRes.success) return { success: false, message: loginRes.error || "Auth failed" };
 
+  const targetHotelId = loginRes.hotelId || hotelId;
   const todayStr = new Date().toISOString().split("T")[0];
   const payload = {
     start: todayStr,
@@ -268,17 +267,14 @@ export async function pushInventoryToAiosell(
     inventory: [
       {
         date: todayStr,
-        split: {
-          executive: executiveAvailable,
-          suite: suiteAvailable,
-        },
+        split,
       },
     ],
   };
 
   try {
     const res = await fetch(
-      `https://live.aiosell.com/api/v1/rms/hotels/sandbox-pms/cust-view/inventory`,
+      `https://live.aiosell.com/api/v1/rms/hotels/${targetHotelId}/cust-view/inventory`,
       {
         method: "POST",
         headers: {
@@ -290,12 +286,13 @@ export async function pushInventoryToAiosell(
     );
 
     const ok = res.ok;
+    const splitSummary = Object.entries(split).map(([k, v]) => `${k}=${v}`).join(", ");
     saveApiLog({
       method: "POST",
-      endpoint: "https://live.aiosell.com/api/v1/rms/hotels/sandbox-pms/cust-view/inventory",
+      endpoint: `https://live.aiosell.com/api/v1/rms/hotels/${targetHotelId}/cust-view/inventory`,
       status: ok ? "SUCCESS" : "FAILED",
       httpCode: res.status,
-      summary: `Pushed room inventory: EXECUTIVE=${executiveAvailable}, SUITE=${suiteAvailable} to Aiosell live RMS.`,
+      summary: `Pushed room inventory: ${splitSummary} to Aiosell live RMS.`,
       payload,
     });
 
@@ -309,7 +306,7 @@ export async function pushInventoryToAiosell(
     const msg = err instanceof Error ? err.message : "Network error";
     saveApiLog({
       method: "POST",
-      endpoint: "https://live.aiosell.com/api/v1/rms/hotels/sandbox-pms/cust-view/inventory",
+      endpoint: `https://live.aiosell.com/api/v1/rms/hotels/${targetHotelId}/cust-view/inventory`,
       status: "FAILED",
       httpCode: 500,
       summary: `Inventory push failed: ${msg}`,
