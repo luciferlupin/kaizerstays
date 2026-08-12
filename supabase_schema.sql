@@ -254,11 +254,20 @@ ALTER TABLE public.rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reservations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.guests ENABLE ROW LEVEL SECURITY;
 
--- Allow Public/Authenticated Access Policies
+-- Allow Public/Authenticated Access Policies (Idempotent)
+DROP POLICY IF EXISTS "Allow public read access on organizations" ON public.organizations;
 CREATE POLICY "Allow public read access on organizations" ON public.organizations FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Allow public read access on staff_users" ON public.staff_users;
 CREATE POLICY "Allow public read access on staff_users" ON public.staff_users FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Allow public all on rooms" ON public.rooms;
 CREATE POLICY "Allow public all on rooms" ON public.rooms FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow public all on reservations" ON public.reservations;
 CREATE POLICY "Allow public all on reservations" ON public.reservations FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow public all on guests" ON public.guests;
 CREATE POLICY "Allow public all on guests" ON public.guests FOR ALL USING (true);
 
 -- Done!
