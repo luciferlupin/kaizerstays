@@ -171,7 +171,7 @@ CREATE TABLE IF NOT EXISTS public.activity_logs (
 );
 
 -- =====================================================================
--- PRE-SEEDED DATA FOR HOTEL SHEMRON NEEMRANA
+-- PRE-SEEDED DATA FOR HOTEL SHEMRON NEEMRANA (Hotel ID: 62a25484e5)
 -- =====================================================================
 
 -- Seed Organization
@@ -179,10 +179,13 @@ INSERT INTO public.organizations (id, name, address, email, gstin)
 VALUES (
     'a0000000-0000-0000-0000-000000000001',
     'Hotel Shemron, Neemrana',
-    'NH-48, Delhi-Jaipur Highway, Neemrana, Rajasthan 301705',
-    'frontdesk@hotelshemron.com',
+    'NH-8, Shahjahanpur, Neemrana, Rajasthan 301706',
+    'ninaad.khera19@gmail.com',
     '08AABCT1332L1ZR'
-) ON CONFLICT (id) DO NOTHING;
+) ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    address = EXCLUDED.address,
+    email = EXCLUDED.email;
 
 -- Seed Owner Credentials (Ninaad Khera / Ninaad.khera@gmail.com / Passcode: 12345)
 INSERT INTO public.staff_users (staff_id, organization_id, first_name, last_name, email, phone, role, password_hash)
@@ -192,18 +195,57 @@ VALUES (
     'Ninaad',
     'Khera',
     'Ninaad.khera@gmail.com',
-    '+91 98100 12345',
+    '+91 99994 90100',
     'OWNER',
     crypt('12345', gen_salt('bf'))
 ) ON CONFLICT (email) DO NOTHING;
 
--- Seed Room Categories
-INSERT INTO public.room_types (name, code, base_rate, max_occupancy) VALUES
-('Standard Room', 'STD', 3500.00, 2),
-('Deluxe Room', 'DLX', 5500.00, 2),
-('Premium Suite', 'STE', 8500.00, 3),
-('Royal Heritage Suite', 'RYL', 14500.00, 4)
-ON CONFLICT DO NOTHING;
+-- Seed Room Categories (Hotel Shemron: 26 Deluxe, 2 Twin, 2 Suite)
+INSERT INTO public.room_types (id, name, code, base_rate, max_occupancy, description) VALUES
+('b0000000-0000-0000-0000-000000000001', 'Deluxe Room', 'DELUXE', 2800.00, 2, 'Spacious king-bed deluxe room with high-speed WiFi, work desk, and ensuite bath.'),
+('b0000000-0000-0000-0000-000000000002', 'Twin Room', 'TWIN', 2800.00, 2, 'Comfortable room with two individual twin beds, premium linens, LED TV, and modern amenities.'),
+('b0000000-0000-0000-0000-000000000003', 'Suite Room', 'SUITE', 5500.00, 2, 'Premium luxury suite with separate living area, plush bedding, balcony view, and luxury toiletries.')
+ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    code = EXCLUDED.code,
+    base_rate = EXCLUDED.base_rate;
+
+-- Seed 30 Physical Rooms for Hotel Shemron
+-- Deluxe Rooms (26 rooms: 101 to 126)
+INSERT INTO public.rooms (room_number, room_type_id, floor, status, is_clean) VALUES
+('101', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('102', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('103', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('104', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('105', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('106', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('107', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('108', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('109', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('110', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('111', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('112', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('113', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('114', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('115', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('116', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('117', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('118', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('119', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('120', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('121', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('122', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('123', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('124', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('125', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+('126', 'b0000000-0000-0000-0000-000000000001', 1, 'AVAILABLE', TRUE),
+-- Twin Rooms (2 rooms: 201 to 202)
+('201', 'b0000000-0000-0000-0000-000000000002', 2, 'AVAILABLE', TRUE),
+('202', 'b0000000-0000-0000-0000-000000000002', 2, 'AVAILABLE', TRUE),
+-- Suite Rooms (2 rooms: 301 to 302)
+('301', 'b0000000-0000-0000-0000-000000000003', 3, 'AVAILABLE', TRUE),
+('302', 'b0000000-0000-0000-0000-000000000003', 3, 'AVAILABLE', TRUE)
+ON CONFLICT (room_number) DO NOTHING;
 
 -- Enable Row Level Security (RLS) for Supabase
 ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
