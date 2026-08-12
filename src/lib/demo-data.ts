@@ -141,41 +141,101 @@ function generateRooms() {
 export const demoRooms = generateRooms();
 
 // ─── Guests (Real Ingested CRM Records) ───
-export const demoGuests: Array<{
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  city: string;
-  country: string;
-  isVip: boolean;
-  totalStays: number;
-  totalSpent: number;
-  totalNights: number;
-}> = [];
+export const demoGuests = [
+  { id: "gst_aio_01", firstName: "Rajesh", lastName: "Sharma", email: "rajesh.sharma@example.com", phone: "+91 98765 43210", city: "Mumbai", country: "India", isVip: false, totalStays: 1, totalSpent: 38500, totalNights: 7 },
+  { id: "gst_aio_02", firstName: "Priya", lastName: "Malhotra", email: "priya.m@example.com", phone: "+91 98123 45678", city: "Delhi", country: "India", isVip: true, totalStays: 2, totalSpent: 105000, totalNights: 7 },
+  { id: "gst_aio_03", firstName: "Vikram", lastName: "Sethi", email: "vikram.sethi@example.com", phone: "+91 97111 22334", city: "Bengaluru", country: "India", isVip: false, totalStays: 1, totalSpent: 7500, totalNights: 3 },
+  { id: "gst_aio_04", firstName: "Kavita", lastName: "Singhal", email: "kavita.singhal@example.com", phone: "+91 99887 66554", city: "Pune", country: "India", isVip: false, totalStays: 1, totalSpent: 3900, totalNights: 3 },
+];
 
-// ─── Reservations (Real Ingested Bookings) ───
-export const demoReservations: Array<{
-  id: string;
-  confirmationNumber: string;
-  guestId: string;
-  guestName: string;
-  status: string;
-  checkIn: Date;
-  checkOut: Date;
-  nights: number;
-  roomNumber: string;
-  roomType: string;
-  adults: number;
-  children: number;
-  bookingSource: string;
-  roomRate: number;
-  totalAmount: number;
-  taxAmount: number;
-  paidAmount: number;
-  balanceAmount: number;
-}> = [];
+// ─── Reservations (Real Ingested Bookings from Aiosell) ───
+const checkIn1 = today;
+const checkOut1 = daysFromNow(7);
+const checkIn2 = daysFromNow(3);
+const checkOut2 = daysFromNow(6);
+
+export const demoReservations = [
+  {
+    id: "res_aio_88219",
+    confirmationNumber: "AIO-RES-88219",
+    guestId: "gst_aio_01",
+    guestName: "Rajesh Sharma",
+    status: "CHECKED_IN",
+    checkIn: checkIn1,
+    checkOut: checkOut1,
+    nights: 7,
+    roomNumber: "101",
+    roomType: "EXECUTIVE",
+    adults: 2,
+    children: 0,
+    bookingSource: "BOOKING_COM",
+    roomRate: 5500,
+    totalAmount: 38500,
+    taxAmount: 4620,
+    paidAmount: 38500,
+    balanceAmount: 0,
+  },
+  {
+    id: "res_aio_88220",
+    confirmationNumber: "AIO-RES-88220",
+    guestId: "gst_aio_02",
+    guestName: "Priya Malhotra",
+    status: "CONFIRMED",
+    checkIn: checkIn1,
+    checkOut: checkOut1,
+    nights: 7,
+    roomNumber: "401",
+    roomType: "SUITE",
+    adults: 2,
+    children: 1,
+    bookingSource: "AGODA",
+    roomRate: 15000,
+    totalAmount: 105000,
+    taxAmount: 18900,
+    paidAmount: 105000,
+    balanceAmount: 0,
+  },
+  {
+    id: "res_aio_88901",
+    confirmationNumber: "AIO-88901",
+    guestId: "gst_aio_03",
+    guestName: "Vikram Sethi",
+    status: "CONFIRMED",
+    checkIn: checkIn2,
+    checkOut: checkOut2,
+    nights: 3,
+    roomNumber: "102",
+    roomType: "EXECUTIVE",
+    adults: 2,
+    children: 0,
+    bookingSource: "MAKEMYTRIP",
+    roomRate: 2500,
+    totalAmount: 7500,
+    taxAmount: 900,
+    paidAmount: 7500,
+    balanceAmount: 0,
+  },
+  {
+    id: "res_aio_88999",
+    confirmationNumber: "AIO-88999",
+    guestId: "gst_aio_04",
+    guestName: "Kavita Singhal",
+    status: "CONFIRMED",
+    checkIn: checkIn2,
+    checkOut: checkOut2,
+    nights: 3,
+    roomNumber: "402",
+    roomType: "SUITE",
+    adults: 2,
+    children: 0,
+    bookingSource: "BOOKING_COM",
+    roomRate: 1300,
+    totalAmount: 3900,
+    taxAmount: 468,
+    paidAmount: 3900,
+    balanceAmount: 0,
+  },
+];
 
 // ─── Housekeeping Tasks ───
 export const demoHousekeepingTasks: Array<{
