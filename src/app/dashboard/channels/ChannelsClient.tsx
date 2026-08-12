@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAppState } from "@/context/AppStateContext";
 import {
   CHANNEL_PROVIDERS,
@@ -198,6 +198,26 @@ export default function ChannelsClient({
     tone: "success" | "danger" | "info";
     message: string;
   } | null>(null);
+
+  useEffect(() => {
+    fetchLiveAiosellSummary()
+      .then((summary) => {
+        const exec = summary.roomTypes.find((r) => r.id === "executive");
+        const ste = summary.roomTypes.find((r) => r.id === "suite");
+        if (exec) {
+          setExecRate(exec.baseRate);
+          setExecAvailable(exec.availableRooms);
+        }
+        if (ste) {
+          setSuiteRate(ste.baseRate);
+          setSuiteAvailable(ste.availableRooms);
+        }
+        setApiLogs(getStoredApiLogs());
+      })
+      .catch(() => {
+        // Fallback to defaults if offline
+      });
+  }, []);
 
   const pmsRoomInputs = useMemo<PMSRoomInput[]>(
     () =>
