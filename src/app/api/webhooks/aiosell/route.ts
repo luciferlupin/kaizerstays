@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
  */
 
 const reservationWebhookSchema = z.object({
-  hotel_id: z.string().optional().default("sandbox-pms"),
+  hotel_id: z.string().optional().default("62a25484e5"),
   booking_id: z.string().or(z.number()).optional(),
   bookingId: z.string().optional(),
   action: z.enum(["CREATE", "MODIFY", "CANCEL"]).optional().default("CREATE"),
@@ -34,6 +34,7 @@ export async function GET() {
     status: "ACTIVE",
     service: "KaizerStays PMS Webhook Receiver for Aiosell Channel Manager",
     webhookUrl: "/api/webhooks/aiosell",
+    hotelId: "62a25484e5",
     supportedEvents: ["RESERVATION_CREATE", "RESERVATION_MODIFY", "RESERVATION_CANCEL"],
     authentication: "Basic Auth / Token Bearer",
   });
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
       rawBody.check_out ||
       rawBody.checkOut ||
       new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
-    const roomType = rawBody.room_type || rawBody.roomType || rawBody.roomId || "executive";
+    const roomType = rawBody.room_type || rawBody.roomType || rawBody.roomId || "deluxe-room";
     const totalAmount = Number(rawBody.total_amount || rawBody.totalAmount || 3500);
 
     return NextResponse.json(
