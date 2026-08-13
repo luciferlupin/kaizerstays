@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppState } from "@/context/AppStateContext";
 import {
   CHANNEL_PROVIDERS,
@@ -331,33 +331,24 @@ export default function ChannelsClient({
   ];
 
   const [liveSummary, setLiveSummary] = useState<AiosellLiveSummary | null>(null);
+  const hasInitializedRatesRef = useRef(false);
 
   useEffect(() => {
     fetchLiveAiosellSummary()
       .then((summary) => {
         setLiveSummary(summary);
-        const dlx = summary.roomTypes.find((r) => r.id === "deluxe-room" || r.id === "deluxe");
-        const twn = summary.roomTypes.find((r) => r.id === "twin-room" || r.id === "twin");
-        const ste = summary.roomTypes.find((r) => r.id === "suite-room" || r.id === "suite");
-        if (dlx) {
-          setDeluxeRate(dlx.baseRate || 2800);
-          setDeluxeAvailable(dlx.availableRooms ?? 28);
+        if (!hasInitializedRatesRef.current) {
+          hasInitializedRatesRef.current = true;
+          const dlx = summary.roomTypes.find((r) => r.id === "deluxe-room" || r.id === "deluxe");
+          const twn = summary.roomTypes.find((r) => r.id === "twin-room" || r.id === "twin");
+          const ste = summary.roomTypes.find((r) => r.id === "suite-room" || r.id === "suite");
+          if (dlx && dlx.baseRate) setDeluxeRate(dlx.baseRate);
+          if (dlx && dlx.availableRooms !== undefined) setDeluxeAvailable(dlx.availableRooms);
+          if (twn && twn.baseRate) setTwinRate(twn.baseRate);
+          if (twn && twn.availableRooms !== undefined) setTwinAvailable(twn.availableRooms);
+          if (ste && ste.baseRate) setSuiteRate(ste.baseRate);
+          if (ste && ste.availableRooms !== undefined) setSuiteAvailable(ste.availableRooms);
         }
-        if (twn) {
-          setTwinRate(twn.baseRate || 2800);
-          setTwinAvailable(twn.availableRooms ?? 2);
-        }
-        if (ste) {
-          setSuiteRate(ste.baseRate || 5500);
-          setSuiteAvailable(ste.availableRooms ?? 2);
-        }
-
-        // Auto-update PMS room rates in real-time
-        updateRoomRatesAndInventory({
-          "deluxe-room": dlx?.baseRate || 2800,
-          "twin-room": twn?.baseRate || 2800,
-          "suite-room": ste?.baseRate || 5500,
-        });
 
         // Auto-import live Aiosell reservations directly into PMS front desk state
         if (summary.liveReservations && summary.liveReservations.length > 0) {
@@ -382,7 +373,7 @@ export default function ChannelsClient({
       .catch(() => {
         // Fallback to defaults if offline
       });
-  }, [importOTAReservations, updateRoomRatesAndInventory]);
+  }, [importOTAReservations]);
 
   const pmsRoomInputs = useMemo<PMSRoomInput[]>(
     () =>
