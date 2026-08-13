@@ -952,8 +952,8 @@ export default function ChannelsClient({
       jobs: [
         {
           id: jobId,
-          providerId: "aiosell",
-          environment: "PRODUCTION",
+          providerId: "aiosell" as const,
+          environment: "PRODUCTION" as const,
           scope: "RATES" as const,
           status: "RUNNING" as const,
           startedAt,
@@ -1001,8 +1001,8 @@ export default function ChannelsClient({
       jobs: [
         {
           id: jobId,
-          providerId: "aiosell",
-          environment: "PRODUCTION",
+          providerId: "aiosell" as const,
+          environment: "PRODUCTION" as const,
           scope: "INVENTORY" as const,
           status: "RUNNING" as const,
           startedAt,
