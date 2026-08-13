@@ -404,7 +404,56 @@ export class AiosellClient {
     const lastMonthStr = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
 
     try {
-      const res = await fetch(`${this.baseUrl}/accounting2/data/${targetHotelId}`, {
+      // Query Aiosell RMS Live Bookings API
+      const res = await fetch(
+        `${this.baseUrl}/bookings/${targetHotelId}?start=${lastMonthStr}&end=${nextMonthStr}`,
+        {
+          headers: { Authorization: `BZ-JWT ${this.token}` },
+          cache: "no-store",
+        }
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        const bookingsList: Record<string, any>[] = data.bookings || (Array.isArray(data) ? data : []);
+        if (bookingsList.length > 0) {
+          return bookingsList.map((b, idx) => {
+            const guestName =
+              b.customer_blurb ||
+              b.customer_name ||
+              (b.customer_contact?.firstName
+                ? `${b.customer_contact.firstName} ${b.customer_contact.lastName || ""}`.trim()
+                : "") ||
+              "Aiosell Guest";
+            const roomObj = b.rooms?.[0] || {};
+            const roomCode = roomObj.roomId || b.room_code || "deluxe-room";
+            const roomTypeName = roomObj.displayName || roomObj.name || b.room_type_name || "Deluxe Room";
+            const rawStatus = String(b.state || b.status || "CONFIRMED").toUpperCase();
+            const status: "CONFIRMED" | "CANCELLED" | "MODIFIED" = rawStatus.includes("CANCEL")
+              ? "CANCELLED"
+              : rawStatus.includes("MODIF")
+              ? "MODIFIED"
+              : "CONFIRMED";
+
+            return {
+              bookingId: String(b.booking_id || b.cm_booking_id || b.pms_id || `AIO-${idx + 1}`),
+              guestName,
+              guestEmail: b.email || b.customer_contact?.email || undefined,
+              guestPhone: b.mobile || b.customer_contact?.phone || undefined,
+              checkIn: String(b.checkin_date || b.check_in || b.checkIn || todayStr).slice(0, 10),
+              checkOut: String(b.checkout_date || b.check_out || b.checkOut || nextMonthStr).slice(0, 10),
+              roomCode,
+              roomTypeName,
+              totalAmount: Number(b.total_price || b.amount || b.balance || 0),
+              channel: String(b.channel || b.source_cm || b.source || "Aiosell Channel Manager"),
+              status,
+            };
+          });
+        }
+      }
+
+      // Secondary fallback endpoint
+      const fallbackRes = await fetch(`${this.baseUrl}/accounting2/data/${targetHotelId}`, {
         method: "POST",
         headers: {
           Authorization: `BZ-JWT ${this.token}`,
@@ -418,16 +467,16 @@ export class AiosellClient {
         cache: "no-store",
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data)) {
+      if (fallbackRes.ok) {
+        const data = await fallbackRes.json();
+        if (Array.isArray(data) && data.length > 0) {
           return data.map((b: Record<string, unknown>, idx: number) => ({
             bookingId: String(b.booking_id || b.bookingId || b.id || `AIO-OTA-${idx + 1}`),
             guestName: String(b.guest_name || b.guestName || b.name || "Aiosell Guest"),
             guestEmail: b.guest_email ? String(b.guest_email) : undefined,
             guestPhone: b.guest_phone ? String(b.guest_phone) : undefined,
-            checkIn: String(b.check_in || b.checkIn || b.stay_from || todayStr),
-            checkOut: String(b.check_out || b.checkOut || b.stay_to || nextMonthStr),
+            checkIn: String(b.check_in || b.checkIn || b.stay_from || todayStr).slice(0, 10),
+            checkOut: String(b.check_out || b.checkOut || b.stay_to || nextMonthStr).slice(0, 10),
             roomCode: String(b.room_code || b.room_id || b.roomType || "deluxe-room"),
             roomTypeName: String(b.room_type_name || b.room_type || "Deluxe Room"),
             totalAmount: Number(b.total_amount || b.amount || b.price || 0),
