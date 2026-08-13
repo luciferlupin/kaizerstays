@@ -420,32 +420,62 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       updated: 0,
       unchanged: 0,
     };
-    const existingByKey = new Map(
-      reservations.map((reservation) => [
-        `${reservation.bookingSource}:${reservation.confirmationNumber}`,
-        reservation,
-      ])
-    );
+
+    // Index existing reservations by multiple lookup keys:
+    // 1. Plain confirmationNumber (lowercased)
+    // 2. id (lowercased)
+    // 3. Provider/Source prefixed key
+    const existingByKey = new Map<string, ExtendedReservation>();
+    reservations.forEach((res) => {
+      if (res.confirmationNumber) {
+        existingByKey.set(res.confirmationNumber.trim().toLowerCase(), res);
+      }
+      if (res.id) {
+        existingByKey.set(res.id.trim().toLowerCase(), res);
+      }
+      if (res.bookingSource && res.confirmationNumber) {
+        existingByKey.set(`${res.bookingSource.toLowerCase()}:${res.confirmationNumber.trim().toLowerCase()}`, res);
+      }
+    });
+
     const updates = new Map<string, ExtendedReservation>();
     const additions: ExtendedReservation[] = [];
     const guestAdditions: typeof demoGuests = [];
 
     records.forEach((record) => {
-      const bookingSource = record.providerId === "booking" ? "BOOKING_COM" : "AGODA";
-      const lookupKey = `${bookingSource}:${record.externalId}`;
-      const existing = existingByKey.get(lookupKey);
+      const rawProvider = String(record.providerId || "").toLowerCase();
+      const bookingSource =
+        rawProvider.includes("booking")
+          ? "BOOKING_COM"
+          : rawProvider.includes("agoda")
+          ? "AGODA"
+          : "AIOSELL_CHANNEL_MANAGER";
+
+      const extId = String(record.externalId || "").trim();
+      if (!extId) return;
+
+      const extIdLower = extId.toLowerCase();
+      const lookupKeyPrefixed = `${bookingSource.toLowerCase()}:${extIdLower}`;
+
+      // Check existing reservation by exact confirmation number, ID, or prefixed key
+      const existing =
+        existingByKey.get(extIdLower) ||
+        existingByKey.get(lookupKeyPrefixed) ||
+        existingByKey.get(`res_ota_${rawProvider}_${extIdLower}`);
+
       const checkIn = new Date(`${record.checkIn}T12:00:00.000Z`);
       const checkOut = new Date(`${record.checkOut}T12:00:00.000Z`);
       const nights = Math.max(
         1,
         Math.round((checkOut.getTime() - checkIn.getTime()) / 86_400_000)
       );
-      const importKey = stableImportKey(`${bookingSource}:${record.externalId}`);
+      const importKey = stableImportKey(`${bookingSource}:${extId}`);
       const paidAmount = existing?.paidAmount || 0;
+
       const imported: ExtendedReservation = {
-        id: existing?.id || `res_ota_${record.providerId}_${importKey}`,
-        confirmationNumber: record.externalId,
-        guestId: existing?.guestId || `guest_ota_${record.providerId}_${importKey}`,
+        id: existing?.id || `res_ota_${rawProvider}_${extId}`,
+        confirmationNumber: extId,
+        guestId: existing?.guestId || `guest_ota_${rawProvider}_${extId}`,
         guestName: record.guestName,
         status: record.status,
         checkIn,
@@ -461,10 +491,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         taxAmount: 0,
         paidAmount,
         balanceAmount: Math.max(0, record.totalAmount - paidAmount),
-        notes: `Imported from ${bookingSource === "BOOKING_COM" ? "Booking.com" : "Agoda"} via ${record.source === "ICAL" ? "iCalendar availability" : record.source === "EMAIL" ? "forwarded OTA email" : "reservation CSV"}. Review room mapping, taxes and payment status before check-in.`,
+        notes: `Imported from ${bookingSource} via Aiosell Channel Manager.`,
         folio: [
           {
-            id: `f_ota_${record.providerId}_${importKey}`,
+            id: `f_ota_${rawProvider}_${extId}`,
             description: `${record.roomType} (${nights} Nights) — imported OTA value`,
             category: "ROOM_CHARGE",
             amount: record.totalAmount,
@@ -475,7 +505,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
       if (!existing) {
         additions.push(imported);
-        existingByKey.set(lookupKey, imported);
+        // Add to local lookup so duplicates in the same batch are prevented
+        existingByKey.set(extIdLower, imported);
+        existingByKey.set(lookupKeyPrefixed, imported);
         summary.imported += 1;
         if (record.source !== "ICAL" && record.guestName !== "OTA Guest") {
           const nameParts = record.guestName.trim().split(/\s+/);
@@ -515,10 +547,34 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (additions.length || updates.size) {
-      setReservations((current) => [
-        ...additions,
-        ...current.map((reservation) => updates.get(reservation.id) || reservation),
-      ]);
+      setReservations((current) => {
+        const seenIds = new Set<string>();
+        const seenConf = new Set<string>();
+        const deduplicated: ExtendedReservation[] = [];
+
+        // 1. Process current state (applying updates if any)
+        current.forEach((r) => {
+          const confKey = (r.confirmationNumber || r.id).trim().toLowerCase();
+          if (!seenConf.has(confKey) && !seenIds.has(r.id)) {
+            seenConf.add(confKey);
+            seenIds.add(r.id);
+            deduplicated.push(updates.get(r.id) || r);
+          }
+        });
+
+        // 2. Add new additions only if not seen
+        additions.forEach((newRes) => {
+          const confKey = (newRes.confirmationNumber || newRes.id).trim().toLowerCase();
+          if (!seenConf.has(confKey) && !seenIds.has(newRes.id)) {
+            seenConf.add(confKey);
+            seenIds.add(newRes.id);
+            deduplicated.push(newRes);
+          }
+        });
+
+        return deduplicated;
+      });
+
       if (guestAdditions.length) {
         setGuests((current) => [
           ...guestAdditions.filter(
@@ -527,12 +583,6 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           ...current,
         ]);
       }
-      addActivity(
-        "OTA Records Imported",
-        "ota",
-        `ota_import_${Date.now()}`,
-        `${summary.imported} new, ${summary.updated} updated, ${summary.unchanged} unchanged reservation records.`
-      );
     }
 
     return summary;
