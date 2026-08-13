@@ -343,6 +343,44 @@ export class AiosellClient {
       }
     }
 
+    if (this.token) {
+      const todayStr = new Date().toISOString().split("T")[0];
+      const dsPayload = [
+        {
+          date: todayStr,
+          rates: [
+            { roomId: "deluxe-room", rateplanId: "deluxe-room-d-ep", rate: rates["deluxe-room"] || 2800, occupancy: "D" },
+            { roomId: "deluxe-room", rateplanId: "deluxe-room-s-ep", rate: rates["deluxe-room"] || 2800, occupancy: "S" },
+            { roomId: "deluxe-room", rateplanId: "deluxe-room-d-cp", rate: (rates["deluxe-room"] || 2800) + 400, occupancy: "D" },
+            { roomId: "deluxe-room", rateplanId: "deluxe-room-s-cp", rate: (rates["deluxe-room"] || 2800) + 400, occupancy: "S" },
+
+            { roomId: "twin-room", rateplanId: "twin-room-d-ep", rate: rates["twin-room"] || 2800, occupancy: "D" },
+            { roomId: "twin-room", rateplanId: "twin-room-s-ep", rate: rates["twin-room"] || 2800, occupancy: "S" },
+            { roomId: "twin-room", rateplanId: "twin-room-d-cp", rate: (rates["twin-room"] || 2800) + 400, occupancy: "D" },
+            { roomId: "twin-room", rateplanId: "twin-room-s-cp", rate: (rates["twin-room"] || 2800) + 400, occupancy: "S" },
+
+            { roomId: "suite-room", rateplanId: "suite-room-d-ep", rate: rates["suite-room"] || 5500, occupancy: "D" },
+            { roomId: "suite-room", rateplanId: "suite-room-s-ep", rate: rates["suite-room"] || 5500, occupancy: "S" },
+            { roomId: "suite-room", rateplanId: "suite-room-d-cp", rate: (rates["suite-room"] || 5500) + 1000, occupancy: "D" },
+            { roomId: "suite-room", rateplanId: "suite-room-s-cp", rate: (rates["suite-room"] || 5500) + 1000, occupancy: "S" },
+          ],
+        },
+      ];
+      try {
+        await fetch(`${this.baseUrl}/hotels/${targetHotelId}/ds-view/rates`, {
+          method: "POST",
+          headers: {
+            Authorization: `BZ-JWT ${this.token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(dsPayload),
+          cache: "no-store",
+        });
+      } catch {
+        // Silently continue
+      }
+    }
+
     const payload = [
       {
         hotelId: targetHotelId,

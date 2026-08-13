@@ -254,9 +254,16 @@ export async function pushRateToAiosell(
 
   const endpoint = `https://live.aiosell.com/api/v1/rms/hotels/${targetHotel}/ds-view/rates`;
   const dates = getDatesInRange(start, end);
+  const cpAddOn = roomId === "suite-room" ? 1000 : 400;
+
   const payload = dates.map((d) => ({
     date: d,
-    rates: [{ roomId, rateplanId, rate: newRate, occupancy }],
+    rates: [
+      { roomId, rateplanId: rateplanId || `${roomId}-d-ep`, rate: newRate, occupancy: "D" },
+      { roomId, rateplanId: `${roomId}-s-ep`, rate: newRate, occupancy: "S" },
+      { roomId, rateplanId: `${roomId}-d-cp`, rate: newRate + cpAddOn, occupancy: "D" },
+      { roomId, rateplanId: `${roomId}-s-cp`, rate: newRate + cpAddOn, occupancy: "S" },
+    ],
   }));
 
   try {
