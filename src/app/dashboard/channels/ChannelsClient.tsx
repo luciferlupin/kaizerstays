@@ -945,21 +945,47 @@ export default function ChannelsClient({
 
   const handlePushRates = async () => {
     setRatePushBusy(true);
+    const jobId = `job_rate_${Date.now()}`;
+    const startedAt = new Date().toISOString();
+    commitState((current) => ({
+      ...current,
+      jobs: [
+        {
+          id: jobId,
+          providerId: "aiosell",
+          environment: "PRODUCTION",
+          scope: "RATES" as const,
+          status: "RUNNING" as const,
+          startedAt,
+          summary: `Pushing rate updates to Aiosell (DELUXE ₹${deluxeRate}, TWIN ₹${twinRate}, SUITE ₹${suiteRate})…`,
+        },
+        ...current.jobs,
+      ].slice(0, 50),
+    }));
+
     try {
       const res1 = await pushRateToAiosell("deluxe-room", "deluxe-room-d-ep", deluxeRate, "D");
       const res2 = await pushRateToAiosell("twin-room", "twin-room-d-ep", twinRate, "D");
       const res3 = await pushRateToAiosell("suite-room", "suite-room-d-ep", suiteRate, "D");
-      if (res1.success && res2.success && res3.success) {
-        setNotice({
-          tone: "success",
-          message: `Live rates pushed to Aiosell (DELUXE: ₹${deluxeRate}, TWIN: ₹${twinRate}, SUITE: ₹${suiteRate}).`,
-        });
-      } else {
-        setNotice({
-          tone: "danger",
-          message: `Rate push result: ${res1.message || res2.message || res3.message}`,
-        });
-      }
+      const isSuccess = res1.success && res2.success && res3.success;
+      const completedAt = new Date().toISOString();
+      const summaryText = isSuccess
+        ? `Live rates pushed to Aiosell (DELUXE: ₹${deluxeRate}, TWIN: ₹${twinRate}, SUITE: ₹${suiteRate}).`
+        : `Rate push result: ${res1.message || res2.message || res3.message}`;
+
+      commitState((current) => ({
+        ...current,
+        jobs: current.jobs.map((j) =>
+          j.id === jobId
+            ? { ...j, status: isSuccess ? "SUCCESS" : "FAILED", completedAt, summary: summaryText }
+            : j
+        ),
+      }));
+
+      setNotice({
+        tone: isSuccess ? "success" : "danger",
+        message: summaryText,
+      });
       setApiLogs(getStoredApiLogs());
     } finally {
       setRatePushBusy(false);
@@ -968,23 +994,48 @@ export default function ChannelsClient({
 
   const handlePushInventory = async () => {
     setInvPushBusy(true);
+    const jobId = `job_inv_${Date.now()}`;
+    const startedAt = new Date().toISOString();
+    commitState((current) => ({
+      ...current,
+      jobs: [
+        {
+          id: jobId,
+          providerId: "aiosell",
+          environment: "PRODUCTION",
+          scope: "INVENTORY" as const,
+          status: "RUNNING" as const,
+          startedAt,
+          summary: `Pushing room inventory updates to Aiosell (DELUXE ${deluxeAvailable}, TWIN ${twinAvailable}, SUITE ${suiteAvailable})…`,
+        },
+        ...current.jobs,
+      ].slice(0, 50),
+    }));
+
     try {
       const res = await pushInventoryToAiosell({
         "deluxe-room": deluxeAvailable,
         "twin-room": twinAvailable,
         "suite-room": suiteAvailable,
       });
-      if (res.success) {
-        setNotice({
-          tone: "success",
-          message: `Live room inventory pushed to Aiosell (DELUXE: ${deluxeAvailable}, TWIN: ${twinAvailable}, SUITE: ${suiteAvailable}).`,
-        });
-      } else {
-        setNotice({
-          tone: "danger",
-          message: `Inventory push result: ${res.message}`,
-        });
-      }
+      const completedAt = new Date().toISOString();
+      const summaryText = res.success
+        ? `Live room inventory pushed to Aiosell (DELUXE: ${deluxeAvailable}, TWIN: ${twinAvailable}, SUITE: ${suiteAvailable}).`
+        : `Inventory push result: ${res.message}`;
+
+      commitState((current) => ({
+        ...current,
+        jobs: current.jobs.map((j) =>
+          j.id === jobId
+            ? { ...j, status: res.success ? "SUCCESS" : "FAILED", completedAt, summary: summaryText }
+            : j
+        ),
+      }));
+
+      setNotice({
+        tone: res.success ? "success" : "danger",
+        message: summaryText,
+      });
       setApiLogs(getStoredApiLogs());
     } finally {
       setInvPushBusy(false);
@@ -1619,6 +1670,79 @@ export default function ChannelsClient({
                       <td className="text-xs">{log.summary}</td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
+
+        {activeTab === "ACTIVITY" ? (
+          <div className="card">
+            <div className="card-header">
+              <div>
+                <h2>Sync Activity & Audit Trail</h2>
+                <p>Real-time audit history of automated & manual channel manager sync jobs</p>
+              </div>
+              <button
+                className="btn btn-primary"
+                onClick={() => handleSync("aiosell")}
+                disabled={Boolean(busyAction)}
+              >
+                {busyAction === "sync-aiosell" ? (
+                  <LoaderCircle className={styles.spinner} size={15} />
+                ) : (
+                  <RefreshCw size={15} />
+                )}
+                Run Full Sync Now
+              </button>
+            </div>
+            <div className="table-container">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Provider</th>
+                    <th>Scope</th>
+                    <th>Started</th>
+                    <th>Completed</th>
+                    <th>Summary</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {managerState.jobs && managerState.jobs.length > 0 ? (
+                    managerState.jobs.map((job) => (
+                      <tr key={job.id}>
+                        <td>
+                          <span
+                            className={`badge ${
+                              job.status === "SUCCESS"
+                                ? "badge-success"
+                                : job.status === "RUNNING"
+                                ? "badge-info"
+                                : "badge-danger"
+                            }`}
+                          >
+                            {job.status}
+                          </span>
+                        </td>
+                        <td className="font-semibold text-primary">
+                          Aiosell Channel Manager (62a25484e5)
+                        </td>
+                        <td>
+                          <span className="badge badge-secondary">{job.scope}</span>
+                        </td>
+                        <td className="text-xs">{formatTimestamp(job.startedAt)}</td>
+                        <td className="text-xs">{formatTimestamp(job.completedAt)}</td>
+                        <td className="text-xs">{job.summary}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="text-center py-6 text-secondary">
+                        No sync activity jobs recorded yet. Click "Run Full Sync Now" to trigger a live sync.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
