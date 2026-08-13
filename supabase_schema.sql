@@ -289,8 +289,9 @@ VALUES (
     'ninaad.khera19@gmail.com',
     '+91 99994 90100',
     'OWNER',
-    crypt('12345', gen_salt('bf'))
-) ON CONFLICT (email) DO NOTHING;
+) ON CONFLICT (staff_id) DO UPDATE SET
+    email = EXCLUDED.email,
+    password_hash = EXCLUDED.password_hash;
 
 -- 3. Seed Room Categories (Deluxe ₹2,800, Twin ₹2,800, Suite ₹5,500)
 INSERT INTO public.room_types (id, name, code, base_rate, total_count, max_occupancy, description) VALUES
