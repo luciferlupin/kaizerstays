@@ -50,15 +50,15 @@ export const demoProperty = {
 // ─── Room Types ───
 export const demoRoomTypes = [
   {
-    id: "executive",
-    propertyId: "prop_demo_001",
-    name: "EXECUTIVE",
-    code: "EXECUTIVE",
-    description: "Executive Deluxe Room — Live Aiosell Listing (25 Rooms)",
+    id: "deluxe-room",
+    propertyId: "62a25484e5",
+    name: "Deluxe Room",
+    code: "DELUXE",
+    description: "Deluxe Room — Live Aiosell Listing (26 Rooms)",
     maxOccupancy: 2,
     maxAdults: 2,
     maxChildren: 1,
-    baseRate: 2000,
+    baseRate: 2800,
     beds: "1 King",
     size: "320 sq ft",
     amenities: ["AC", "WiFi", "TV", "Mini Bar", "Safe", "Work Desk"],
@@ -67,20 +67,37 @@ export const demoRoomTypes = [
     isActive: true,
   },
   {
-    id: "suite",
-    propertyId: "prop_demo_001",
-    name: "SUITE",
+    id: "twin-room",
+    propertyId: "62a25484e5",
+    name: "Twin Room",
+    code: "TWIN",
+    description: "Twin Room — Live Aiosell Listing (2 Rooms)",
+    maxOccupancy: 2,
+    maxAdults: 2,
+    maxChildren: 0,
+    baseRate: 2800,
+    beds: "2 Twin Beds",
+    size: "320 sq ft",
+    amenities: ["AC", "WiFi", "TV", "Safe", "Work Desk"],
+    images: [],
+    sortOrder: 2,
+    isActive: true,
+  },
+  {
+    id: "suite-room",
+    propertyId: "62a25484e5",
+    name: "Suite Room",
     code: "SUITE",
-    description: "Presidential Suite — Live Aiosell Listing (5 Rooms)",
+    description: "Suite Room — Live Aiosell Listing (2 Rooms)",
     maxOccupancy: 3,
     maxAdults: 3,
     maxChildren: 1,
-    baseRate: 1300,
-    beds: "1 King + 1 Living Room",
+    baseRate: 5500,
+    beds: "1 King + Living Room",
     size: "600 sq ft",
     amenities: ["AC", "WiFi", "TV", "Mini Bar", "Living Area", "Safe", "Jacuzzi"],
     images: [],
-    sortOrder: 2,
+    sortOrder: 3,
     isActive: true,
   },
 ];
@@ -101,40 +118,61 @@ function generateRooms() {
     typeCode: string;
   }> = [];
 
-  const roomConfigs = [
-    { typeId: "executive", typeCode: "EXECUTIVE", typeName: "EXECUTIVE", floors: [1, 2, 3], perFloor: 8 },
-    { typeId: "suite", typeCode: "SUITE", typeName: "SUITE", floors: [4], perFloor: 5 },
-  ];
-
-  const statuses = ["AVAILABLE", "OCCUPIED", "RESERVED", "DIRTY", "CLEANING", "MAINTENANCE"];
-  const hkStatuses = ["CLEAN", "DIRTY", "CLEANING", "INSPECTED"];
-
-  let roomNum = 101;
-  for (const config of roomConfigs) {
-    for (const floor of config.floors) {
-      const count = floor === config.floors[0] ? config.perFloor : Math.min(config.perFloor, 5);
-      for (let i = 0; i < count; i++) {
-        const num = floor * 100 + (roomNum % 100);
-        const status = "AVAILABLE";
-        const hkStatus = "CLEAN";
-
-        rooms.push({
-          id: `room_${num}`,
-          propertyId: "prop_demo_001",
-          roomTypeId: config.typeId,
-          floorId: null,
-          number: num.toString(),
-          status,
-          housekeepingStatus: hkStatus,
-          isActive: true,
-          floor,
-          typeName: config.typeName,
-          typeCode: config.typeCode,
-        });
-        roomNum++;
-      }
-    }
+  // Deluxe Room: 26 rooms
+  for (let i = 1; i <= 26; i++) {
+    const floor = Math.ceil(i / 10);
+    const num = 100 + i;
+    rooms.push({
+      id: `room_${num}`,
+      propertyId: "62a25484e5",
+      roomTypeId: "deluxe-room",
+      floorId: null,
+      number: num.toString(),
+      status: "AVAILABLE",
+      housekeepingStatus: "CLEAN",
+      isActive: true,
+      floor,
+      typeName: "Deluxe Room",
+      typeCode: "DELUXE",
+    });
   }
+
+  // Twin Room: 2 rooms
+  for (let i = 1; i <= 2; i++) {
+    const num = 200 + i;
+    rooms.push({
+      id: `room_${num}`,
+      propertyId: "62a25484e5",
+      roomTypeId: "twin-room",
+      floorId: null,
+      number: num.toString(),
+      status: "AVAILABLE",
+      housekeepingStatus: "CLEAN",
+      isActive: true,
+      floor: 2,
+      typeName: "Twin Room",
+      typeCode: "TWIN",
+    });
+  }
+
+  // Suite Room: 2 rooms
+  for (let i = 1; i <= 2; i++) {
+    const num = 300 + i;
+    rooms.push({
+      id: `room_${num}`,
+      propertyId: "62a25484e5",
+      roomTypeId: "suite-room",
+      floorId: null,
+      number: num.toString(),
+      status: "AVAILABLE",
+      housekeepingStatus: "CLEAN",
+      isActive: true,
+      floor: 3,
+      typeName: "Suite Room",
+      typeCode: "SUITE",
+    });
+  }
+
   return rooms;
 }
 
@@ -165,7 +203,7 @@ export const demoReservations = [
     checkOut: checkOut1,
     nights: 7,
     roomNumber: "101",
-    roomType: "EXECUTIVE",
+    roomType: "Deluxe Room",
     adults: 2,
     children: 0,
     bookingSource: "BOOKING_COM",
@@ -184,8 +222,8 @@ export const demoReservations = [
     checkIn: checkIn1,
     checkOut: checkOut1,
     nights: 7,
-    roomNumber: "401",
-    roomType: "SUITE",
+    roomNumber: "301",
+    roomType: "Suite Room",
     adults: 2,
     children: 1,
     bookingSource: "AGODA",
@@ -205,7 +243,7 @@ export const demoReservations = [
     checkOut: checkOut2,
     nights: 3,
     roomNumber: "102",
-    roomType: "EXECUTIVE",
+    roomType: "Deluxe Room",
     adults: 2,
     children: 0,
     bookingSource: "MAKEMYTRIP",

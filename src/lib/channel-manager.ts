@@ -238,6 +238,7 @@ export function createAutoMappings(
   return pmsRooms.map((room) => {
     const normalizedName = normalizeRoomName(room.name);
     const match =
+      otaRooms.find((otaRoom) => otaRoom.id.toLowerCase() === room.id.toLowerCase()) ||
       otaRooms.find((otaRoom) => otaRoom.code.toLowerCase() === room.code.toLowerCase()) ||
       otaRooms.find(
         (otaRoom) => normalizeRoomName(otaRoom.name) === normalizedName
