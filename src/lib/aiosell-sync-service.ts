@@ -293,9 +293,9 @@ export async function pushInventoryToAiosell(
   const todayStr = new Date().toISOString().split("T")[0];
   const targetHotel = loginRes.hotelId || hotelId;
 
-  const endpoint = `https://live.aiosell.com/api/v1/rms/hotels/${targetHotel}/cust-view/inventory`;
+  const endpoint = `https://live.aiosell.com/api/v1/rms/hotels/${targetHotel}/ds-view/inventory`;
   const splitSummary = Object.entries(split).map(([k, v]) => `${k}=${v}`).join(", ");
-  const payload = { start: todayStr, end: todayStr, inventory: [{ date: todayStr, split }] };
+  const payload = [{ date: todayStr, split }];
 
   if (!loginRes.success || !loginRes.token) {
     saveApiLog({
