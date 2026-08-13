@@ -1,0 +1,64 @@
+name: kaizerstays-dev
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    env_file:
+      - .env.docker
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - kaizerstays_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - private
+
+  migrate:
+    build:
+      context: .
+      target: migrate
+    env_file:
+      - .env.docker
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - private
+
+  app:
+    build:
+      context: .
+      target: runner
+    env_file:
+      - .env.docker
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - private
+
+networks:
+  private:
+    driver: bridge
+
+volumes:
+  kaizerstays_postgres_data:

@@ -243,6 +243,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </div>
           </div>
 
+        </div>
+        <div style={{ padding: "6px 12px 2px 12px", textAlign: "center", fontSize: "11px", color: "var(--color-text-tertiary)" }}>
+          Powered by <a href="https://www.curiouskaizer.com/" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "underline" }} title="Curious Kaizer - Web Development Company in Delhi">Curious Kaizer</a>
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
           <button
             onClick={handleLogout}
             title="Logout / Sign Out"
