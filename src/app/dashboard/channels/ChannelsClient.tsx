@@ -177,6 +177,7 @@ export default function ChannelsClient({
     reservations,
     addActivity,
     importOTAReservations,
+    updateRoomRatesAndInventory,
     updateOTAChannel,
   } = useAppState();
   const [managerState, setManagerState] =
@@ -340,7 +341,7 @@ export default function ChannelsClient({
         const ste = summary.roomTypes.find((r) => r.id === "suite-room" || r.id === "suite");
         if (dlx) {
           setDeluxeRate(dlx.baseRate || 2800);
-          setDeluxeAvailable(dlx.availableRooms ?? 26);
+          setDeluxeAvailable(dlx.availableRooms ?? 28);
         }
         if (twn) {
           setTwinRate(twn.baseRate || 2800);
@@ -350,12 +351,38 @@ export default function ChannelsClient({
           setSuiteRate(ste.baseRate || 5500);
           setSuiteAvailable(ste.availableRooms ?? 2);
         }
+
+        // Auto-update PMS room rates in real-time
+        updateRoomRatesAndInventory({
+          "deluxe-room": dlx?.baseRate || 2800,
+          "twin-room": twn?.baseRate || 2800,
+          "suite-room": ste?.baseRate || 5500,
+        });
+
+        // Auto-import live Aiosell reservations directly into PMS front desk state
+        if (summary.liveReservations && summary.liveReservations.length > 0) {
+          const normalized: NormalizedOTAReservation[] = summary.liveReservations.map((b) => ({
+            externalId: String(b.bookingId || `AIO-${Date.now()}`),
+            providerId: "aiosell" as const,
+            source: "EMAIL" as const,
+            status: b.status === "CANCELLED" ? "CANCELLED" : "CONFIRMED",
+            checkIn: String(b.checkIn || new Date().toISOString()).slice(0, 10),
+            checkOut: String(b.checkOut || new Date().toISOString()).slice(0, 10),
+            guestName: String(b.guestName || "Aiosell Guest"),
+            roomType: String(b.roomTypeName || b.roomCode || "Deluxe Room"),
+            adults: 2,
+            children: 0,
+            totalAmount: Number(b.totalAmount || 2800),
+          }));
+          importOTAReservations(normalized);
+        }
+
         setApiLogs(getStoredApiLogs());
       })
       .catch(() => {
         // Fallback to defaults if offline
       });
-  }, []);
+  }, [importOTAReservations, updateRoomRatesAndInventory]);
 
   const pmsRoomInputs = useMemo<PMSRoomInput[]>(
     () =>
@@ -1077,6 +1104,14 @@ export default function ChannelsClient({
             : j
         ),
       }));
+
+      if (isSuccess) {
+        updateRoomRatesAndInventory({
+          "deluxe-room": dlxRate,
+          "twin-room": twnRate,
+          "suite-room": steRate,
+        });
+      }
 
       setNotice({
         tone: isSuccess ? "success" : "danger",
