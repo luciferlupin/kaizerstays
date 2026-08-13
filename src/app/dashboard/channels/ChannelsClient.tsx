@@ -1551,51 +1551,25 @@ export default function ChannelsClient({
                   </tr>
                 </thead>
                 <tbody>
-                  {(liveSummary?.liveReservations && liveSummary.liveReservations.length > 0
-                    ? liveSummary.liveReservations
-                    : [
-                        {
-                          bookingId: "AIO-RES-88219",
-                          guestName: "Rajesh Sharma",
-                          checkIn: "2026-08-12",
-                          checkOut: "2026-08-19",
-                          roomTypeName: "Deluxe Room",
-                          channel: "Booking.com via Aiosell",
-                          totalAmount: 38500,
-                          status: "CONFIRMED",
-                        },
-                        {
-                          bookingId: "AIO-RES-88220",
-                          guestName: "Priya Malhotra",
-                          checkIn: "2026-08-12",
-                          checkOut: "2026-08-19",
-                          roomTypeName: "Suite Room",
-                          channel: "Agoda via Aiosell",
-                          totalAmount: 105000,
-                          status: "CONFIRMED",
-                        },
-                        {
-                          bookingId: "AIO-88901",
-                          guestName: "Vikram Sethi",
-                          checkIn: "2026-08-15",
-                          checkOut: "2026-08-18",
-                          roomTypeName: "Deluxe Room",
-                          channel: "MakeMyTrip via Aiosell Webhook",
-                          totalAmount: 7500,
-                          status: "CONFIRMED",
-                        },
-                      ]
-                  ).map((b, idx) => (
-                    <tr key={b.bookingId || idx}>
-                      <td className="font-semibold text-primary">{b.bookingId}</td>
-                      <td>{b.guestName}</td>
-                      <td>{b.checkIn} → {b.checkOut}</td>
-                      <td><span className="badge badge-info">{b.roomTypeName || "Deluxe Room"}</span></td>
-                      <td>{b.channel}</td>
-                      <td className="font-bold">₹{(b.totalAmount || 0).toLocaleString("en-IN")}</td>
-                      <td><span className="badge badge-success">{b.status || "CONFIRMED"}</span></td>
+                  {liveSummary?.liveReservations && liveSummary.liveReservations.length > 0 ? (
+                    liveSummary.liveReservations.map((b, idx) => (
+                      <tr key={b.bookingId || idx}>
+                        <td className="font-semibold text-primary">{b.bookingId}</td>
+                        <td>{b.guestName}</td>
+                        <td>{b.checkIn} → {b.checkOut}</td>
+                        <td><span className="badge badge-info">{b.roomTypeName || "Deluxe Room"}</span></td>
+                        <td>{b.channel}</td>
+                        <td className="font-bold">₹{(b.totalAmount || 0).toLocaleString("en-IN")}</td>
+                        <td><span className="badge badge-success">{b.status || "CONFIRMED"}</span></td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="text-center py-6 text-secondary">
+                        No live channel bookings currently active on live.aiosell.com for Hotel Shemron (`62a25484e5`). All incoming OTA bookings sync automatically in real-time.
+                      </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -2235,7 +2209,7 @@ export default function ChannelsClient({
                         </strong>
                         <p>
                           {runtimeFor(wizard.providerId).productionConfigured
-                            ? "KaizerStays PMS connects directly to live.aiosell.com (sandboxpms / Hotel ID 2298). Aiosell manages all OTA links, pushing reservations and receiving PMS inventory/rates."
+                            ? "KaizerStays PMS connects directly to live.aiosell.com for Hotel Shemron, Neemrana (62a25484e5). Aiosell manages all OTA links, pushing live reservations and receiving real-time PMS inventory and rates."
                             : "Provide Aiosell API credentials to enable live synchronization."}
                         </p>
                       </div>

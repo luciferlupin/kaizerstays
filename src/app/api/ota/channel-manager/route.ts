@@ -130,7 +130,7 @@ function runPreflight(
       id: "access",
       label: "Aiosell Channel Manager API connected",
       passed: true,
-      detail: "Direct API integration with live.aiosell.com active using sandboxpms / Hotel 2298.",
+      detail: "Direct API integration with live.aiosell.com active for Hotel Shemron, Neemrana (62a25484e5).",
     },
   ];
 }

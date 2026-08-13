@@ -414,7 +414,7 @@ export class AiosellClient {
 
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           return data.map((b: Record<string, unknown>, idx: number) => ({
             bookingId: String(b.booking_id || b.bookingId || b.id || `AIO-OTA-${idx + 1}`),
             guestName: String(b.guest_name || b.guestName || b.name || "Aiosell Guest"),
@@ -424,46 +424,17 @@ export class AiosellClient {
             checkOut: String(b.check_out || b.checkOut || b.stay_to || nextMonthStr),
             roomCode: String(b.room_code || b.room_id || b.roomType || "deluxe-room"),
             roomTypeName: String(b.room_type_name || b.room_type || "Deluxe Room"),
-            totalAmount: Number(b.total_amount || b.amount || b.price || 5600),
+            totalAmount: Number(b.total_amount || b.amount || b.price || 0),
             channel: String(b.channel || b.ota || "Aiosell Channel Manager"),
             status: (String(b.status || "CONFIRMED").toUpperCase() as "CONFIRMED" | "CANCELLED" | "MODIFIED"),
           }));
         }
       }
     } catch {
-      // Fallback
+      // Return empty array if offline or error
     }
 
-    const nextWeekStr = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
-
-    return [
-      {
-        bookingId: "AIO-RES-88219",
-        guestName: "Rajesh Sharma",
-        guestEmail: "rajesh.sharma@example.com",
-        guestPhone: "+91 98765 43210",
-        checkIn: todayStr,
-        checkOut: nextWeekStr,
-        roomCode: "deluxe-room",
-        roomTypeName: "Deluxe Room",
-        totalAmount: 38500,
-        channel: "Aiosell Channel Manager (Booking.com)",
-        status: "CONFIRMED",
-      },
-      {
-        bookingId: "AIO-RES-88220",
-        guestName: "Priya Malhotra",
-        guestEmail: "priya.m@example.com",
-        guestPhone: "+91 98123 45678",
-        checkIn: todayStr,
-        checkOut: nextWeekStr,
-        roomCode: "suite-room",
-        roomTypeName: "Suite Room",
-        totalAmount: 105000,
-        channel: "Aiosell Channel Manager (Agoda)",
-        status: "CONFIRMED",
-      },
-    ];
+    return [];
   }
 
   /**
