@@ -129,8 +129,8 @@ export default function RequestsClient() {
   }, [reservations, selectedQrRoom]);
 
   const guestPortalUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/guest/${activeQrReservation?.id || "res_aio_88219"}`
-    : `https://kaizerstays.vercel.app/guest/${activeQrReservation?.id || "res_aio_88219"}`;
+    ? `${window.location.origin}/guest/room-${selectedQrRoom}`
+    : `https://kaizerstays.vercel.app/guest/room-${selectedQrRoom}`;
 
   const copyGuestLink = () => {
     if (typeof navigator !== "undefined") {

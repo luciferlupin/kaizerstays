@@ -26,7 +26,7 @@ export default function InvoicesClient() {
   const [showPostCheckoutModal, setShowPostCheckoutModal] = useState(false);
 
   // Post checkout billing form state
-  const [postResId, setPostResId] = useState(reservations[0]?.id || "res_aio_88219");
+  const [postResId, setPostResId] = useState(reservations[0]?.id || "");
   const [chargeDescription, setChargeDescription] = useState("Late Checkout Charge");
   const [chargeAmount, setChargeAmount] = useState<number>(1500);
   const [taxPercent, setTaxPercent] = useState<number>(12);
