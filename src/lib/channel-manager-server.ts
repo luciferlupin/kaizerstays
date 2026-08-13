@@ -5,7 +5,7 @@ import {
   ChannelProviderId,
   ChannelProviderRuntime,
 } from "@/lib/channel-manager";
-import { AiosellClient } from "@/lib/aiosell";
+import { AiosellClient, AIOSELL_V2_CONFIG } from "@/lib/aiosell";
 
 function getBridgeConfiguration() {
   return {
@@ -65,6 +65,11 @@ export async function forwardChannelOperation(
           syncedAt: new Date().toISOString(),
           hotelId: "62a25484e5",
           provider: "https://live.aiosell.com",
+          v2PartnerEndpoints: {
+            ratesUpdate: AIOSELL_V2_CONFIG.ratesUrl,
+            inventoryUpdate: AIOSELL_V2_CONFIG.inventoryUrl,
+            basicAuthUser: AIOSELL_V2_CONFIG.username,
+          },
           outgoingPush: pushRes,
           incomingReservations: bookings,
           summary: {

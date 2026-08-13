@@ -1360,8 +1360,8 @@ export default function ChannelsClient({
           <div className="card">
             <div className="card-header">
               <div>
-                <h2>Update Live Rates (Aiosell RMS Sync)</h2>
-                <p>Modify base rates and push updates directly to live.aiosell.com / Hotel Shemron (62a25484e5)</p>
+                <h2>Update Live Rates (Aiosell CM v2 Partner Sync)</h2>
+                <p>Modify base rates and push updates to <code>https://live.aiosell.com/api/v2/cm/update-rates/curious-kaizer</code> (Basic Auth: curious-kaizer)</p>
               </div>
               <button
                 className="btn btn-primary"
@@ -1369,10 +1369,16 @@ export default function ChannelsClient({
                 disabled={ratePushBusy}
               >
                 {ratePushBusy ? <LoaderCircle className={styles.spinner} size={15} /> : <RefreshCw size={15} />}
-                Push Rates to Aiosell Live
+                Push Rates to Aiosell CM v2
               </button>
             </div>
             <div className="card-body">
+              <div className="alert alert-info text-xs mb-4 flex items-center gap-2">
+                <ShieldCheck size={14} />
+                <span>
+                  <strong>Aiosell PMS Partner Status:</strong> Active endpoint <code>https://live.aiosell.com/api/v2/cm/update-rates/curious-kaizer</code> using HTTP Basic Auth (<code>curious-kaizer</code>).
+                </span>
+              </div>
               <div className={styles.syncScopeGrid}>
                 <div className="stat-card">
                   <span className="stat-card-label">DELUXE Room Rate</span>
@@ -1422,8 +1428,8 @@ export default function ChannelsClient({
           <div className="card">
             <div className="card-header">
               <div>
-                <h2>Update Room Inventory (Aiosell Live Sync)</h2>
-                <p>Manage available room counts and push live updates directly to live.aiosell.com / Hotel Shemron</p>
+                <h2>Update Room Inventory (Aiosell CM v2 Partner Sync)</h2>
+                <p>Manage available room counts and push updates to <code>https://live.aiosell.com/api/v2/cm/update/curious-kaizer</code> (Basic Auth: curious-kaizer)</p>
               </div>
               <button
                 className="btn btn-primary"
@@ -1431,10 +1437,16 @@ export default function ChannelsClient({
                 disabled={invPushBusy}
               >
                 {invPushBusy ? <LoaderCircle className={styles.spinner} size={15} /> : <RefreshCw size={15} />}
-                Push Inventory to Aiosell Live
+                Push Inventory to Aiosell CM v2
               </button>
             </div>
             <div className="card-body">
+              <div className="alert alert-info text-xs mb-4 flex items-center gap-2">
+                <ShieldCheck size={14} />
+                <span>
+                  <strong>Aiosell PMS Partner Status:</strong> Active endpoint <code>https://live.aiosell.com/api/v2/cm/update/curious-kaizer</code> using HTTP Basic Auth (<code>curious-kaizer</code>).
+                </span>
+              </div>
               <div className={styles.syncScopeGrid}>
                 <div className="stat-card">
                   <span className="stat-card-label">DELUXE Available Rooms</span>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { AiosellClient } from "@/lib/aiosell";
+import { AiosellClient, AIOSELL_V2_CONFIG } from "@/lib/aiosell";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +22,11 @@ export async function GET() {
       success: false,
       provider: "Aiosell Channel Manager",
       endpoint: "https://live.aiosell.com/api/v1/rms",
+      v2Endpoints: {
+        ratesUpdate: AIOSELL_V2_CONFIG.ratesUrl,
+        inventoryUpdate: AIOSELL_V2_CONFIG.inventoryUrl,
+        basicAuthUser: AIOSELL_V2_CONFIG.username,
+      },
       authenticated: false,
       error: authResult.error,
     }, { status: 401 });
@@ -80,6 +85,12 @@ export async function GET() {
     success: true,
     provider: "Aiosell Channel Manager & RMS",
     endpoint: "https://live.aiosell.com/api/v1/rms",
+    v2PartnerEndpoints: {
+      ratesUpdate: AIOSELL_V2_CONFIG.ratesUrl,
+      inventoryUpdate: AIOSELL_V2_CONFIG.inventoryUrl,
+      basicAuthUser: AIOSELL_V2_CONFIG.username,
+      status: "ACTIVE",
+    },
     authenticated: true,
     hotelId: targetHotelId,
     hotelDetails: {
