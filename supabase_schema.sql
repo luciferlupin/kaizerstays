@@ -52,6 +52,9 @@ CREATE TABLE IF NOT EXISTS public.organizations (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Ensure property_id column exists on pre-existing organizations table
+ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS property_id VARCHAR(100) DEFAULT '62a25484e5';
+
 -- 4. Staff & Owner Users
 CREATE TABLE IF NOT EXISTS public.staff_users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -80,18 +83,23 @@ CREATE TABLE IF NOT EXISTS public.room_types (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE public.room_types ADD COLUMN IF NOT EXISTS total_count INT DEFAULT 28;
+
 -- 6. Physical Rooms (32 Rooms: 28 Deluxe, 2 Twin, 2 Suite)
 CREATE TABLE IF NOT EXISTS public.rooms (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     room_number VARCHAR(20) UNIQUE NOT NULL,
     room_type_id UUID REFERENCES public.room_types(id) ON DELETE SET NULL,
-    room_type_code VARCHAR(50) DEFAULT 'DELUXE',
+    room_type_code VARCHAR(50) DEFAULT 'deluxe-room',
     floor INT DEFAULT 1,
     status room_status DEFAULT 'AVAILABLE',
     is_clean BOOLEAN DEFAULT TRUE,
     housekeeping_notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE public.rooms ADD COLUMN IF NOT EXISTS room_type_code VARCHAR(50) DEFAULT 'deluxe-room';
+ALTER TABLE public.rooms ADD COLUMN IF NOT EXISTS housekeeping_notes TEXT;
 
 -- 7. Guests CRM Ledger
 CREATE TABLE IF NOT EXISTS public.guests (
@@ -108,6 +116,8 @@ CREATE TABLE IF NOT EXISTS public.guests (
     total_nights INT DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE public.guests ADD COLUMN IF NOT EXISTS total_nights INT DEFAULT 0;
 
 -- 8. Reservations Ledger
 CREATE TABLE IF NOT EXISTS public.reservations (
