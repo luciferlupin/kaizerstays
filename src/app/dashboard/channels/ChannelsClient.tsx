@@ -402,15 +402,15 @@ export default function ChannelsClient({
   const sandboxConnections = managerState.connections.filter(
     (connection) => connection.status === "SANDBOX_ACTIVE"
   );
-  const otaReservations = reservations.filter(
-    (reservation) =>
-      reservation.bookingSource === "BOOKING_COM" ||
-      reservation.bookingSource === "AGODA"
-  );
-  const otaRevenue = otaReservations.reduce(
-    (total, reservation) => total + reservation.totalAmount,
-    0
-  );
+  const liveBookingsCount = liveSummary?.liveReservations ? liveSummary.liveReservations.length : reservations.filter(
+    (r) => r.bookingSource === "BOOKING_COM" || r.bookingSource === "AGODA" || r.bookingSource === "AIOSELL_CHANNEL_MANAGER"
+  ).length;
+
+  const liveBookingsRevenue = liveSummary?.liveReservations && liveSummary.liveReservations.length > 0
+    ? liveSummary.liveReservations.reduce((sum, r) => sum + (r.totalAmount || 0), 0)
+    : reservations
+        .filter((r) => r.bookingSource === "BOOKING_COM" || r.bookingSource === "AGODA" || r.bookingSource === "AIOSELL_CHANNEL_MANAGER")
+        .reduce((total, r) => total + r.totalAmount, 0);
   const latestJob = managerState.jobs[0];
   const connectionsWithSetup = managerState.connections.filter(
     (connection) => connection.propertyId || connection.mappings.length > 0
@@ -2058,16 +2058,15 @@ export default function ChannelsClient({
 
       <section className={styles.crmContext}>
         <div>
-          <span>Local OTA-tagged reservations</span>
-          <strong>{otaReservations.length}</strong>
+          <span>Live Aiosell OTA Reservations</span>
+          <strong>{liveBookingsCount}</strong>
         </div>
         <div>
-          <span>Local OTA-tagged revenue</span>
-          <strong>{formatCurrency(otaRevenue)}</strong>
+          <span>Live Aiosell OTA Revenue</span>
+          <strong>{formatCurrency(liveBookingsRevenue)}</strong>
         </div>
         <p>
-          These figures come from KaizerStays reservations. They are not presented
-          as OTA totals until a production sync succeeds.
+          Real-time channel booking stats fetched directly from live Aiosell RMS for Hotel Shemron (`62a25484e5`).
         </p>
       </section>
 
