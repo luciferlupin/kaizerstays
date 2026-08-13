@@ -140,7 +140,7 @@ export function createDefaultChannelManagerState(): ChannelManagerState {
           propertyId: "62a25484e5",
           propertyName: "Hotel Shemron (Aiosell RMS)",
           mappings: [
-            { pmsRoomTypeId: "deluxe-room", pmsRoomTypeName: "Deluxe Room", pmsRoomTypeCode: "DELUXE", otaRoomTypeId: "deluxe-room", otaRoomTypeName: "Deluxe Room (26 Rooms)", otaRatePlanId: "deluxe-room-d-ep", otaRatePlanName: "Room Only (EP Double ₹2,800)" },
+            { pmsRoomTypeId: "deluxe-room", pmsRoomTypeName: "Deluxe Room", pmsRoomTypeCode: "DELUXE", otaRoomTypeId: "deluxe-room", otaRoomTypeName: "Deluxe Room (28 Rooms)", otaRatePlanId: "deluxe-room-d-ep", otaRatePlanName: "Room Only (EP Double ₹2,800)" },
             { pmsRoomTypeId: "twin-room", pmsRoomTypeName: "Twin Room", pmsRoomTypeCode: "TWIN", otaRoomTypeId: "twin-room", otaRoomTypeName: "Twin Room (2 Rooms)", otaRatePlanId: "twin-room-d-ep", otaRatePlanName: "Room Only (EP Double ₹2,800)" },
             { pmsRoomTypeId: "suite-room", pmsRoomTypeName: "Suite Room", pmsRoomTypeCode: "SUITE", otaRoomTypeId: "suite-room", otaRoomTypeName: "Suite Room (2 Rooms)", otaRatePlanId: "suite-room-d-ep", otaRatePlanName: "Room Only (EP Double ₹5,500)" },
           ],

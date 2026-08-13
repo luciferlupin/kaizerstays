@@ -102,7 +102,7 @@ export const demoRoomTypes = [
   },
 ];
 
-// ─── Rooms ───
+// ─── Rooms (Hotel Shemron, Neemrana - 32 Rooms Total) ───
 function generateRooms() {
   const rooms: Array<{
     id: string;
@@ -118,10 +118,26 @@ function generateRooms() {
     typeCode: string;
   }> = [];
 
-  // Deluxe Room: 26 rooms
-  for (let i = 1; i <= 26; i++) {
-    const floor = Math.ceil(i / 10);
-    const num = 100 + i;
+  // Floor 1 Deluxe Rooms (101 - 114: 14 Rooms)
+  for (let i = 101; i <= 114; i++) {
+    rooms.push({
+      id: `room_${i}`,
+      propertyId: "62a25484e5",
+      roomTypeId: "deluxe-room",
+      floorId: null,
+      number: i.toString(),
+      status: "AVAILABLE",
+      housekeepingStatus: "CLEAN",
+      isActive: true,
+      floor: 1,
+      typeName: "Deluxe Room",
+      typeCode: "DELUXE",
+    });
+  }
+
+  // Floor 3 Deluxe Rooms (301 - 315, skipping 313: 14 Rooms)
+  const floor3DeluxeNumbers = [301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 311, 312, 314, 315];
+  for (const num of floor3DeluxeNumbers) {
     rooms.push({
       id: `room_${num}`,
       propertyId: "62a25484e5",
@@ -131,15 +147,15 @@ function generateRooms() {
       status: "AVAILABLE",
       housekeepingStatus: "CLEAN",
       isActive: true,
-      floor,
+      floor: 3,
       typeName: "Deluxe Room",
       typeCode: "DELUXE",
     });
   }
 
-  // Twin Room: 2 rooms
-  for (let i = 1; i <= 2; i++) {
-    const num = 200 + i;
+  // Floor 3 Twin Rooms (316, 317: 2 Rooms)
+  const floor3TwinNumbers = [316, 317];
+  for (const num of floor3TwinNumbers) {
     rooms.push({
       id: `room_${num}`,
       propertyId: "62a25484e5",
@@ -149,15 +165,15 @@ function generateRooms() {
       status: "AVAILABLE",
       housekeepingStatus: "CLEAN",
       isActive: true,
-      floor: 2,
+      floor: 3,
       typeName: "Twin Room",
       typeCode: "TWIN",
     });
   }
 
-  // Suite Room: 2 rooms
-  for (let i = 1; i <= 2; i++) {
-    const num = 300 + i;
+  // Floor 3 Suite Rooms (318, 319: 2 Rooms)
+  const floor3SuiteNumbers = [318, 319];
+  for (const num of floor3SuiteNumbers) {
     rooms.push({
       id: `room_${num}`,
       propertyId: "62a25484e5",
@@ -301,17 +317,41 @@ export const demoGuestRequests: Array<{
 }> = [];
 
 // ─── Recent Payments ───
-export const demoPayments: Array<{
-  id: string;
-  paymentNumber: string;
-  guestName: string;
-  reservationId: string;
-  amount: number;
-  method: string;
-  status: string;
-  reference: string;
-  receivedAt: Date;
-}> = [];
+export const demoPayments = [
+  {
+    id: "pay_001",
+    paymentNumber: "REC-2026-0813-1001",
+    guestName: "Rajesh Sharma",
+    reservationId: "res_aio_88219",
+    amount: 38500,
+    method: "UPI",
+    status: "COMPLETED",
+    reference: "UPI-987654321012",
+    receivedAt: new Date(Date.now() - 3600000 * 4),
+  },
+  {
+    id: "pay_002",
+    paymentNumber: "REC-2026-0813-1002",
+    guestName: "Priya Malhotra",
+    reservationId: "res_aio_88220",
+    amount: 105000,
+    method: "CREDIT_CARD",
+    status: "COMPLETED",
+    reference: "CARD-AUTH-88912",
+    receivedAt: new Date(Date.now() - 3600000 * 12),
+  },
+  {
+    id: "pay_003",
+    paymentNumber: "REC-2026-0813-1003",
+    guestName: "Vikram Sethi",
+    reservationId: "res_aio_88901",
+    amount: 7500,
+    method: "CASH",
+    status: "COMPLETED",
+    reference: "CASH-REC-0012",
+    receivedAt: new Date(Date.now() - 3600000 * 24),
+  },
+];
 
 // ─── Recent Activity ───
 export const demoActivity: Array<{

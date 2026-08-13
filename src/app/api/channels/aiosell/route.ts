@@ -67,10 +67,10 @@ export async function GET() {
     { roomId: "suite-room", rate: 5500, rateplanId: "suite-room-d-ep", occupancy: "D" },
   ];
 
-  const todayInv = liveInventory?.[todayStr]?.split || { "deluxe-room": 26, "twin-room": 2, "suite-room": 2 };
+  const todayInv = liveInventory?.[todayStr]?.split || { "deluxe-room": 28, "twin-room": 2, "suite-room": 2 };
 
   const rooms = (hotelDetails?.rooms || [
-    { id: "deluxe-room", displayName: "Deluxe Room", name: "Deluxe Room", totalCount: 26 },
+    { id: "deluxe-room", displayName: "Deluxe Room", name: "Deluxe Room", totalCount: 28 },
     { id: "twin-room", displayName: "Twin Room", name: "Twin Room", totalCount: 2 },
     { id: "suite-room", displayName: "Suite Room", name: "Suite Room", totalCount: 2 },
   ]).map((r) => ({
@@ -214,7 +214,7 @@ export async function POST(request: Request) {
       }) || [
         {
           id: "deluxe-room",
-          name: "Deluxe Room (26 Rooms)",
+          name: "Deluxe Room (28 Rooms)",
           code: "DELUXE",
           ratePlans: defaultRatePlansMap["deluxe-room"],
         },
@@ -241,7 +241,7 @@ export async function POST(request: Request) {
 
     if (action === "sync") {
       const ratesMap: Record<string, number> = (rates as Record<string, number>) || { "deluxe-room": 2800, "twin-room": 2800, "suite-room": 5500 };
-      const inventoryMap: Record<string, number> = (inventory as Record<string, number>) || { "deluxe-room": 26, "twin-room": 2, "suite-room": 2 };
+      const inventoryMap: Record<string, number> = (inventory as Record<string, number>) || { "deluxe-room": 28, "twin-room": 2, "suite-room": 2 };
 
       // Push rates & inventory to Aiosell
       const syncPushResult = await client.pushRatesAndInventory(ratesMap, inventoryMap, targetHotelId);

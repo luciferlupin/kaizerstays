@@ -259,7 +259,7 @@ export default function DashboardClient() {
 
           {/* Visual Mini Grid */}
           <div className="room-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(40px, 1fr))", gap: "6px" }}>
-            {rooms.slice(0, 35).map((room) => (
+            {rooms.map((room) => (
               <div
                 key={room.id}
                 style={{

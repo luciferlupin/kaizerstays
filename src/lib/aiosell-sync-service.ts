@@ -99,8 +99,8 @@ function getInitialLogs(): AiosellApiLog[] {
       endpoint: AIOSELL_V2_CONFIG.inventoryUrl,
       status: "SUCCESS",
       httpCode: 200,
-      summary: "Aiosell CM v2 Inventory Update: DELUXE set to 26, TWIN set to 2, SUITE set to 2 available (Basic Auth: curious-kaizer).",
-      payload: { hotel_id: "62a25484e5", partner: AIOSELL_V2_CONFIG.partnerName, split: { "deluxe-room": 26, "twin-room": 2, "suite-room": 2 } },
+      summary: "Aiosell CM v2 Inventory Update: DELUXE set to 28, TWIN set to 2, SUITE set to 2 available (Basic Auth: curious-kaizer).",
+      payload: { hotel_id: "62a25484e5", partner: AIOSELL_V2_CONFIG.partnerName, split: { "deluxe-room": 28, "twin-room": 2, "suite-room": 2 } },
     },
     {
       id: "log_init_02",
@@ -158,10 +158,10 @@ export async function fetchLiveAiosellSummary(): Promise<AiosellLiveSummary> {
   const demandForecast = await client.fetchDemandForecast(hotelId);
   const commissions = await client.fetchCommissionReport(hotelId);
 
-  const todayInv = liveInventory?.[todayStr]?.split || { "deluxe-room": 26, "twin-room": 2, "suite-room": 2 };
+  const todayInv = liveInventory?.[todayStr]?.split || { "deluxe-room": 28, "twin-room": 2, "suite-room": 2 };
   
   const roomTypes = (hotelDetails.rooms || [
-    { id: "deluxe-room", name: "Deluxe Room", displayName: "Deluxe Room", totalCount: 26, maxocc: 2 },
+    { id: "deluxe-room", name: "Deluxe Room", displayName: "Deluxe Room", totalCount: 28, maxocc: 2 },
     { id: "twin-room", name: "Twin Room", displayName: "Twin Room", totalCount: 2, maxocc: 2 },
     { id: "suite-room", name: "Suite Room", displayName: "Suite Room", totalCount: 2, maxocc: 2 },
   ]).map((r) => ({
@@ -203,9 +203,22 @@ export async function fetchLiveAiosellSummary(): Promise<AiosellLiveSummary> {
   };
 }
 
-/**
- * Execute dynamic rate push to live.aiosell.com via CM v2 Partner Endpoint
- */
+function getDatesInRange(startStr: string, endStr: string): string[] {
+  const dates: string[] = [];
+  const curr = new Date(startStr);
+  const end = new Date(endStr);
+  if (isNaN(curr.getTime()) || isNaN(end.getTime()) || curr > end) {
+    return [startStr];
+  }
+  let count = 0;
+  while (curr <= end && count < 90) {
+    dates.push(curr.toISOString().split("T")[0]);
+    curr.setDate(curr.getDate() + 1);
+    count++;
+  }
+  return dates.length > 0 ? dates : [startStr];
+}
+
 /**
  * Execute dynamic rate push to live.aiosell.com via authenticated Aiosell RMS API
  */
@@ -214,11 +227,15 @@ export async function pushRateToAiosell(
   rateplanId: string,
   newRate: number,
   occupancy: "S" | "D" = "D",
-  hotelId = "62a25484e5"
+  hotelId = "62a25484e5",
+  startDate?: string,
+  endDate?: string
 ): Promise<{ success: boolean; message: string }> {
   const client = new AiosellClient();
   const loginRes = await client.login();
   const todayStr = new Date().toISOString().split("T")[0];
+  const start = startDate || todayStr;
+  const end = endDate || start;
   const targetHotel = loginRes.hotelId || hotelId;
 
   if (!loginRes.success || !loginRes.token) {
@@ -236,7 +253,11 @@ export async function pushRateToAiosell(
   }
 
   const endpoint = `https://live.aiosell.com/api/v1/rms/hotels/${targetHotel}/ds-view/rates`;
-  const payload = [{ date: todayStr, rates: [{ roomId, rateplanId, rate: newRate, occupancy }] }];
+  const dates = getDatesInRange(start, end);
+  const payload = dates.map((d) => ({
+    date: d,
+    rates: [{ roomId, rateplanId, rate: newRate, occupancy }],
+  }));
 
   try {
     const res = await fetch(endpoint, {
@@ -250,19 +271,20 @@ export async function pushRateToAiosell(
     });
 
     const isOk = res.ok;
+    const dateRangeLabel = dates.length === 1 ? start : `${start} to ${end} (${dates.length} days)`;
     saveApiLog({
       method: "POST",
       endpoint,
       status: isOk ? "SUCCESS" : "FAILED",
       httpCode: res.status,
-      summary: `Pushed rate ₹${newRate.toLocaleString("en-IN")} for ${roomId.toUpperCase()} (${rateplanId}) to Aiosell RMS.`,
+      summary: `Pushed rate ₹${newRate.toLocaleString("en-IN")} for ${roomId.toUpperCase()} (${rateplanId}) for ${dateRangeLabel} to Aiosell RMS.`,
       payload,
     });
 
     return {
       success: isOk,
       message: isOk
-        ? `Rate ₹${newRate.toLocaleString("en-IN")} pushed successfully to Aiosell RMS.`
+        ? `Rate ₹${newRate.toLocaleString("en-IN")} pushed successfully for ${dateRangeLabel}.`
         : `Aiosell rate push returned HTTP status ${res.status}`,
     };
   } catch (err) {

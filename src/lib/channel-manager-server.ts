@@ -50,7 +50,7 @@ export async function forwardChannelOperation(
     if (action === "sync" || action === "activate") {
       const pushRes = await client.pushRatesAndInventory(
         { "deluxe-room": 2800, "twin-room": 2800, "suite-room": 5500 },
-        { "deluxe-room": 26, "twin-room": 2, "suite-room": 2 },
+        { "deluxe-room": 28, "twin-room": 2, "suite-room": 2 },
         "62a25484e5"
       );
       const bookings = await client.fetchLiveReservations("62a25484e5");
@@ -134,7 +134,7 @@ export async function forwardChannelOperation(
           ratePlans: finalPlans,
         };
       }) || [
-        { id: "deluxe-room", name: "Deluxe Room (26 Rooms)", code: "DELUXE", ratePlans: defaultRatePlansMap["deluxe-room"] },
+        { id: "deluxe-room", name: "Deluxe Room (28 Rooms)", code: "DELUXE", ratePlans: defaultRatePlansMap["deluxe-room"] },
         { id: "twin-room", name: "Twin Room (2 Rooms)", code: "TWIN", ratePlans: defaultRatePlansMap["twin-room"] },
         { id: "suite-room", name: "Suite Room (2 Rooms)", code: "SUITE", ratePlans: defaultRatePlansMap["suite-room"] },
       ];

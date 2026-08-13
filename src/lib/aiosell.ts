@@ -228,13 +228,19 @@ export class AiosellClient {
    */
   async pushRatesV2(
     rates: Record<string, number>,
-    hotelId?: string
+    hotelId?: string,
+    startDate?: string,
+    endDate?: string
   ): Promise<AiosellSyncResult> {
     const targetHotelId = hotelId || this.hotelId || "62a25484e5";
+    const start = startDate || new Date().toISOString().split("T")[0];
+    const end = endDate || start;
     const payload = {
       hotelId: targetHotelId,
       partner: AIOSELL_V2_CONFIG.partnerName,
       syncedAt: new Date().toISOString(),
+      startDate: start,
+      endDate: end,
       rates: Object.keys(rates).map((roomCode) => ({
         roomCode,
         rate: rates[roomCode],
@@ -256,7 +262,7 @@ export class AiosellClient {
         success: res.ok,
         syncedAt: new Date().toISOString(),
         message: res.ok
-          ? "Rates successfully updated via Aiosell CM v2 partner endpoint."
+          ? `Rates successfully updated (${start} to ${end}) via Aiosell CM v2 partner endpoint.`
           : `Aiosell CM v2 rates update returned HTTP status ${res.status}`,
         payloadSent: payload,
       };

@@ -138,7 +138,15 @@ interface AppStateContextType {
   addRoom: (newRoom: typeof demoRooms[0]) => void;
   updateHousekeepingTaskStatus: (taskId: string, newStatus: string) => void;
   addHousekeepingTask: (task: typeof demoHousekeepingTasks[0]) => void;
-  addGuestRequest: (req: { roomNumber: string; guestName: string; type: string; description: string }) => void;
+  addGuestRequest: (req: {
+    roomNumber: string;
+    guestName: string;
+    type: string;
+    description: string;
+    quantity?: number;
+    priority?: string;
+    source?: string;
+  }) => void;
   updateGuestRequestStatus: (reqId: string, newStatus: string) => void;
   addPayment: (payment: { reservationId: string; guestName: string; amount: number; method: string; reference?: string }) => void;
   addExpense: (expense: typeof demoExpenses[0]) => void;
@@ -640,20 +648,34 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   };
 
   // ─── Add Guest Service Request ───
-  const addGuestRequest = (req: { roomNumber: string; guestName: string; type: string; description: string }) => {
+  const addGuestRequest = (req: {
+    roomNumber: string;
+    guestName: string;
+    type: string;
+    description: string;
+    quantity?: number;
+    priority?: string;
+    source?: string;
+  }) => {
     const newReq = {
       id: `req_${Date.now()}`,
       roomNumber: req.roomNumber,
-      guestName: req.guestName,
+      guestName: req.guestName || "In-House Guest",
       type: req.type,
       description: req.description,
-      quantity: 1,
+      quantity: req.quantity || 1,
       status: "REQUESTED",
-      priority: "NORMAL",
+      priority: req.priority || "NORMAL",
+      source: req.source || "FRONT_DESK_CALL",
       createdAt: new Date(),
     };
     setGuestRequests((prev) => [newReq, ...prev]);
-    addActivity("Guest Service Request", "request", newReq.id, `Room #${req.roomNumber} (${req.guestName}) requested: ${req.description}`);
+    addActivity(
+      "Guest Service Request",
+      "request",
+      newReq.id,
+      `Room #${req.roomNumber} (${req.guestName}) requested: ${req.description} [${req.source || "Front Desk Call"}]`
+    );
   };
 
   const updateGuestRequestStatus = (reqId: string, newStatus: string) => {
@@ -665,7 +687,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   // ─── Add Payment (connected to Reservation Folio & Outstanding Balance) ───
   const addPayment = (payment: { reservationId: string; guestName: string; amount: number; method: string; reference?: string }) => {
     const payId = `pay_${Date.now()}`;
-    const payNum = `PAY-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const payNum = `REC-2026-${new Date().toISOString().slice(5, 7)}${new Date().toISOString().slice(8, 10)}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const newPayment = {
       id: payId,

@@ -48,6 +48,7 @@ import {
   CalendarDays,
   Check,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   ExternalLink,
   FileSpreadsheet,
@@ -185,12 +186,103 @@ export default function ChannelsClient({
   const [busyAction, setBusyAction] = useState("");
   const [fallbackImport, setFallbackImport] =
     useState<FallbackImportState | null>(null);
-  const [deluxeRate, setDeluxeRate] = useState(2800);
-  const [twinRate, setTwinRate] = useState(2800);
-  const [suiteRate, setSuiteRate] = useState(5500);
-  const [deluxeAvailable, setDeluxeAvailable] = useState(26);
-  const [twinAvailable, setTwinAvailable] = useState(2);
-  const [suiteAvailable, setSuiteAvailable] = useState(2);
+  const [deluxeRate, setDeluxeRate] = useState<number | "">(2800);
+  const [twinRate, setTwinRate] = useState<number | "">(2800);
+  const [suiteRate, setSuiteRate] = useState<number | "">(5500);
+
+  const todayISO = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const in6DaysISO = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 6);
+    return d.toISOString().split("T")[0];
+  }, []);
+
+  const [rateStartDate, setRateStartDate] = useState(todayISO);
+  const [rateEndDate, setRateEndDate] = useState(in6DaysISO);
+  const [calendarViewDate, setCalendarViewDate] = useState(() => new Date());
+
+  const selectedDaysCount = useMemo(() => {
+    if (!rateStartDate || !rateEndDate) return 1;
+    const start = new Date(rateStartDate);
+    const end = new Date(rateEndDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return 1;
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  }, [rateStartDate, rateEndDate]);
+
+  const applyRatePreset = (preset: "today" | "7days" | "14days" | "30days" | "month") => {
+    const today = new Date();
+    const startStr = today.toISOString().split("T")[0];
+    setRateStartDate(startStr);
+    let end = new Date();
+    if (preset === "today") {
+      setRateEndDate(startStr);
+    } else if (preset === "7days") {
+      end.setDate(today.getDate() + 6);
+      setRateEndDate(end.toISOString().split("T")[0]);
+    } else if (preset === "14days") {
+      end.setDate(today.getDate() + 13);
+      setRateEndDate(end.toISOString().split("T")[0]);
+    } else if (preset === "30days") {
+      end.setDate(today.getDate() + 29);
+      setRateEndDate(end.toISOString().split("T")[0]);
+    } else if (preset === "month") {
+      const year = today.getFullYear();
+      const month = today.getMonth();
+      const lastDay = new Date(year, month + 1, 0);
+      setRateEndDate(lastDay.toISOString().split("T")[0]);
+    }
+  };
+
+  const handleCalendarDayClick = (dateStr: string) => {
+    if (!rateStartDate || (rateStartDate && rateEndDate && rateStartDate !== rateEndDate)) {
+      setRateStartDate(dateStr);
+      setRateEndDate(dateStr);
+    } else {
+      if (new Date(dateStr) < new Date(rateStartDate)) {
+        setRateStartDate(dateStr);
+      } else {
+        setRateEndDate(dateStr);
+      }
+    }
+  };
+
+  const currentMonthYearLabel = useMemo(() => {
+    return calendarViewDate.toLocaleString("en-US", { month: "long", year: "numeric" });
+  }, [calendarViewDate]);
+
+  const calendarDays = useMemo(() => {
+    const year = calendarViewDate.getFullYear();
+    const month = calendarViewDate.getMonth();
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+
+    const days = [];
+    for (let i = 0; i < firstDayIndex; i++) {
+      days.push(null);
+    }
+    for (let d = 1; d <= totalDays; d++) {
+      const monthStr = String(month + 1).padStart(2, "0");
+      const dayStr = String(d).padStart(2, "0");
+      const dateStr = `${year}-${monthStr}-${dayStr}`;
+      days.push({
+        dayNumber: d,
+        dateStr,
+        isToday: dateStr === todayISO,
+      });
+    }
+    return days;
+  }, [calendarViewDate, todayISO]);
+
+  const formatDateLabel = (dateStr: string) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr + "T00:00:00");
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+  const [deluxeAvailable, setDeluxeAvailable] = useState<number | "">(28);
+  const [twinAvailable, setTwinAvailable] = useState<number | "">(2);
+  const [suiteAvailable, setSuiteAvailable] = useState<number | "">(2);
   const [ratePushBusy, setRatePushBusy] = useState(false);
   const [invPushBusy, setInvPushBusy] = useState(false);
   const [apiLogs, setApiLogs] = useState<AiosellApiLog[]>(getStoredApiLogs);
@@ -947,6 +1039,7 @@ export default function ChannelsClient({
     setRatePushBusy(true);
     const jobId = `job_rate_${Date.now()}`;
     const startedAt = new Date().toISOString();
+    const rangeLabel = rateStartDate === rateEndDate ? rateStartDate : `${rateStartDate} to ${rateEndDate}`;
     commitState((current) => ({
       ...current,
       jobs: [
@@ -957,20 +1050,23 @@ export default function ChannelsClient({
           scope: "RATES" as const,
           status: "RUNNING" as const,
           startedAt,
-          summary: `Pushing rate updates to Aiosell (DELUXE ₹${deluxeRate}, TWIN ₹${twinRate}, SUITE ₹${suiteRate})…`,
+          summary: `Pushing rate updates (${rangeLabel}) to Aiosell (DELUXE ₹${deluxeRate}, TWIN ₹${twinRate}, SUITE ₹${suiteRate})…`,
         },
         ...current.jobs,
       ].slice(0, 50),
     }));
 
     try {
-      const res1 = await pushRateToAiosell("deluxe-room", "deluxe-room-d-ep", deluxeRate, "D");
-      const res2 = await pushRateToAiosell("twin-room", "twin-room-d-ep", twinRate, "D");
-      const res3 = await pushRateToAiosell("suite-room", "suite-room-d-ep", suiteRate, "D");
+      const dlxRate = Number(deluxeRate) || 2800;
+      const twnRate = Number(twinRate) || 2800;
+      const steRate = Number(suiteRate) || 5500;
+      const res1 = await pushRateToAiosell("deluxe-room", "deluxe-room-d-ep", dlxRate, "D", "62a25484e5", rateStartDate, rateEndDate);
+      const res2 = await pushRateToAiosell("twin-room", "twin-room-d-ep", twnRate, "D", "62a25484e5", rateStartDate, rateEndDate);
+      const res3 = await pushRateToAiosell("suite-room", "suite-room-d-ep", steRate, "D", "62a25484e5", rateStartDate, rateEndDate);
       const isSuccess = res1.success && res2.success && res3.success;
       const completedAt = new Date().toISOString();
       const summaryText = isSuccess
-        ? `Live rates pushed to Aiosell (DELUXE: ₹${deluxeRate}, TWIN: ₹${twinRate}, SUITE: ₹${suiteRate}).`
+        ? `Live rates pushed to Aiosell (${rangeLabel}, ${selectedDaysCount} day${selectedDaysCount > 1 ? "s" : ""}) for DELUXE: ₹${dlxRate}, TWIN: ₹${twnRate}, SUITE: ₹${steRate}.`
         : `Rate push result: ${res1.message || res2.message || res3.message}`;
 
       commitState((current) => ({
@@ -996,6 +1092,9 @@ export default function ChannelsClient({
     setInvPushBusy(true);
     const jobId = `job_inv_${Date.now()}`;
     const startedAt = new Date().toISOString();
+    const dlxInv = Number(deluxeAvailable) || 28;
+    const twnInv = Number(twinAvailable) || 2;
+    const steInv = Number(suiteAvailable) || 2;
     commitState((current) => ({
       ...current,
       jobs: [
@@ -1006,7 +1105,7 @@ export default function ChannelsClient({
           scope: "INVENTORY" as const,
           status: "RUNNING" as const,
           startedAt,
-          summary: `Pushing room inventory updates to Aiosell (DELUXE ${deluxeAvailable}, TWIN ${twinAvailable}, SUITE ${suiteAvailable})…`,
+          summary: `Pushing room inventory updates to Aiosell (DELUXE ${dlxInv}, TWIN ${twnInv}, SUITE ${steInv})…`,
         },
         ...current.jobs,
       ].slice(0, 50),
@@ -1014,9 +1113,9 @@ export default function ChannelsClient({
 
     try {
       const res = await pushInventoryToAiosell({
-        "deluxe-room": deluxeAvailable,
-        "twin-room": twinAvailable,
-        "suite-room": suiteAvailable,
+        "deluxe-room": dlxInv,
+        "twin-room": twnInv,
+        "suite-room": steInv,
       });
       const completedAt = new Date().toISOString();
       const summaryText = res.success
@@ -1446,10 +1545,10 @@ export default function ChannelsClient({
 
         {activeTab === "RATES" ? (
           <div className="card">
-            <div className="card-header">
+            <div className="card-header flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h2>Update Live Rates (Aiosell CM v2 Partner Sync)</h2>
-                <p>Modify base rates and push updates to <code>https://live.aiosell.com/api/v2/cm/update-rates/curious-kaizer</code> (Basic Auth: curious-kaizer)</p>
+                <h2>Update Live Rates & Calendar (Aiosell CM v2 Partner Sync)</h2>
+                <p>Select dates or date ranges to update base rates and push live updates to Aiosell CM & RMS</p>
               </div>
               <button
                 className="btn btn-primary"
@@ -1457,55 +1556,224 @@ export default function ChannelsClient({
                 disabled={ratePushBusy}
               >
                 {ratePushBusy ? <LoaderCircle className={styles.spinner} size={15} /> : <RefreshCw size={15} />}
-                Push Rates to Aiosell CM v2
+                Push Rates ({selectedDaysCount} Day{selectedDaysCount > 1 ? "s" : ""}) to Aiosell
               </button>
             </div>
-            <div className="card-body">
-              <div className="alert alert-info text-xs mb-4 flex items-center gap-2">
+            <div className="card-body flex flex-col gap-6">
+              <div className="alert alert-info text-xs flex items-center gap-2">
                 <ShieldCheck size={14} />
                 <span>
                   <strong>Aiosell PMS Partner Status:</strong> Active endpoint <code>https://live.aiosell.com/api/v2/cm/update-rates/curious-kaizer</code> using HTTP Basic Auth (<code>curious-kaizer</code>).
                 </span>
               </div>
-              <div className={styles.syncScopeGrid}>
-                <div className="stat-card">
-                  <span className="stat-card-label">DELUXE Room Rate</span>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-lg font-bold">₹</span>
+
+              {/* Date Selection Bar */}
+              <div className={styles.rateDateBar}>
+                <div className={styles.rateDateControls}>
+                  <div className={styles.dateField}>
+                    <label className="form-label text-xs font-semibold">Start Date</label>
                     <input
-                      type="number"
+                      type="date"
                       className="form-control"
-                      value={deluxeRate}
-                      onChange={(e) => setDeluxeRate(Number(e.target.value))}
+                      value={rateStartDate}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setRateStartDate(val);
+                        if (val && rateEndDate && new Date(val) > new Date(rateEndDate)) {
+                          setRateEndDate(val);
+                        }
+                      }}
                     />
                   </div>
-                  <span className="text-xs text-secondary mt-1">Rate Plan: deluxe-room-d-ep (EP Double)</span>
+                  <div className={styles.dateField}>
+                    <label className="form-label text-xs font-semibold">Till Date (End Date)</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={rateEndDate}
+                      min={rateStartDate}
+                      onChange={(e) => setRateEndDate(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <div className="stat-card">
-                  <span className="stat-card-label">TWIN Room Rate</span>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-lg font-bold">₹</span>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={twinRate}
-                      onChange={(e) => setTwinRate(Number(e.target.value))}
-                    />
+
+                {/* Quick Presets */}
+                <div className={styles.presetGroup}>
+                  <span className="text-xs font-semibold text-secondary">Quick Date Presets:</span>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${rateStartDate === todayISO && rateEndDate === todayISO ? "btn-primary" : "btn-secondary"}`}
+                      onClick={() => applyRatePreset("today")}
+                    >
+                      Today Only
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${selectedDaysCount === 7 ? "btn-primary" : "btn-secondary"}`}
+                      onClick={() => applyRatePreset("7days")}
+                    >
+                      Next 7 Days
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${selectedDaysCount === 14 ? "btn-primary" : "btn-secondary"}`}
+                      onClick={() => applyRatePreset("14days")}
+                    >
+                      Next 14 Days
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${selectedDaysCount === 30 ? "btn-primary" : "btn-secondary"}`}
+                      onClick={() => applyRatePreset("30days")}
+                    >
+                      Next 30 Days
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm btn-secondary`}
+                      onClick={() => applyRatePreset("month")}
+                    >
+                      This Month
+                    </button>
                   </div>
-                  <span className="text-xs text-secondary mt-1">Rate Plan: twin-room-d-ep (EP Double)</span>
                 </div>
-                <div className="stat-card">
-                  <span className="stat-card-label">SUITE Room Rate</span>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-lg font-bold">₹</span>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={suiteRate}
-                      onChange={(e) => setSuiteRate(Number(e.target.value))}
-                    />
+
+                {/* Range Pill Summary */}
+                <div className={styles.rangeSummaryPill}>
+                  <CalendarDays size={16} />
+                  <span>
+                    <strong>{formatDateLabel(rateStartDate)}</strong> to <strong>{formatDateLabel(rateEndDate)}</strong>
+                    <span className={styles.daysBadge}>{selectedDaysCount} Day{selectedDaysCount > 1 ? "s" : ""}</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Interactive Calendar Month Grid View */}
+              <div className={styles.calendarCard}>
+                <div className={styles.calendarCardHeader}>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-icon-only btn-sm"
+                      onClick={() => setCalendarViewDate(new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth() - 1, 1))}
+                      title="Previous Month"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <h3 className={styles.monthTitle}>{currentMonthYearLabel}</h3>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-icon-only btn-sm"
+                      onClick={() => setCalendarViewDate(new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth() + 1, 1))}
+                      title="Next Month"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm ml-2"
+                      onClick={() => setCalendarViewDate(new Date())}
+                    >
+                      Today
+                    </button>
                   </div>
-                  <span className="text-xs text-secondary mt-1">Rate Plan: suite-room-d-ep (EP Double)</span>
+                  <span className="text-xs text-secondary">
+                    Click any date to highlight or adjust date range
+                  </span>
+                </div>
+
+                <div className={styles.calendarGrid}>
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((dayName) => (
+                    <div key={dayName} className={styles.calendarHeaderCell}>
+                      {dayName}
+                    </div>
+                  ))}
+
+                  {calendarDays.map((cell, idx) => {
+                    if (!cell) {
+                      return <div key={`empty-${idx}`} className={styles.calendarEmptyCell} />;
+                    }
+
+                    const isSelectedRange =
+                      rateStartDate &&
+                      rateEndDate &&
+                      cell.dateStr >= rateStartDate &&
+                      cell.dateStr <= rateEndDate;
+                    const isStart = cell.dateStr === rateStartDate;
+                    const isEnd = cell.dateStr === rateEndDate;
+
+                    return (
+                      <div
+                        key={cell.dateStr}
+                        className={`${styles.calendarDayCell} ${
+                          isSelectedRange ? styles.inRange : ""
+                        } ${isStart ? styles.rangeStart : ""} ${
+                          isEnd ? styles.rangeEnd : ""
+                        } ${cell.isToday ? styles.todayCell : ""}`}
+                        onClick={() => handleCalendarDayClick(cell.dateStr)}
+                      >
+                        <div className={styles.cellDayHeader}>
+                          <span className={styles.cellDayNum}>{cell.dayNumber}</span>
+                          {cell.isToday ? <span className={styles.todayBadge}>Today</span> : null}
+                        </div>
+                        <div className={styles.cellRatesList}>
+                          <div className={styles.ratePillDeluxe}>D: ₹{((Number(deluxeRate) || 0) / 1000).toFixed(1)}k</div>
+                          <div className={styles.ratePillTwin}>T: ₹{((Number(twinRate) || 0) / 1000).toFixed(1)}k</div>
+                          <div className={styles.ratePillSuite}>S: ₹{((Number(suiteRate) || 0) / 1000).toFixed(1)}k</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Room Category Rates Inputs */}
+              <div>
+                <h3 className="text-base font-semibold mb-3">Room Category Base Rates (₹ INR)</h3>
+                <div className={styles.syncScopeGrid}>
+                  <div className="stat-card">
+                    <span className="stat-card-label">DELUXE Room Rate</span>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-lg font-bold">₹</span>
+                      <input
+                        type="number"
+                        className="form-control"
+                        placeholder="2800"
+                        value={deluxeRate}
+                        onChange={(e) => setDeluxeRate(e.target.value === "" ? "" : Number(e.target.value))}
+                      />
+                    </div>
+                    <span className="text-xs text-secondary mt-1">Rate Plan: deluxe-room-d-ep (EP Double) · 28 Rooms</span>
+                  </div>
+                  <div className="stat-card">
+                    <span className="stat-card-label">TWIN Room Rate</span>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-lg font-bold">₹</span>
+                      <input
+                        type="number"
+                        className="form-control"
+                        placeholder="2800"
+                        value={twinRate}
+                        onChange={(e) => setTwinRate(e.target.value === "" ? "" : Number(e.target.value))}
+                      />
+                    </div>
+                    <span className="text-xs text-secondary mt-1">Rate Plan: twin-room-d-ep (EP Double) · 2 Rooms</span>
+                  </div>
+                  <div className="stat-card">
+                    <span className="stat-card-label">SUITE Room Rate</span>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-lg font-bold">₹</span>
+                      <input
+                        type="number"
+                        className="form-control"
+                        placeholder="5500"
+                        value={suiteRate}
+                        onChange={(e) => setSuiteRate(e.target.value === "" ? "" : Number(e.target.value))}
+                      />
+                    </div>
+                    <span className="text-xs text-secondary mt-1">Rate Plan: suite-room-d-ep (EP Double) · 2 Rooms</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1542,12 +1810,13 @@ export default function ChannelsClient({
                     <input
                       type="number"
                       className="form-control"
+                      placeholder="28"
                       value={deluxeAvailable}
-                      onChange={(e) => setDeluxeAvailable(Number(e.target.value))}
+                      onChange={(e) => setDeluxeAvailable(e.target.value === "" ? "" : Number(e.target.value))}
                     />
-                    <span className="text-sm font-semibold">/ 26 Total</span>
+                    <span className="text-sm font-semibold">/ 28 Total</span>
                   </div>
-                  <span className="text-xs text-secondary mt-1">Physical Count: 26 DELUXE Rooms</span>
+                  <span className="text-xs text-secondary mt-1">Physical Count: 28 DELUXE Rooms</span>
                 </div>
                 <div className="stat-card">
                   <span className="stat-card-label">TWIN Available Rooms</span>
@@ -1555,8 +1824,9 @@ export default function ChannelsClient({
                     <input
                       type="number"
                       className="form-control"
+                      placeholder="2"
                       value={twinAvailable}
-                      onChange={(e) => setTwinAvailable(Number(e.target.value))}
+                      onChange={(e) => setTwinAvailable(e.target.value === "" ? "" : Number(e.target.value))}
                     />
                     <span className="text-sm font-semibold">/ 2 Total</span>
                   </div>
@@ -1568,8 +1838,9 @@ export default function ChannelsClient({
                     <input
                       type="number"
                       className="form-control"
+                      placeholder="2"
                       value={suiteAvailable}
-                      onChange={(e) => setSuiteAvailable(Number(e.target.value))}
+                      onChange={(e) => setSuiteAvailable(e.target.value === "" ? "" : Number(e.target.value))}
                     />
                     <span className="text-sm font-semibold">/ 2 Total</span>
                   </div>
