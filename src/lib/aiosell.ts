@@ -9,9 +9,9 @@ export const AIOSELL_V2_CONFIG = {
   ratesUrl: "https://live.aiosell.com/api/v2/cm/update-rates/kaizerstays",
   inventoryUrl: "https://live.aiosell.com/api/v2/cm/update/kaizerstays",
   username: "ninaad.khera19@gmail.com",
-  password: "Aiosell",
+  password: "aiosell",
   get basicAuthHeader() {
-    return "Basic " + (typeof btoa !== "undefined" ? btoa("ninaad.khera19@gmail.com:Aiosell") : Buffer.from("ninaad.khera19@gmail.com:Aiosell").toString("base64"));
+    return "Basic " + (typeof btoa !== "undefined" ? btoa("ninaad.khera19@gmail.com:aiosell") : Buffer.from("ninaad.khera19@gmail.com:aiosell").toString("base64"));
   },
 };
 
