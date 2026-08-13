@@ -206,6 +206,9 @@ export async function fetchLiveAiosellSummary(): Promise<AiosellLiveSummary> {
 /**
  * Execute dynamic rate push to live.aiosell.com via CM v2 Partner Endpoint
  */
+/**
+ * Execute dynamic rate push to live.aiosell.com via authenticated Aiosell RMS API
+ */
 export async function pushRateToAiosell(
   roomId: string,
   rateplanId: string,
@@ -214,94 +217,141 @@ export async function pushRateToAiosell(
   hotelId = "62a25484e5"
 ): Promise<{ success: boolean; message: string }> {
   const client = new AiosellClient();
-  const v2Res = await client.pushRatesV2({ [roomId]: newRate }, hotelId);
-
+  const loginRes = await client.login();
   const todayStr = new Date().toISOString().split("T")[0];
-  const payload = {
-    hotelId,
-    partner: AIOSELL_V2_CONFIG.partnerName,
-    rates: [{ roomCode: roomId, rateplanId, rate: newRate, occupancy, date: todayStr }],
-  };
+  const targetHotel = loginRes.hotelId || hotelId;
 
-  saveApiLog({
-    method: "POST",
-    endpoint: AIOSELL_V2_CONFIG.ratesUrl,
-    status: v2Res.success ? "SUCCESS" : "FAILED",
-    httpCode: v2Res.success ? 200 : 400,
-    summary: `Pushed rate ₹${newRate} for ${roomId.toUpperCase()} (${rateplanId}) to Aiosell CM v2 partner endpoint.`,
-    payload,
-  });
-
-  // Also send v1 push for dual compatibility
-  try {
-    const loginRes = await client.login();
-    if (loginRes.success) {
-      await fetch(
-        `https://live.aiosell.com/api/v1/rms/hotels/${loginRes.hotelId || hotelId}/ds-view/rates`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `BZ-JWT ${loginRes.token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify([{ date: todayStr, rates: [{ roomId, rateplanId, rate: newRate, occupancy }] }]),
-        }
-      );
-    }
-  } catch {
-    // Ignore v1 errors if v2 succeeded
+  if (!loginRes.success || !loginRes.token) {
+    saveApiLog({
+      method: "POST",
+      endpoint: `https://live.aiosell.com/api/v1/rms/hotels/${targetHotel}/ds-view/rates`,
+      status: "FAILED",
+      httpCode: 401,
+      summary: `Rate push failed for ${roomId.toUpperCase()}: Authentication failed.`,
+    });
+    return {
+      success: false,
+      message: loginRes.error || "Aiosell authentication failed",
+    };
   }
 
-  return {
-    success: v2Res.success,
-    message: v2Res.message || `Rate ₹${newRate} pushed to Aiosell CM v2 (${AIOSELL_V2_CONFIG.partnerName}).`,
-  };
+  const endpoint = `https://live.aiosell.com/api/v1/rms/hotels/${targetHotel}/ds-view/rates`;
+  const payload = [{ date: todayStr, rates: [{ roomId, rateplanId, rate: newRate, occupancy }] }];
+
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `BZ-JWT ${loginRes.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+    });
+
+    const isOk = res.ok;
+    saveApiLog({
+      method: "POST",
+      endpoint,
+      status: isOk ? "SUCCESS" : "FAILED",
+      httpCode: res.status,
+      summary: `Pushed rate ₹${newRate.toLocaleString("en-IN")} for ${roomId.toUpperCase()} (${rateplanId}) to Aiosell RMS.`,
+      payload,
+    });
+
+    return {
+      success: isOk,
+      message: isOk
+        ? `Rate ₹${newRate.toLocaleString("en-IN")} pushed successfully to Aiosell RMS.`
+        : `Aiosell rate push returned HTTP status ${res.status}`,
+    };
+  } catch (err) {
+    saveApiLog({
+      method: "POST",
+      endpoint,
+      status: "FAILED",
+      httpCode: 500,
+      summary: `Rate push exception for ${roomId.toUpperCase()}: ${err instanceof Error ? err.message : "Network error"}`,
+      payload,
+    });
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "Failed to push rates to Aiosell",
+    };
+  }
 }
 
 /**
- * Execute dynamic room inventory push to live.aiosell.com via CM v2 Partner Endpoint
+ * Execute dynamic room inventory push to live.aiosell.com via authenticated Aiosell RMS API
  */
 export async function pushInventoryToAiosell(
   split: Record<string, number> = { "deluxe-room": 26, "twin-room": 2, "suite-room": 2 },
   hotelId = "62a25484e5"
 ): Promise<{ success: boolean; message: string }> {
   const client = new AiosellClient();
-  const v2Res = await client.pushInventoryV2(split, hotelId);
+  const loginRes = await client.login();
+  const todayStr = new Date().toISOString().split("T")[0];
+  const targetHotel = loginRes.hotelId || hotelId;
 
+  const endpoint = `https://live.aiosell.com/api/v1/rms/hotels/${targetHotel}/cust-view/inventory`;
   const splitSummary = Object.entries(split).map(([k, v]) => `${k}=${v}`).join(", ");
-  saveApiLog({
-    method: "POST",
-    endpoint: AIOSELL_V2_CONFIG.inventoryUrl,
-    status: v2Res.success ? "SUCCESS" : "FAILED",
-    httpCode: v2Res.success ? 200 : 400,
-    summary: `Pushed room inventory: ${splitSummary} to Aiosell CM v2 partner endpoint.`,
-    payload: { hotelId, partner: AIOSELL_V2_CONFIG.partnerName, split },
-  });
+  const payload = { start: todayStr, end: todayStr, inventory: [{ date: todayStr, split }] };
 
-  // Also send v1 push for dual compatibility
-  try {
-    const loginRes = await client.login();
-    if (loginRes.success) {
-      const todayStr = new Date().toISOString().split("T")[0];
-      await fetch(
-        `https://live.aiosell.com/api/v1/rms/hotels/${loginRes.hotelId || hotelId}/cust-view/inventory`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `BZ-JWT ${loginRes.token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ start: todayStr, end: todayStr, inventory: [{ date: todayStr, split }] }),
-        }
-      );
-    }
-  } catch {
-    // Ignore v1 errors if v2 succeeded
+  if (!loginRes.success || !loginRes.token) {
+    saveApiLog({
+      method: "POST",
+      endpoint,
+      status: "FAILED",
+      httpCode: 401,
+      summary: `Inventory push failed: Authentication failed.`,
+      payload,
+    });
+    return {
+      success: false,
+      message: loginRes.error || "Aiosell authentication failed",
+    };
   }
 
-  return {
-    success: v2Res.success,
-    message: v2Res.message || `Room inventory pushed to Aiosell CM v2 (${AIOSELL_V2_CONFIG.partnerName}).`,
-  };
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `BZ-JWT ${loginRes.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+    });
+
+    const isOk = res.ok;
+    saveApiLog({
+      method: "POST",
+      endpoint,
+      status: isOk ? "SUCCESS" : "FAILED",
+      httpCode: res.status,
+      summary: `Pushed room inventory: ${splitSummary} to Aiosell RMS.`,
+      payload,
+    });
+
+    return {
+      success: isOk,
+      message: isOk
+        ? `Room inventory (${splitSummary}) pushed successfully to Aiosell RMS.`
+        : `Aiosell inventory push returned HTTP status ${res.status}`,
+    };
+  } catch (err) {
+    saveApiLog({
+      method: "POST",
+      endpoint,
+      status: "FAILED",
+      httpCode: 500,
+      summary: `Inventory push exception: ${err instanceof Error ? err.message : "Network error"}`,
+      payload,
+    });
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "Failed to push inventory to Aiosell",
+    };
+  }
 }
 
