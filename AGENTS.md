@@ -14,7 +14,7 @@ Always keep the software, PMS database models, room categories, rate plans, and 
 - **Active Property:** Hotel Shemron, Neemrana (`62a25484e5`)
 - **Aiosell Auth / Account:** `ninaad.khera19@gmail.com`
 - **Room Categories & Physical Room Counts:**
-  - `deluxe-room` (Deluxe Room) — 26 Rooms (Base Rate: ₹2,800)
+  - `deluxe-room` (Deluxe Room) — 28 Rooms (Base Rate: ₹2,800)
   - `twin-room` (Twin Room) — 2 Rooms (Base Rate: ₹2,800)
   - `suite-room` (Suite Room) — 2 Rooms (Base Rate: ₹5,500)
 - **Standard Rate Plan Codes:**

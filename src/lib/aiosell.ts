@@ -5,13 +5,13 @@
  */
 
 export const AIOSELL_V2_CONFIG = {
-  partnerName: "curious-kaizer",
-  ratesUrl: "https://live.aiosell.com/api/v2/cm/update-rates/curious-kaizer",
-  inventoryUrl: "https://live.aiosell.com/api/v2/cm/update/curious-kaizer",
-  username: "curious-kaizer",
-  password: "17psjfi6",
+  partnerName: "kaizerstays",
+  ratesUrl: "https://live.aiosell.com/api/v2/cm/update-rates/kaizerstays",
+  inventoryUrl: "https://live.aiosell.com/api/v2/cm/update/kaizerstays",
+  username: "ninaad.khera19@gmail.com",
+  password: "Aiosell",
   get basicAuthHeader() {
-    return "Basic " + (typeof btoa !== "undefined" ? btoa("curious-kaizer:17psjfi6") : Buffer.from("curious-kaizer:17psjfi6").toString("base64"));
+    return "Basic " + (typeof btoa !== "undefined" ? btoa("ninaad.khera19@gmail.com:Aiosell") : Buffer.from("ninaad.khera19@gmail.com:Aiosell").toString("base64"));
   },
 };
 

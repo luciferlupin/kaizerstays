@@ -1598,7 +1598,7 @@ export default function ChannelsClient({
               <div className="alert alert-info text-xs flex items-center gap-2">
                 <ShieldCheck size={14} />
                 <span>
-                  <strong>Aiosell PMS Partner Status:</strong> Active endpoint <code>https://live.aiosell.com/api/v2/cm/update-rates/curious-kaizer</code> using HTTP Basic Auth (<code>curious-kaizer</code>).
+                  <strong>Aiosell PMS Partner Status:</strong> Active endpoint <code>https://live.aiosell.com/api/v1/rms</code> (Account: <code>ninaad.khera19@gmail.com</code>).
                 </span>
               </div>
 
@@ -1820,7 +1820,7 @@ export default function ChannelsClient({
             <div className="card-header">
               <div>
                 <h2>Update Room Inventory (Aiosell CM v2 Partner Sync)</h2>
-                <p>Manage available room counts and push updates to <code>https://live.aiosell.com/api/v2/cm/update/curious-kaizer</code> (Basic Auth: curious-kaizer)</p>
+                <p>Manage available room counts and push updates to <code>https://live.aiosell.com/api/v1/rms</code> (Account: ninaad.khera19@gmail.com)</p>
               </div>
               <button
                 className="btn btn-primary"
@@ -1828,14 +1828,14 @@ export default function ChannelsClient({
                 disabled={invPushBusy}
               >
                 {invPushBusy ? <LoaderCircle className={styles.spinner} size={15} /> : <RefreshCw size={15} />}
-                Push Inventory to Aiosell CM v2
+                Push Inventory to Aiosell RMS
               </button>
             </div>
             <div className="card-body">
               <div className="alert alert-info text-xs mb-4 flex items-center gap-2">
                 <ShieldCheck size={14} />
                 <span>
-                  <strong>Aiosell PMS Partner Status:</strong> Active endpoint <code>https://live.aiosell.com/api/v2/cm/update/curious-kaizer</code> using HTTP Basic Auth (<code>curious-kaizer</code>).
+                  <strong>Aiosell PMS Partner Status:</strong> Active endpoint <code>https://live.aiosell.com/api/v1/rms</code> (Account: <code>ninaad.khera19@gmail.com</code>).
                 </span>
               </div>
               <div className={styles.syncScopeGrid}>

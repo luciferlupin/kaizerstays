@@ -99,7 +99,7 @@ function getInitialLogs(): AiosellApiLog[] {
       endpoint: AIOSELL_V2_CONFIG.inventoryUrl,
       status: "SUCCESS",
       httpCode: 200,
-      summary: "Aiosell CM v2 Inventory Update: DELUXE set to 28, TWIN set to 2, SUITE set to 2 available (Basic Auth: curious-kaizer).",
+      summary: "Aiosell CM v2 Inventory Update: DELUXE set to 28, TWIN set to 2, SUITE set to 2 available (Auth: ninaad.khera19@gmail.com).",
       payload: { hotel_id: "62a25484e5", partner: AIOSELL_V2_CONFIG.partnerName, split: { "deluxe-room": 28, "twin-room": 2, "suite-room": 2 } },
     },
     {
@@ -109,7 +109,7 @@ function getInitialLogs(): AiosellApiLog[] {
       endpoint: AIOSELL_V2_CONFIG.ratesUrl,
       status: "SUCCESS",
       httpCode: 200,
-      summary: "Aiosell CM v2 Rates Update: DELUXE set to ₹2,800, TWIN set to ₹2,800, SUITE set to ₹5,500 (Basic Auth: curious-kaizer).",
+      summary: "Aiosell CM v2 Rates Update: DELUXE set to ₹2,800, TWIN set to ₹2,800, SUITE set to ₹5,500 (Auth: ninaad.khera19@gmail.com).",
       payload: { hotel_id: "62a25484e5", partner: AIOSELL_V2_CONFIG.partnerName, rates: [{ roomId: "deluxe-room", rate: 2800 }, { roomId: "twin-room", rate: 2800 }, { roomId: "suite-room", rate: 5500 }] },
     },
     {
