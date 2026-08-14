@@ -6,7 +6,7 @@ export type RoomStatus = "AVAILABLE" | "OCCUPIED" | "DIRTY" | "CLEANING" | "MAIN
 export type HousekeepingStatus = "CLEAN" | "DIRTY" | "CLEANING" | "INSPECTED";
 export type ReservationStatus = "PENDING" | "CONFIRMED" | "CHECKED_IN" | "CHECKED_OUT" | "CANCELLED";
 export type BookingSource = "DIRECT" | "WEBSITE" | "WALK_IN" | "BOOKING_COM" | "AGODA" | "CORPORATE";
-export type PaymentMethod = "CASH" | "UPI" | "CREDIT_CARD" | "DEBIT_CARD" | "RAZORPAY" | "BANK_TRANSFER" | "ROOM_FOLIO";
+export type PaymentMethod = "CASH" | "UPI" | "CREDIT_CARD" | "DEBIT_CARD" | "RAZORPAY" | "BANK_TRANSFER" | "OTA_COLLECT" | "BTC" | "ROOM_FOLIO";
 export type PaymentStatus = "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED";
 export type Priority = "LOW" | "NORMAL" | "HIGH" | "URGENT";
 export type TaskStatus = "PENDING" | "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
@@ -100,6 +100,11 @@ export interface Reservation {
   taxAmount: number;
   paidAmount: number;
   balanceAmount: number;
+  isCorporate?: boolean;
+  companyName?: string;
+  companyContact?: string;
+  companyGstin?: string;
+  companyAddress?: string;
 }
 
 export interface FolioItem {

@@ -65,12 +65,14 @@ export const BOOKING_SOURCE_LABELS: Record<string, string> = {
 
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CASH: "Cash",
-  UPI: "UPI",
+  UPI: "UPI / PhonePe / GPay",
   CREDIT_CARD: "Credit Card",
   DEBIT_CARD: "Debit Card",
   BANK_TRANSFER: "Bank Transfer",
   RAZORPAY: "Razorpay",
-  OTA_COLLECT: "OTA Collect",
+  OTA_COLLECT: "OTA Collect (Pre-paid via OTA)",
+  OTA_SETTLEMENT: "OTA Settlement",
+  BTC: "BTC (Bill To Company / Credit)",
   CORPORATE_CREDIT: "Corporate Credit",
   OTHER: "Other",
 };
@@ -142,13 +144,21 @@ export const GUEST_ID_TYPES = [
   { value: "OTHER", label: "Other" },
 ];
 
-// ─── Meal Plans ───
+// ─── Meal Plans (EP: Room Only vs CP: Room with Breakfast) ───
 
 export const MEAL_PLANS = [
-  { value: "EP", label: "European Plan (Room Only)" },
-  { value: "CP", label: "Continental Plan (Breakfast)" },
-  { value: "MAP", label: "Modified American Plan (Breakfast + Dinner)" },
-  { value: "AP", label: "American Plan (All Meals)" },
+  {
+    value: "EP",
+    label: "EP — European Plan (Without Breakfast / Room Only)",
+    shortLabel: "EP (Without Breakfast)",
+    description: "Standard room accommodation without breakfast",
+  },
+  {
+    value: "CP",
+    label: "CP — Continental Plan (With Breakfast Included)",
+    shortLabel: "CP (With Breakfast)",
+    description: "Room accommodation with daily breakfast included",
+  },
 ];
 
 // ─── Permissions ───

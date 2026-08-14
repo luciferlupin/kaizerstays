@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS public.organizations (
     address TEXT DEFAULT 'NH-48, Shahjahanpur, Neemrana, Rajasthan 301706',
     phone VARCHAR(50) DEFAULT '+91 99994 90100',
     email VARCHAR(255) DEFAULT 'ninaad.khera19@gmail.com',
-    gstin VARCHAR(50) DEFAULT '08AABCT1332L1ZR',
+    gstin VARCHAR(50) DEFAULT '08AAPCS3946P1ZD',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -272,7 +272,7 @@ VALUES (
     '62a25484e5',
     'NH-48, Shahjahanpur, Neemrana, Rajasthan 301706',
     'ninaad.khera19@gmail.com',
-    '08AABCT1332L1ZR'
+    '08AAPCS3946P1ZD'
 ) ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     property_id = EXCLUDED.property_id,

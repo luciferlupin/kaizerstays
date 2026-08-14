@@ -295,8 +295,11 @@ export default function CalendarClient() {
 
                 // Find matching active reservation for this room on dateStr
                 const res = reservations.find((r) => {
-                  if (r.roomNumber !== room.number) return false;
                   if (r.status === "CANCELLED") return false;
+                  const rtStr = (r.roomType || "").toLowerCase();
+                  const fallbackRoom = rtStr.includes("twin") ? "102" : rtStr.includes("suite") ? "103" : "101";
+                  const effectiveRoomNum = r.roomNumber || fallbackRoom;
+                  if (effectiveRoomNum !== room.number) return false;
                   const cIn = new Date(r.checkIn).toISOString().split("T")[0];
                   const cOut = new Date(r.checkOut).toISOString().split("T")[0];
                   return dateStr >= cIn && dateStr < cOut;

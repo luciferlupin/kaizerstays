@@ -12,10 +12,12 @@ import {
   CheckCircle2,
   Download,
   LogOut,
+  RotateCcw,
 } from "lucide-react";
+import { toDateKey } from "@/lib/rates";
 
 export default function ReservationsClient() {
-  const { reservations, rooms, cancelReservation, checkInGuest, checkOutGuest } = useAppState();
+  const { reservations, rooms, cancelReservation, checkInGuest, checkOutGuest, undoCheckIn } = useAppState();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [sourceFilter, setSourceFilter] = useState("ALL");
@@ -266,29 +268,68 @@ ${filtered
 
                           {isConfirmed && (
                             <button
-                              className="btn btn-primary btn-sm"
+                              className={`btn btn-sm ${
+                                toDateKey(new Date(res.checkIn)) > toDateKey(new Date())
+                                  ? "btn-secondary"
+                                  : "btn-primary"
+                              }`}
                               onClick={() => {
+                                const checkInKey = toDateKey(new Date(res.checkIn));
+                                const todayKey = toDateKey(new Date());
+                                if (checkInKey > todayKey) {
+                                  const confirmEarly = window.confirm(
+                                    `Check-in date for ${res.guestName} is ${formatDate(res.checkIn, "dd MMM yyyy")} (in the future).\n\nDo you want to proceed with Early Check-In today?`
+                                  );
+                                  if (!confirmEarly) return;
+                                }
                                 const targetRoom = roomNum || "101";
                                 checkInGuest(res.id, targetRoom);
                               }}
+                              title={
+                                toDateKey(new Date(res.checkIn)) > toDateKey(new Date())
+                                  ? `Scheduled for ${formatDate(res.checkIn, "dd MMM yyyy")}`
+                                  : "Check in guest"
+                              }
                             >
-                              <CheckCircle2 size={13} /> Check In
+                              <CheckCircle2 size={13} />{" "}
+                              {toDateKey(new Date(res.checkIn)) > toDateKey(new Date()) ? "Early Check-In" : "Check In"}
                             </button>
                           )}
 
                           {isCheckedIn && (
-                            <button
-                              className="btn btn-secondary btn-sm"
-                              onClick={() => checkOutGuest(res.id)}
-                            >
-                              <LogOut size={13} /> Check Out
-                            </button>
+                            <>
+                              <button
+                                className="btn btn-primary btn-sm"
+                                onClick={() => {
+                                  if (window.confirm(`Check out ${res.guestName} from Room #${roomNum || res.roomNumber}?`)) {
+                                    checkOutGuest(res.id);
+                                  }
+                                }}
+                              >
+                                <LogOut size={13} /> Check Out
+                              </button>
+                              <button
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => {
+                                  if (window.confirm(`Revert check-in for ${res.guestName}? Status will change back to CONFIRMED.`)) {
+                                    undoCheckIn(res.id);
+                                  }
+                                }}
+                                title="Revert accidental check-in back to Confirmed"
+                              >
+                                <RotateCcw size={13} /> Undo Check-In
+                              </button>
+                            </>
                           )}
 
-                          {isConfirmed && (
+                          {(isConfirmed || isCheckedIn) && (
                             <button
                               className="btn btn-ghost btn-sm text-danger"
-                              onClick={() => cancelReservation(res.id)}
+                              onClick={() => {
+                                if (window.confirm(`Cancel reservation for ${res.guestName}?`)) {
+                                  cancelReservation(res.id);
+                                }
+                              }}
                             >
                               Cancel
                             </button>

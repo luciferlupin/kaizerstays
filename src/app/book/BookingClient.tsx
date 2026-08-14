@@ -145,11 +145,14 @@ export default function BookingClient() {
     return physical.slice(0, netAvailable);
   };
 
-  const getRoomPricingDetails = (roomType: typeof demoRoomTypes[0]) => {
+  const [selectedMealPlan, setSelectedMealPlan] = useState<"EP" | "CP">("EP");
+
+  const getRoomPricingDetails = (roomType: typeof demoRoomTypes[0], plan: "EP" | "CP" = selectedMealPlan) => {
     const pmsType = roomTypes.find((r) => r.id === roomType.id || r.code === roomType.code);
     const liveBaseRate = pmsType?.baseRate || roomType.baseRate;
     const stayRateInfo = getAverageRateForStay(roomType.id, checkIn, checkOut, liveBaseRate);
-    const nightlyRate = stayRateInfo.averageRate;
+    const breakfastSupplement = roomType.id === "suite-room" ? 700 : 500;
+    const nightlyRate = plan === "CP" ? stayRateInfo.averageRate + breakfastSupplement : stayRateInfo.averageRate;
     const baseSubtotal = nightlyRate * Math.max(1, nights);
 
     const discount = activePromo?.discountType === "PERCENTAGE"
@@ -263,7 +266,34 @@ export default function BookingClient() {
         {/* STEP 1: ROOM SELECTION */}
         {step === "SELECT_ROOM" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            <h2 style={{ fontSize: "20px", fontWeight: 800 }}>Select Available Room Categories ({nights} Nights)</h2>
+            <div className="card" style={{ padding: "16px 20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                <div>
+                  <h3 style={{ fontSize: "15px", fontWeight: 700 }}>Select Rate Plan (EP vs CP)</h3>
+                  <p className="text-xs text-secondary">Every room category offers Room Only (EP) or Breakfast Included (CP)</p>
+                </div>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${selectedMealPlan === "EP" ? "btn-primary" : "btn-secondary"}`}
+                    onClick={() => setSelectedMealPlan("EP")}
+                  >
+                    EP — Without Breakfast
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${selectedMealPlan === "CP" ? "btn-primary" : "btn-secondary"}`}
+                    onClick={() => setSelectedMealPlan("CP")}
+                  >
+                    CP — With Breakfast Included
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <h2 style={{ fontSize: "20px", fontWeight: 800 }}>
+              Available Room Categories ({nights} Nights — {selectedMealPlan === "CP" ? "CP: Breakfast Included" : "EP: Without Breakfast"})
+            </h2>
             {roomTypes.map((rt) => {
               const pricing = getRoomPricingDetails(rt);
               const availableRooms = getAvailableRoomsForStay(rt.id);
@@ -287,13 +317,16 @@ export default function BookingClient() {
 
                   <div style={{ textAlign: "right", borderLeft: "1px solid var(--color-border-subtle)", paddingLeft: "20px" }}>
                     <div className="text-xs text-secondary font-semibold">
-                      {formatCurrency(pricing.nightlyRate)} <span className="text-tertiary">/ night</span>
+                      Tariff: {formatCurrency(pricing.discountedSubtotal)} <span className="text-tertiary">({nights} n @ {formatCurrency(pricing.nightlyRate)}/n)</span>
                     </div>
-                    <div className="mono font-bold text-primary" style={{ fontSize: "22px", margin: "4px 0" }}>
+                    <div className="text-xs font-bold" style={{ color: "#0071e3", marginTop: "2px" }}>
+                      + GST (12%): <span className="mono">{formatCurrency(pricing.gstTax)}</span>
+                    </div>
+                    <div className="mono font-bold text-primary" style={{ fontSize: "22px", margin: "4px 0 2px" }}>
                       {formatCurrency(pricing.totalInclusive)}
                     </div>
-                    <div className="text-xs text-tertiary" style={{ marginBottom: "6px" }}>
-                      Total for {nights} Night{nights > 1 ? "s" : ""} (incl. 12% GST)
+                    <div className="text-xs text-secondary font-medium" style={{ marginBottom: "6px" }}>
+                      Total Payable Amount
                     </div>
                     <div className={`text-xs font-semibold ${availability ? "text-success" : "text-danger"}`}>
                       {availability ? `${availability} room${availability === 1 ? "" : "s"} available` : "Sold out or stop-sold"}

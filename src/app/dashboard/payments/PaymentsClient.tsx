@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 export default function PaymentsClient() {
-  const { payments, reservations, addPayment, addActivity } = useAppState();
+  const { payments, reservations, property, addPayment, addActivity } = useAppState();
   const [methodFilter, setMethodFilter] = useState("ALL");
   const [search, setSearch] = useState("");
   const [showRecordModal, setShowRecordModal] = useState(false);
@@ -34,7 +34,7 @@ export default function PaymentsClient() {
 
   // Record Payment Form state
   const [selectedResId, setSelectedResId] = useState(() => reservations[0]?.id || "res_001");
-  const [amount, setAmount] = useState<number>(2800);
+  const [amount, setAmount] = useState<number | string>(2800);
   const [method, setMethod] = useState("UPI");
   const [ref, setRef] = useState("UPI987654321");
 
@@ -65,14 +65,15 @@ export default function PaymentsClient() {
     e.preventDefault();
     const res = reservations.find((r) => r.id === selectedResId) || reservations[0];
     if (!res) return;
+    const safeAmount = Number(amount) || 0;
     addPayment({
       reservationId: res.id,
       guestName: res.guestName,
-      amount: Number(amount) || 0,
+      amount: safeAmount,
       method,
       reference: ref,
     });
-    addActivity("Payment Recorded", "payments", res.id, `${formatCurrency(amount)} received via ${method} for ${res.guestName}`);
+    addActivity("Payment Recorded", "payments", res.id, `${formatCurrency(safeAmount)} received via ${method} for ${res.guestName}`);
     setSaved(true);
     setTimeout(() => {
       setShowRecordModal(false);
@@ -178,14 +179,14 @@ ${filtered
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold text-secondary">Method Filter:</span>
-            {["ALL", "UPI", "CASH", "CREDIT_CARD", "BANK_TRANSFER", "OTA_SETTLEMENT"].map((m) => (
+            {["ALL", "UPI", "CASH", "CREDIT_CARD", "BANK_TRANSFER", "OTA_COLLECT", "BTC"].map((m) => (
               <button
                 key={m}
                 type="button"
                 className={`btn btn-sm ${methodFilter === m ? "btn-primary" : "btn-secondary"}`}
                 onClick={() => setMethodFilter(m)}
               >
-                {m === "ALL" ? "All Methods" : m.replace("_", " ")}
+                {m === "ALL" ? "All Methods" : m === "OTA_COLLECT" ? "OTA Collect" : m === "BTC" ? "BTC (Due)" : m.replace("_", " ")}
               </button>
             ))}
           </div>
@@ -250,10 +251,14 @@ ${filtered
                               ? "badge-info"
                               : p.method === "CASH"
                               ? "badge-success"
+                              : p.method === "BTC"
+                              ? "badge-warning"
+                              : p.method === "OTA_COLLECT" || p.method === "OTA_SETTLEMENT"
+                              ? "badge-purple"
                               : "badge-primary"
                           }`}
                         >
-                          {p.method.replace("_", " ")}
+                          {p.method === "BTC" ? "BTC (Bill To Company)" : p.method === "OTA_COLLECT" ? "OTA Collect" : p.method.replace("_", " ")}
                         </span>
                       </td>
                       <td className="mono text-xs text-tertiary">{p.reference || "N/A"}</td>
@@ -361,20 +366,37 @@ ${filtered
                       required
                       className="form-control text-sm font-bold"
                       value={amount}
-                      onChange={(e) => setAmount(Number(e.target.value))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setAmount(val === "" ? "" : Number(val));
+                      }}
+                      placeholder="Enter amount (₹)"
                     />
                   </div>
 
                   <div className="form-group">
                     <label className="form-label text-xs font-semibold">Payment Method</label>
                     <select className="form-control text-sm" value={method} onChange={(e) => setMethod(e.target.value)}>
-                      <option value="UPI">UPI</option>
+                      <option value="UPI">UPI / PhonePe / GPay</option>
                       <option value="CASH">Cash</option>
                       <option value="CREDIT_CARD">Credit Card</option>
                       <option value="BANK_TRANSFER">Bank Transfer</option>
+                      <option value="OTA_COLLECT">OTA Payment (Pre-paid / OTA Collect)</option>
+                      <option value="BTC">BTC (Bill To Company / Credit)</option>
                     </select>
                   </div>
                 </div>
+
+                {method === "BTC" && (
+                  <div style={{ padding: "10px 14px", background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: "6px", fontSize: "12px", color: "var(--amber-700, #b45309)" }}>
+                    <strong>BTC (Bill To Company):</strong> Bill is billed to Company credit ledger and marked under Due Payments. When company settles payment later, you can mark it settled.
+                  </div>
+                )}
+                {method === "OTA_COLLECT" && (
+                  <div style={{ padding: "10px 14px", background: "rgba(0, 113, 227, 0.08)", border: "1px solid rgba(0, 113, 227, 0.2)", borderRadius: "6px", fontSize: "12px", color: "var(--blue-700, #005bb5)" }}>
+                    <strong>OTA Collect:</strong> Payment collected directly by OTA channel (Booking.com / Agoda / MMT) prior to check-in.
+                  </div>
+                )}
 
                 <div className="form-group">
                   <label className="form-label text-xs font-semibold">Transaction Reference / UTR #</label>
@@ -401,7 +423,7 @@ ${filtered
         </div>
       )}
 
-      {/* Printable Official Payment Receipt Modal */}
+      {/* Modal 2: Printable Receipt */}
       {selectedReceipt && (
         <div
           className="modal-backdrop"
@@ -420,8 +442,8 @@ ${filtered
             className="card modal-card"
             style={{
               width: "100%",
-              maxWidth: "540px",
-              padding: "24px",
+              maxWidth: "780px",
+              padding: "32px",
               background: "#ffffff",
               color: "#000000",
               borderRadius: "12px",
@@ -432,21 +454,29 @@ ${filtered
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "16px",
-                borderBottom: "2px solid #000",
-                paddingBottom: "12px",
+                alignItems: "flex-start",
+                marginBottom: "20px",
+                borderBottom: "2px solid #0f172a",
+                paddingBottom: "16px",
               }}
             >
               <div>
-                <div style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b" }}>
-                  Official Payment Receipt
+                <div
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: 800,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
+                    color: "#0071e3",
+                  }}
+                >
+                  OFFICIAL PAYMENT RECEIPT
                 </div>
-                <h2 style={{ fontSize: "20px", fontWeight: 800, margin: "2px 0", color: "#0f172a" }}>HOTEL SHEMRON</h2>
-                <div style={{ fontSize: "11px", color: "#475569" }}>NH-48, Shahjahanpur, Neemrana, Rajasthan · GSTIN: 08AAAAH9821K1Z2</div>
+                <h2 style={{ fontSize: "26px", fontWeight: 900, margin: "4px 0", color: "#0f172a" }}>HOTEL SHEMRON</h2>
+                <div style={{ fontSize: "12px", color: "#475569" }}>NH-48, Shahjahanpur, Neemrana, Rajasthan · GSTIN: {property.gstin}</div>
               </div>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSelectedReceipt(null)}>
-                <X size={18} style={{ color: "#000" }} />
+              <button type="button" className="btn btn-ghost btn-sm no-print" onClick={() => setSelectedReceipt(null)}>
+                <X size={20} style={{ color: "#000" }} />
               </button>
             </div>
 
@@ -455,84 +485,84 @@ ${filtered
               style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
-                gap: "12px",
+                gap: "16px",
                 background: "#f8fafc",
-                padding: "14px",
+                padding: "18px",
                 borderRadius: "8px",
                 border: "1px solid #e2e8f0",
-                marginBottom: "16px",
+                marginBottom: "20px",
               }}
             >
               <div>
-                <span style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase" }}>Receipt Number</span>
-                <div style={{ fontWeight: 800, fontSize: "14px", fontFamily: "monospace", color: "#0071e3" }}>
+                <span style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase", fontWeight: 700 }}>Receipt Number</span>
+                <div style={{ fontWeight: 800, fontSize: "16px", fontFamily: "monospace", color: "#0071e3", marginTop: "2px" }}>
                   {selectedReceipt.paymentNumber}
                 </div>
               </div>
               <div>
-                <span style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase" }}>Date & Time</span>
-                <div style={{ fontWeight: 600, fontSize: "13px", color: "#1e293b" }}>
+                <span style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase", fontWeight: 700 }}>Date & Time</span>
+                <div style={{ fontWeight: 600, fontSize: "14px", color: "#1e293b", marginTop: "2px" }}>
                   {formatDate(selectedReceipt.receivedAt, "dd MMM yyyy, hh:mm a")}
                 </div>
               </div>
               <div>
-                <span style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase" }}>Guest Name</span>
-                <div style={{ fontWeight: 700, fontSize: "14px", color: "#0f172a" }}>{selectedReceipt.guestName}</div>
+                <span style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase", fontWeight: 700 }}>Guest Name</span>
+                <div style={{ fontWeight: 800, fontSize: "16px", color: "#0f172a", marginTop: "2px" }}>{selectedReceipt.guestName}</div>
               </div>
               <div>
-                <span style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase" }}>Room & Confirmation</span>
-                <div style={{ fontWeight: 700, fontSize: "13px", color: "#1e293b" }}>
+                <span style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase", fontWeight: 700 }}>Room & Reservation</span>
+                <div style={{ fontWeight: 700, fontSize: "14px", color: "#1e293b", marginTop: "2px" }}>
                   Room #{receiptReservation?.roomNumber || "101"} · {receiptReservation?.confirmationNumber || "AIO-RES"}
                 </div>
               </div>
             </div>
 
             {/* Payment Summary */}
-            <div style={{ border: "1px solid #e2e8f0", borderRadius: "8px", overflow: "hidden", marginBottom: "16px" }}>
+            <div style={{ border: "1px solid #e2e8f0", borderRadius: "8px", overflow: "hidden", marginBottom: "20px" }}>
               <div
                 style={{
                   background: "#f1f5f9",
-                  padding: "10px 14px",
+                  padding: "12px 16px",
                   fontWeight: 700,
-                  fontSize: "12px",
+                  fontSize: "13px",
                   textTransform: "uppercase",
                   color: "#334155",
                 }}
               >
-                Payment Transaction Details
+                Payment Transaction Breakdown
               </div>
-              <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
+              <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px" }}>
                   <span style={{ color: "#475569" }}>Payment Method:</span>
-                  <span style={{ fontWeight: 700 }}>{selectedReceipt.method.replace("_", " ")}</span>
+                  <span style={{ fontWeight: 700, color: "#0f172a" }}>{selectedReceipt.method.replace("_", " ")}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
-                  <span style={{ color: "#475569" }}>Transaction Ref / UTR:</span>
-                  <span style={{ fontFamily: "monospace", fontWeight: 700 }}>{selectedReceipt.reference || "N/A"}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px" }}>
+                  <span style={{ color: "#475569" }}>Transaction Reference / UTR:</span>
+                  <span style={{ fontFamily: "monospace", fontWeight: 700, color: "#0f172a" }}>{selectedReceipt.reference || "N/A"}</span>
                 </div>
                 <div
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
-                    fontSize: "13px",
+                    fontSize: "14px",
                     borderTop: "1px dashed #cbd5e1",
-                    paddingTop: "8px",
-                    marginTop: "4px",
+                    paddingTop: "12px",
+                    marginTop: "6px",
                   }}
                 >
-                  <span style={{ fontWeight: 700, fontSize: "14px", color: "#0f172a" }}>Total Amount Received:</span>
-                  <span style={{ fontWeight: 800, fontSize: "18px", color: "#16a34a" }}>
+                  <span style={{ fontWeight: 800, fontSize: "16px", color: "#0f172a" }}>Total Amount Received:</span>
+                  <span style={{ fontWeight: 900, fontSize: "20px", color: "#16a34a" }}>
                     {formatCurrency(selectedReceipt.amount)}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div style={{ fontSize: "11px", color: "#64748b", textAlign: "center", marginBottom: "16px" }}>
+            <div style={{ fontSize: "12px", color: "#64748b", textAlign: "center", marginBottom: "20px" }}>
               Received with thanks by Front Desk Office · Hotel Shemron Neemrana (Computer Generated Receipt)
             </div>
 
-            <div className="flex items-center justify-end gap-2" style={{ borderTop: "1px solid #e2e8f0", paddingTop: "12px" }}>
+            <div className="flex items-center justify-end gap-2 no-print" style={{ borderTop: "1px solid #e2e8f0", paddingTop: "16px" }}>
               <button type="button" className="btn btn-secondary" onClick={() => setSelectedReceipt(null)}>
                 Close
               </button>

@@ -20,13 +20,15 @@ import {
   CheckCircle2,
   X,
   Check,
+  RotateCcw,
 } from "lucide-react";
+import { toDateKey } from "@/lib/rates";
 
 export default function ReservationDetailClient() {
-  const { reservations, guests, addPayment } = useAppState();
+  const { reservations, guests, addPayment, checkInGuest, checkOutGuest, undoCheckIn, cancelReservation } = useAppState();
   const [activeTab, setActiveTab] = useState<"overview" | "folio" | "payments">("folio");
   const [showPayModal, setShowPayModal] = useState(false);
-  const [payAmount, setPayAmount] = useState(0);
+  const [payAmount, setPayAmount] = useState<number | string>(0);
   const [payMethod, setPayMethod] = useState("UPI");
   const [payDone, setPayDone] = useState(false);
 
@@ -40,15 +42,21 @@ export default function ReservationDetailClient() {
     .filter((f) => f.category !== "PAYMENT")
     .reduce((sum, item) => sum + item.amount, 0);
 
-  const totalPaid = res.paidAmount;
-  const balanceDue = res.balanceAmount;
+  const folioPayments = folioItems
+    .filter((f) => f.category === "PAYMENT")
+    .reduce((sum, item) => sum + Math.abs(item.amount), 0);
+
+  const totalPaid = Math.max(res.paidAmount || 0, folioPayments);
+  const effectiveTotal = Math.max(res.totalAmount || 0, totalCharges);
+  const balanceDue = Math.max(0, effectiveTotal - totalPaid);
 
   const handleRecordPayment = () => {
-    if (payAmount <= 0) return;
+    const numAmount = Number(payAmount) || 0;
+    if (numAmount <= 0 && payMethod !== "BTC") return;
     addPayment({
       reservationId: res.id,
       guestName: res.guestName,
-      amount: payAmount,
+      amount: numAmount,
       method: payMethod,
     });
     setPayDone(true);
@@ -82,16 +90,93 @@ export default function ReservationDetailClient() {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                setPayAmount(balanceDue);
-                setShowPayModal(true);
-              }}
-            >
-              <CreditCard size={16} /> Collect Payment
-            </button>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+            {res.status === "CONFIRMED" && (
+              <button
+                className={`btn ${toDateKey(new Date(res.checkIn)) > toDateKey(new Date()) ? "btn-secondary" : "btn-primary"}`}
+                onClick={() => {
+                  const checkInKey = toDateKey(new Date(res.checkIn));
+                  const todayKey = toDateKey(new Date());
+                  if (checkInKey > todayKey) {
+                    const confirmEarly = window.confirm(
+                      `Check-in date for ${res.guestName} is ${formatDate(res.checkIn, "dd MMM yyyy")} (in the future).\n\nDo you want to proceed with Early Check-In today?`
+                    );
+                    if (!confirmEarly) return;
+                  }
+                  checkInGuest(res.id, res.roomNumber || "101");
+                }}
+              >
+                <LogIn size={16} /> {toDateKey(new Date(res.checkIn)) > toDateKey(new Date()) ? "Early Check-In" : "Check In Guest"}
+              </button>
+            )}
+
+            {res.status === "CHECKED_IN" && (
+              <>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    if (window.confirm(`Check out ${res.guestName} from Room #${res.roomNumber}?`)) {
+                      checkOutGuest(res.id);
+                    }
+                  }}
+                >
+                  <LogOut size={16} /> Check Out Guest
+                </button>
+
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    if (window.confirm(`Revert check-in for ${res.guestName}? Status will return to CONFIRMED.`)) {
+                      undoCheckIn(res.id);
+                    }
+                  }}
+                  title="Revert accidental check-in back to Confirmed"
+                >
+                  <RotateCcw size={16} /> Undo Check-In
+                </button>
+              </>
+            )}
+
+            {(res.status === "CONFIRMED" || res.status === "CHECKED_IN") && (
+              <button
+                className="btn btn-ghost text-danger"
+                onClick={() => {
+                  if (window.confirm(`Cancel reservation for ${res.guestName}?`)) {
+                    cancelReservation(res.id);
+                  }
+                }}
+              >
+                Cancel Reservation
+              </button>
+            )}
+
+            {balanceDue > 0 ? (
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  setPayAmount(balanceDue);
+                  setShowPayModal(true);
+                }}
+              >
+                <CreditCard size={16} /> Collect Payment ({formatCurrency(balanceDue)})
+              </button>
+            ) : (
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <span className="badge badge-success" style={{ padding: "8px 14px", fontSize: "13px", display: "inline-flex", alignItems: "center", gap: "6px", fontWeight: 700 }}>
+                  <CheckCircle2 size={16} /> Paid in Full
+                </span>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    setPayAmount(0);
+                    setShowPayModal(true);
+                  }}
+                  title="Record optional add-on payment if needed"
+                >
+                  <Plus size={14} /> Add Extra Payment
+                </button>
+              </div>
+            )}
             <Link href="/dashboard/invoices" className="btn btn-secondary">
               <FileText size={16} /> Print Tax Invoice
             </Link>
@@ -115,6 +200,16 @@ export default function ReservationDetailClient() {
               {res.roomNumber ? `Room #${res.roomNumber}` : "Unassigned"} ({res.roomType})
             </div>
           </div>
+
+          {res.companyName && (
+            <div>
+              <span className="text-xs text-tertiary">Billed to Corporate Company</span>
+              <div style={{ fontWeight: 700, fontSize: "15px", color: "var(--color-primary)" }}>{res.companyName}</div>
+              {res.companyContact && <div className="text-xs text-secondary">Attn: {res.companyContact}</div>}
+              {res.companyGstin && <div className="text-xs text-secondary mono">GSTIN: {res.companyGstin}</div>}
+              {res.companyAddress && <div className="text-xs text-secondary">{res.companyAddress}</div>}
+            </div>
+          )}
 
           <div>
             <span className="text-xs text-tertiary">Stay Period</span>
@@ -240,7 +335,11 @@ export default function ReservationDetailClient() {
                       type="number"
                       className="form-input"
                       value={payAmount}
-                      onChange={(e) => setPayAmount(Number(e.target.value))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setPayAmount(val === "" ? "" : Number(val));
+                      }}
+                      placeholder="Enter payment amount (₹)"
                     />
                   </div>
                   <div className="form-group">
@@ -254,8 +353,20 @@ export default function ReservationDetailClient() {
                       <option value="CASH">Cash</option>
                       <option value="CREDIT_CARD">Credit Card</option>
                       <option value="BANK_TRANSFER">Bank Transfer</option>
+                      <option value="OTA_COLLECT">OTA Payment (Pre-paid / OTA Collect)</option>
+                      <option value="BTC">BTC (Bill To Company / Credit)</option>
                     </select>
                   </div>
+                  {payMethod === "BTC" && (
+                    <div style={{ padding: "10px 14px", background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: "6px", fontSize: "12px", color: "var(--amber-700, #b45309)" }}>
+                      <strong>BTC (Bill To Company):</strong> Posts payment to Corporate Ledger as Due Payment. When the company settles the payment later, mark it settled in Payments.
+                    </div>
+                  )}
+                  {payMethod === "OTA_COLLECT" && (
+                    <div style={{ padding: "10px 14px", background: "rgba(0, 113, 227, 0.08)", border: "1px solid rgba(0, 113, 227, 0.2)", borderRadius: "6px", fontSize: "12px", color: "var(--blue-700, #005bb5)" }}>
+                      <strong>OTA Collect:</strong> Pre-paid directly by guest on OTA portal (Booking.com / Agoda / MMT). Collected via channel manager settlement.
+                    </div>
+                  )}
                 </>
               )}
             </div>

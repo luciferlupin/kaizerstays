@@ -26,7 +26,7 @@ export const demoProperty = {
   state: "Rajasthan",
   country: "IN",
   zipCode: "301705",
-  gstin: "08AABCT1332L1ZR",
+  gstin: "08AAPCS3946P1ZD",
   starRating: 4,
   totalRooms: 32,
   currency: "INR",

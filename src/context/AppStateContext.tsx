@@ -52,6 +52,11 @@ export interface ExtendedReservation {
   guestIdType?: string;
   guestIdNumber?: string;
   notes?: string;
+  isCorporate?: boolean;
+  companyName?: string;
+  companyContact?: string;
+  companyGstin?: string;
+  companyAddress?: string;
   folio?: FolioItem[];
 }
 
@@ -225,29 +230,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
             }))
           );
         }
-        if (parsed.reservations)
-          setReservations(
-            parsed.reservations.filter(
-              (r: any) =>
-                !r.id?.startsWith("res_") &&
-                !r.guestName?.includes("Anand Verma") &&
-                !r.guestName?.includes("Pankaj Tanwar") &&
-                !r.guestName?.includes("Rahul Verma")
-            )
-          );
-        if (parsed.guests)
-          setGuests(
-            parsed.guests.filter(
-              (g: any) =>
-                !g.id?.startsWith("guest_") &&
-                g.firstName !== "Anand" &&
-                g.firstName !== "Pankaj"
-            )
-          );
-        if (parsed.housekeepingTasks) setHousekeepingTasks(parsed.housekeepingTasks.filter((h: any) => !h.id?.startsWith("hk_")));
-        if (parsed.guestRequests) setGuestRequests(parsed.guestRequests.filter((r: any) => !r.id?.startsWith("req_")));
-        if (parsed.payments) setPayments(parsed.payments.filter((p: any) => !p.id?.startsWith("pay_")));
-        if (parsed.expenses) setExpenses(parsed.expenses.filter((e: any) => !e.id?.startsWith("exp_")));
+        if (parsed.reservations?.length) setReservations(parsed.reservations);
+        if (parsed.guests?.length) setGuests(parsed.guests);
+        if (parsed.housekeepingTasks?.length) setHousekeepingTasks(parsed.housekeepingTasks);
+        if (parsed.guestRequests?.length) setGuestRequests(parsed.guestRequests);
+        if (parsed.payments?.length) setPayments(parsed.payments);
+        if (parsed.expenses?.length) setExpenses(parsed.expenses);
         if (parsed.staff?.length) setStaff(parsed.staff);
         if (parsed.inventoryItems?.length) setInventoryItems(parsed.inventoryItems);
         if (parsed.requisitions?.length) setRequisitions(parsed.requisitions);
@@ -505,7 +493,19 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         existing?.status === "CHECKED_IN" || existing?.status === "CHECKED_OUT"
           ? existing.status
           : record.status;
-      const preservedRoomNumber = existing?.roomNumber || "";
+      let effectiveRoomNumber = existing?.roomNumber || "";
+      if (!effectiveRoomNumber) {
+        const rtStr = (record.roomType || "").toLowerCase();
+        const targetTypeId = rtStr.includes("twin")
+          ? "twin-room"
+          : rtStr.includes("suite")
+          ? "suite-room"
+          : "deluxe-room";
+        const candidateRoom = rooms.find(
+          (room) => room.roomTypeId === targetTypeId && room.isActive
+        );
+        effectiveRoomNumber = candidateRoom?.number || (targetTypeId === "twin-room" ? "102" : targetTypeId === "suite-room" ? "103" : "101");
+      }
 
       const imported: ExtendedReservation = {
         id: existing?.id || `res_ota_${rawProvider}_${extId}`,
@@ -516,7 +516,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         checkIn,
         checkOut,
         nights,
-        roomNumber: preservedRoomNumber,
+        roomNumber: effectiveRoomNumber,
         roomType: record.roomType,
         adults: record.adults,
         children: record.children,
@@ -710,6 +710,24 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
     const res = reservations.find((r) => r.id === reservationId);
     addActivity("Guest Checked In", "checkin", reservationId, `${res?.guestName || "Guest"} checked into Room #${roomNumber}`);
+  };
+
+  // ─── Undo / Revert Check-In (returns status back to CONFIRMED) ───
+  const undoCheckIn = (reservationId: string) => {
+    const res = reservations.find((r) => r.id === reservationId || r.confirmationNumber === reservationId);
+    if (!res) return;
+
+    setReservations((prev) =>
+      prev.map((r) => (r.id === res.id ? { ...r, status: "CONFIRMED" } : r))
+    );
+
+    if (res.roomNumber) {
+      setRooms((prev) =>
+        prev.map((r) => (r.number === res.roomNumber ? { ...r, status: "RESERVED", housekeepingStatus: "CLEAN" } : r))
+      );
+    }
+
+    addActivity("Check-In Reverted", "checkin", res.id, `Reverted check-in for ${res.guestName} back to CONFIRMED`);
   };
 
   // ─── Mark Reservation as Prepaid (Zero Out Balance) ───
@@ -1063,6 +1081,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         importOTAReservations,
         updateRoomRatesAndInventory,
         checkInGuest,
+        undoCheckIn,
         markReservationAsPrepaid,
         checkOutGuest,
         cancelReservation,

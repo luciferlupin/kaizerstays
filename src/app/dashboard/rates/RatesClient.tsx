@@ -288,17 +288,29 @@ export default function RatesClient() {
                     <td>
                       <div className="font-semibold">{roomType.name}</div>
                       <div className="text-xs text-secondary">{totalRooms} physical rooms · {roomType.code}</div>
+                      <div className="text-xs text-primary font-medium" style={{ marginTop: "2px" }}>
+                        EP &amp; CP Rates
+                      </div>
                     </td>
                     {visibleDates.map((date) => {
                       const restriction = restrictions[getRestrictionKey(roomType.id, date)];
                       const booked = bookedRooms(roomType.id, date);
                       const sellable = Math.max(0, Math.min(totalRooms, restriction?.availabilityCap ?? totalRooms) - booked);
                       const restricted = restriction?.stopSell || restriction?.closedToArrival || restriction?.closedToDeparture;
+                      const epRate = restriction?.rate || roomType.baseRate;
+                      const cpSupplement = roomType.id === "suite-room" ? 700 : 500;
+                      const cpRate = epRate + cpSupplement;
+
                       return (
                         <td key={date} style={{ background: restriction?.stopSell ? "rgba(255,59,48,.06)" : undefined }}>
-                          <div className="mono font-bold">{formatCurrency(restriction?.rate || roomType.baseRate)}</div>
-                          <div className={`text-xs ${sellable === 0 ? "text-danger" : "text-success"}`}>{sellable} sellable · {booked} booked</div>
-                          <div className="text-xs text-secondary" style={{ marginTop: "3px" }}>
+                          <div className="mono font-bold text-primary" style={{ fontSize: "13px" }}>
+                            EP: {formatCurrency(epRate)}
+                          </div>
+                          <div className="mono text-xs font-semibold text-secondary" style={{ marginTop: "1px" }}>
+                            CP: {formatCurrency(cpRate)} <span style={{ fontSize: "10px", color: "var(--green-600)" }}>(+b/fast)</span>
+                          </div>
+                          <div className={`text-xs ${sellable === 0 ? "text-danger" : "text-success"}`} style={{ marginTop: "3px" }}>{sellable} sellable · {booked} booked</div>
+                          <div className="text-xs text-secondary" style={{ marginTop: "2px" }}>
                             {restriction?.stopSell ? "STOP SELL" : restricted ? [restriction.closedToArrival ? "CTA" : "", restriction.closedToDeparture ? "CTD" : ""].filter(Boolean).join(" · ") : `Min ${restriction?.minStay || 1} night`}
                           </div>
                         </td>

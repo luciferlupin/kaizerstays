@@ -22,10 +22,29 @@ export default function FrontDeskClient() {
   const [assignedRoomNumber, setAssignedRoomNumber] = useState("");
   const [actionDone, setActionDone] = useState(false);
 
-  const todayKey = formatDate(new Date(), "yyyy-MM-dd");
-  const isToday = (date: Date | string) => formatDate(date, "yyyy-MM-dd") === todayKey;
-  const arrivals = reservations.filter((r) => r.status === "CONFIRMED" && isToday(r.checkIn));
-  const departures = reservations.filter((r) => r.status === "CHECKED_IN" && isToday(r.checkOut));
+  const toDateStr = (date: Date | string) => {
+    if (!date) return "";
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return String(date).slice(0, 10);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const todayKey = toDateStr(new Date());
+
+  // Arrivals: Check-in date is today or overdue (checkIn <= today) and status is CONFIRMED or PENDING
+  const arrivals = reservations.filter(
+    (r) => !["CHECKED_OUT", "CANCELLED"].includes(r.status) && (r.status === "CONFIRMED" || r.status === "PENDING") && toDateStr(r.checkIn) <= todayKey
+  );
+
+  // Departures: Check-out date is today or overdue (checkOut <= today) and status is CHECKED_IN or CONFIRMED
+  const departures = reservations.filter(
+    (r) => !["CHECKED_OUT", "CANCELLED"].includes(r.status) && (r.status === "CHECKED_IN" || r.status === "CONFIRMED") && toDateStr(r.checkOut) <= todayKey
+  );
+
+  // In-House: Currently checked-in guests
   const inHouse = reservations.filter((r) => r.status === "CHECKED_IN");
 
   const getEffectiveRoomDetails = (r: (typeof reservations)[0]) => {

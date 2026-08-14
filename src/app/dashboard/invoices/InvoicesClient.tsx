@@ -45,7 +45,7 @@ const formatInvoiceCurrency = (amount: number) =>
   }).format(amount);
 
 export default function InvoicesClient() {
-  const { reservations } = useAppState();
+  const { reservations, property } = useAppState();
 
   const [activeTab, setActiveTab] = useState<"ALL" | "IN_HOUSE" | "POST_CHECKOUT" | "OUTSTANDING">("ALL");
   const [search, setSearch] = useState("");
@@ -55,7 +55,7 @@ export default function InvoicesClient() {
   // Post checkout billing form state
   const [postResId, setPostResId] = useState(reservations[0]?.id || "");
   const [chargeDescription, setChargeDescription] = useState("Late Checkout Charge");
-  const [chargeAmount, setChargeAmount] = useState<number>(1500);
+  const [chargeAmount, setChargeAmount] = useState<number | string>(1500);
   // Custom post-checkout bills created in session
   const [customPostCheckoutBills, setCustomPostCheckoutBills] = useState<InvoiceRecord[]>([]);
 
@@ -111,7 +111,8 @@ export default function InvoicesClient() {
     e.preventDefault();
     const res = reservations.find((r) => r.id === postResId) || reservations[0];
     if (!res) return;
-    const gst = calculateInclusiveHotelGST(chargeAmount);
+    const safeAmount = Number(chargeAmount) || 0;
+    const gst = calculateInclusiveHotelGST(safeAmount);
 
     const newBill: InvoiceRecord = {
       id: `inv_post_${Date.now()}`,
@@ -313,7 +314,11 @@ export default function InvoicesClient() {
                     min={1}
                     className="form-control text-sm font-bold"
                     value={chargeAmount}
-                    onChange={(e) => setChargeAmount(Number(e.target.value))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setChargeAmount(val === "" ? "" : Number(val));
+                    }}
+                    placeholder="Enter amount (₹)"
                   />
                 </div>
 
@@ -338,91 +343,177 @@ export default function InvoicesClient() {
         </div>
       )}
 
-      {/* Modal 2: Printable GST Tax Invoice & Settlement Bill */}
+      {/* Modal 2: Printable GST Tax Invoice & Settlement Bill (Exact Hotel Shemron Format) */}
       {selectedInvoice && (
         <div className="modal-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "16px" }}>
-          <div className="card modal-card" style={{ width: "100%", maxWidth: "620px", padding: "24px", background: "#ffffff", color: "#000000", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", borderBottom: "2px solid #0f172a", paddingBottom: "14px" }}>
+          <div className="card modal-card" style={{ width: "100%", maxWidth: "780px", padding: "28px 32px", background: "#ffffff", color: "#000000", borderRadius: "8px", border: "1px solid #000000", fontFamily: "sans-serif" }}>
+            {/* HOTEL SHEMRON Header */}
+            <div style={{ textAlign: "center", marginBottom: "10px", borderBottom: "1px solid #000000", paddingBottom: "10px", position: "relative" }}>
+              <button type="button" className="btn btn-ghost btn-sm no-print" style={{ position: "absolute", top: "0", right: "0" }} onClick={() => setSelectedInvoice(null)}>
+                <X size={20} style={{ color: "#000" }} />
+              </button>
+              <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#000", margin: "0 0 2px", textTransform: "none" }}>Hotel Shemron</h2>
+              <div style={{ fontSize: "11px", color: "#111", lineHeight: "1.4" }}>
+                Motel No 1, RIICO Industrial Area Sahjahanpur<br />
+                District Alwar-301706<br />
+                Alwar<br />
+                Email: gauravsharma86401@yahoo.com<br />
+                <strong style={{ fontSize: "12px" }}>GSTIN : 08AAPCS3946P1ZD</strong>
+              </div>
+            </div>
+
+            {/* Sub-Header Bar */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: 800, fontSize: "13px", borderBottom: "1px solid #000", paddingBottom: "4px", marginBottom: "8px" }}>
+              <span>TAX INVOICE</span>
+              <span>Bill Date : {formatDate(selectedInvoice.date, "dd/MM/yyyy")}</span>
+            </div>
+
+            {/* 3-Column Detailed Information Grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1.1fr", gap: "10px", fontSize: "11px", borderBottom: "1px solid #000", paddingBottom: "8px", marginBottom: "10px", lineHeight: "1.6" }}>
               <div>
-                <div style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#0071e3" }}>TAX INVOICE & SETTLEMENT BILL</div>
-                <h2 style={{ fontSize: "22px", fontWeight: 900, margin: "2px 0", color: "#0f172a" }}>HOTEL SHEMRON</h2>
-                <div style={{ fontSize: "11px", color: "#475569" }}>
-                  NH-48, Shahjahanpur, Neemrana, Rajasthan 301705 · GSTIN: 08AAAAH9821K1Z2 · SAC: 9963
+                <div><strong>Company Name &amp; Address</strong> : {selectedInvoice.reservation?.companyName || "N/A"}</div>
+                {selectedInvoice.reservation?.companyAddress && <div style={{ fontSize: "10px", color: "#333", paddingLeft: "8px" }}>{selectedInvoice.reservation.companyAddress}</div>}
+                <div style={{ marginTop: "4px" }}><strong>Guest Name</strong> : {selectedInvoice.guestName}</div>
+                <div><strong>Email</strong> : {selectedInvoice.reservation?.guestEmail || ""}</div>
+                <div><strong>GSTIN No.</strong> : {selectedInvoice.reservation?.companyGstin || selectedInvoice.gstin || ""}</div>
+              </div>
+
+              <div>
+                <div><strong>Bill No.</strong> : {selectedInvoice.billNumber || selectedInvoice.invoiceNumber}</div>
+                <div><strong>Room No.</strong> : {selectedInvoice.roomNumber}</div>
+                <div><strong>Tariff</strong> : {selectedInvoice.taxableAmount?.toFixed(2)}</div>
+                <div><strong>Meal Plan</strong> : {selectedInvoice.reservation?.roomType?.includes("CP") ? "CP" : "EP"}</div>
+                <div><strong>Age</strong> : 0</div>
+                <div><strong>Mobile</strong> : {selectedInvoice.reservation?.guestPhone || ""}</div>
+                <div><strong>Reg. No.</strong> : G2652</div>
+                <div><strong>State Code</strong> : 08</div>
+              </div>
+
+              <div>
+                <div><strong>Arr. Date</strong> : {formatDate(selectedInvoice.reservation?.checkIn, "dd/MM/yyyy")}</div>
+                <div><strong>Arr. Time</strong> : 12:00 pm</div>
+                <div><strong>Dep. Date</strong> : {formatDate(selectedInvoice.reservation?.checkOut, "dd/MM/yyyy")}</div>
+                <div><strong>Dep. Time</strong> : 11:00 am</div>
+                <div><strong>Pax</strong> : Adult- {selectedInvoice.reservation?.adults || 1} / {selectedInvoice.reservation?.children || 0}</div>
+                <div><strong>Tot. Room No</strong> : 1</div>
+                <div><strong>Nationality</strong> : INDIAN</div>
+                <div><strong>Room Type</strong> : {(selectedInvoice.roomType || selectedInvoice.reservation?.roomType || "DELUXE").toUpperCase()}</div>
+              </div>
+            </div>
+
+            {/* Tariff Table */}
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10px", textAlign: "center", marginBottom: "10px", border: "1px solid #000" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid #000", fontWeight: 700 }}>
+                  <th style={{ borderRight: "1px solid #000", padding: "4px" }}>Date</th>
+                  <th style={{ borderRight: "1px solid #000", padding: "4px" }}>ROOM RENT</th>
+                  <th style={{ borderRight: "1px solid #000", padding: "4px" }}>E.BED</th>
+                  <th style={{ borderRight: "1px solid #000", padding: "4px" }}>FOOD</th>
+                  <th style={{ borderRight: "1px solid #000", padding: "4px" }}>LAUNDRY</th>
+                  <th style={{ borderRight: "1px solid #000", padding: "4px" }}>MISC</th>
+                  <th style={{ borderRight: "1px solid #000", padding: "4px" }}>TAXI</th>
+                  <th style={{ padding: "4px" }}>Total</th>
+                </tr>
+                <tr style={{ borderBottom: "1px solid #000", fontWeight: 700, fontSize: "9px" }}>
+                  <th style={{ borderRight: "1px solid #000", padding: "2px" }}>HSN/SAC</th>
+                  <th style={{ borderRight: "1px solid #000", padding: "2px" }}>996311</th>
+                  <th style={{ borderRight: "1px solid #000", padding: "2px" }}></th>
+                  <th style={{ borderRight: "1px solid #000", padding: "2px" }}>996332</th>
+                  <th style={{ borderRight: "1px solid #000", padding: "2px" }}>999719</th>
+                  <th style={{ borderRight: "1px solid #000", padding: "2px" }}>996329</th>
+                  <th style={{ borderRight: "1px solid #000", padding: "2px" }}>996414</th>
+                  <th style={{ padding: "2px" }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: "1px solid #000" }}>
+                  <td style={{ borderRight: "1px solid #000", padding: "4px" }}>{formatDate(selectedInvoice.reservation?.checkIn, "dd/MM/yyyy")}</td>
+                  <td style={{ borderRight: "1px solid #000", padding: "4px" }}>{selectedInvoice.taxableAmount?.toFixed(2)}</td>
+                  <td style={{ borderRight: "1px solid #000", padding: "4px" }}>0.00</td>
+                  <td style={{ borderRight: "1px solid #000", padding: "4px" }}>0.00</td>
+                  <td style={{ borderRight: "1px solid #000", padding: "4px" }}>0.00</td>
+                  <td style={{ borderRight: "1px solid #000", padding: "4px" }}>0.00</td>
+                  <td style={{ borderRight: "1px solid #000", padding: "4px" }}>0.00</td>
+                  <td style={{ padding: "4px" }}>{selectedInvoice.taxableAmount?.toFixed(2)}</td>
+                </tr>
+                <tr style={{ fontWeight: 700 }}>
+                  <td style={{ borderRight: "1px solid #000", padding: "4px", textAlign: "left" }}>Total :</td>
+                  <td style={{ borderRight: "1px solid #000", padding: "4px" }}>{selectedInvoice.taxableAmount?.toFixed(2)}</td>
+                  <td style={{ borderRight: "1px solid #000", padding: "4px" }}>0.00</td>
+                  <td style={{ borderRight: "1px solid #000", padding: "4px" }}>0.00</td>
+                  <td style={{ borderRight: "1px solid #000", padding: "4px" }}>0.00</td>
+                  <td style={{ borderRight: "1px solid #000", padding: "4px" }}>0.00</td>
+                  <td style={{ borderRight: "1px solid #000", padding: "4px" }}>0.00</td>
+                  <td style={{ padding: "4px" }}>{selectedInvoice.taxableAmount?.toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Tax & Breakdown summary right-aligned */}
+            <div style={{ display: "flex", justifyContent: "flex-end", fontSize: "11px", marginBottom: "10px" }}>
+              <div style={{ width: "240px", lineHeight: "1.6" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span>CGST@2.5%</span>
+                  <span>: {selectedInvoice.cgst?.toFixed(2)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span>SGST@2.5%</span>
+                  <span>: {selectedInvoice.sgst?.toFixed(2)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800 }}>
+                  <span>Total</span>
+                  <span>: {selectedInvoice.amount?.toFixed(2)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span>Currently Settled</span>
+                  <span>: {selectedInvoice.status === "PAID" ? selectedInvoice.amount?.toFixed(2) : "0.00"}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, marginTop: "2px" }}>
+                  <span>Net Due</span>
+                  <span>: {selectedInvoice.status === "PAID" ? "0.00" : selectedInvoice.amount?.toFixed(2)}</span>
                 </div>
               </div>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSelectedInvoice(null)}>
-                <X size={18} style={{ color: "#000" }} />
-              </button>
             </div>
 
-            {/* Bill & Guest Header */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: "#f8fafc", padding: "14px", borderRadius: "8px", border: "1px solid #e2e8f0", marginBottom: "16px" }}>
-              <div>
-                <span style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase" }}>Invoice Number</span>
-                <div style={{ fontWeight: 800, fontSize: "14px", fontFamily: "monospace", color: "#0f172a" }}>{selectedInvoice.invoiceNumber}</div>
-                <span style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase", marginTop: "4px", display: "block" }}>Bill Number</span>
-                <div style={{ fontWeight: 700, fontSize: "12px", fontFamily: "monospace", color: "#475569" }}>{selectedInvoice.billNumber || "BILL-2026-001"}</div>
-              </div>
-              <div>
-                <span style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase" }}>Billed To Guest</span>
-                <div style={{ fontWeight: 800, fontSize: "14px", color: "#0f172a" }}>{selectedInvoice.guestName}</div>
-                <div style={{ fontSize: "12px", color: "#334155" }}>Room #{selectedInvoice.roomNumber}</div>
-                <div style={{ fontSize: "11px", color: "#64748b" }}>Date: {formatDate(selectedInvoice.date, "dd MMM yyyy")}</div>
-              </div>
-            </div>
-
-            {/* Folio Items Table */}
-            <div style={{ border: "1px solid #cbd5e1", borderRadius: "8px", overflow: "hidden", marginBottom: "16px" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+            {/* Receipt Information Table */}
+            <div style={{ marginBottom: "14px" }}>
+              <div style={{ fontSize: "11px", fontWeight: 700, textDecoration: "underline", marginBottom: "3px" }}>Receipt Information</div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10px", border: "1px solid #000", textAlign: "left" }}>
                 <thead>
-                  <tr style={{ background: "#f1f5f9", borderBottom: "1px solid #cbd5e1", textAlign: "left", color: "#334155" }}>
-                    <th style={{ padding: "8px 12px" }}>Description</th>
-                    <th style={{ padding: "8px 12px", textAlign: "right" }}>Amount (₹)</th>
+                  <tr style={{ borderBottom: "1px solid #000", background: "#f8fafc" }}>
+                    <th style={{ padding: "3px 6px", borderRight: "1px solid #000" }}>Date</th>
+                    <th style={{ padding: "3px 6px", borderRight: "1px solid #000" }}>ReceiptNo</th>
+                    <th style={{ padding: "3px 6px", borderRight: "1px solid #000" }}>Rec / Ref</th>
+                    <th style={{ padding: "3px 6px", borderRight: "1px solid #000" }}>Settlement Mode</th>
+                    <th style={{ padding: "3px 6px", textAlign: "right" }}>Receipt Amount</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
-                    <td style={{ padding: "8px 12px" }}>
-                      {selectedInvoice.description || "Room Accommodation Tariff & Guest Services"}
-                    </td>
-                    <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 600 }}>
-                      {formatInvoiceCurrency(selectedInvoice.taxableAmount)}
-                    </td>
-                  </tr>
-                  <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
-                    <td style={{ padding: "8px 12px", color: "#64748b" }}>CGST ({HOTEL_ACCOMMODATION_CGST_RATE}%)</td>
-                    <td style={{ padding: "8px 12px", textAlign: "right", color: "#64748b" }}>
-                      {formatInvoiceCurrency(selectedInvoice.cgst)}
-                    </td>
-                  </tr>
-                  <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
-                    <td style={{ padding: "8px 12px", color: "#64748b" }}>SGST ({HOTEL_ACCOMMODATION_SGST_RATE}%)</td>
-                    <td style={{ padding: "8px 12px", textAlign: "right", color: "#64748b" }}>
-                      {formatInvoiceCurrency(selectedInvoice.sgst)}
-                    </td>
-                  </tr>
-                  <tr style={{ background: "#f8fafc", fontWeight: 800 }}>
-                    <td style={{ padding: "10px 12px", fontSize: "13px" }}>Total Payable Amount</td>
-                    <td style={{ padding: "10px 12px", textAlign: "right", fontSize: "16px", color: "#0071e3" }}>
-                      {formatInvoiceCurrency(selectedInvoice.amount)}
-                    </td>
+                  <tr>
+                    <td style={{ padding: "3px 6px", borderRight: "1px solid #000" }}>{formatDate(selectedInvoice.date, "dd/MM/yyyy")}</td>
+                    <td style={{ padding: "3px 6px", borderRight: "1px solid #000" }}>R2444</td>
+                    <td style={{ padding: "3px 6px", borderRight: "1px solid #000" }}>Receipt</td>
+                    <td style={{ padding: "3px 6px", borderRight: "1px solid #000" }}>UPI</td>
+                    <td style={{ padding: "3px 6px", textAlign: "right" }}>{selectedInvoice.amount?.toFixed(2)}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", fontSize: "11px", color: "#64748b", marginBottom: "16px" }}>
-              <div>
-                <div>Thank you for staying at Hotel Shemron Neemrana!</div>
-                <div>{HOTEL_ACCOMMODATION_GST_RATE}% GST included without ITC · SAC 9963.</div>
+            {/* Footer and Signatures */}
+            <div style={{ fontSize: "11px", marginTop: "14px" }}>
+              <div style={{ fontWeight: 600, marginBottom: "26px" }}>Please make Cheque in favour of HOTEL SHEMRON</div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                <div>( Guest Signature )</div>
+                <div style={{ textAlign: "right" }}>
+                  <div>For HOTEL SHEMRON</div>
+                  <div style={{ marginTop: "20px" }}>Authorised Signatory</div>
+                </div>
               </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ borderBottom: "1px solid #000", width: "120px", marginBottom: "4px" }}></div>
-                <div>Authorized Signatory</div>
-              </div>
+              <div style={{ textAlign: "right", marginTop: "8px", fontSize: "10px", color: "#666" }}>Page 1 of 1</div>
             </div>
 
-            <div className="flex items-center justify-end gap-2" style={{ borderTop: "1px solid #e2e8f0", paddingTop: "12px" }}>
+            <div className="flex items-center justify-end gap-2 no-print" style={{ borderTop: "1px solid #e2e8f0", paddingTop: "14px", marginTop: "14px" }}>
               <button type="button" className="btn btn-secondary" onClick={() => setSelectedInvoice(null)}>
                 Close
               </button>

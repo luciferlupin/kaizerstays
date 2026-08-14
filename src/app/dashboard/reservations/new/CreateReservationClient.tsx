@@ -38,14 +38,22 @@ export default function CreateReservationClient() {
 
   const [bookingSource, setBookingSource] = useState<string>("DIRECT");
   const [paymentMethod, setPaymentMethod] = useState<string>("UPI");
-  const [depositAmount, setDepositAmount] = useState<number>(0);
+  const [depositAmount, setDepositAmount] = useState<number | string>(0);
+  const [mealPlan, setMealPlan] = useState<"EP" | "CP">("EP");
   const [notes, setNotes] = useState<string>("");
+  const [isCorporate, setIsCorporate] = useState<boolean>(false);
+  const [companyName, setCompanyName] = useState<string>("");
+  const [companyContact, setCompanyContact] = useState<string>("");
+  const [companyGstin, setCompanyGstin] = useState<string>("");
+  const [companyAddress, setCompanyAddress] = useState<string>("");
   const [createdResId, setCreatedResId] = useState<string>("");
 
   const selectedRoomType = roomTypes.find((rt) => rt.id === selectedRoomTypeId) || roomTypes[0];
   const nights = calculateNights(new Date(checkIn), new Date(checkOut));
   const stayRate = getAverageRateForStay(selectedRoomType.id, checkIn, checkOut, selectedRoomType.baseRate);
-  const pricing = calculateRoomCharges(stayRate.averageRate, nights);
+  const breakfastSupplement = selectedRoomTypeId === "suite-room" ? 700 : 500;
+  const effectiveNightlyRate = mealPlan === "CP" ? stayRate.averageRate + breakfastSupplement : stayRate.averageRate;
+  const pricing = calculateRoomCharges(effectiveNightlyRate, nights);
   const datesValid = Boolean(checkIn && checkOut && new Date(checkOut) > new Date(checkIn));
   const stayAllowed = datesValid && stayRate.blockedDates.length === 0 && nights >= stayRate.minStay;
 
@@ -78,20 +86,25 @@ export default function CreateReservationClient() {
       checkOut: new Date(checkOut),
       nights,
       roomNumber: effectiveSelectedRoomNumber,
-      roomType: selectedRoomType.name,
+      roomType: `${selectedRoomType.name} (${mealPlan})`,
       adults,
       children,
       bookingSource,
-      roomRate: selectedRoomType.baseRate,
+      roomRate: effectiveNightlyRate,
       totalAmount: pricing.total,
       taxAmount: pricing.tax,
-      paidAmount: depositAmount,
-      balanceAmount: Math.max(0, pricing.total - depositAmount),
+      paidAmount: Number(depositAmount) || 0,
+      balanceAmount: Math.max(0, pricing.total - (Number(depositAmount) || 0)),
       guestEmail: email.trim(),
       guestPhone: phone.trim(),
       guestIdType: idType,
       guestIdNumber: idNumber.trim(),
-      notes: notes.trim(),
+      notes: `Meal Plan: ${mealPlan === "CP" ? "CP (Continental Plan - With Breakfast)" : "EP (European Plan - Without Breakfast / Room Only)"}.${isCorporate && companyName ? ` Company: ${companyName}` : ""} ${notes.trim()}`,
+      isCorporate,
+      companyName: isCorporate ? companyName.trim() : undefined,
+      companyContact: isCorporate ? companyContact.trim() : undefined,
+      companyGstin: isCorporate ? companyGstin.trim() : undefined,
+      companyAddress: isCorporate ? companyAddress.trim() : undefined,
     });
 
     setCreatedResId(newRes.id);
@@ -208,6 +221,46 @@ export default function CreateReservationClient() {
             ))}
           </div>
 
+          {/* Rate Plan Selection (EP vs CP) */}
+          <div style={{ marginBottom: "20px" }}>
+            <label className="form-label font-semibold text-xs text-secondary" style={{ textTransform: "uppercase", letterSpacing: "0.05em" }}>Select Rate Plan (EP vs CP)</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "6px" }}>
+              <button
+                type="button"
+                onClick={() => setMealPlan("EP")}
+                style={{
+                  padding: "14px 16px",
+                  borderRadius: "var(--radius-md)",
+                  border: mealPlan === "EP" ? "2px solid var(--color-primary)" : "1px solid var(--color-border)",
+                  background: mealPlan === "EP" ? "var(--color-primary-light)" : "white",
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                <div style={{ fontWeight: 800, fontSize: "14px", color: "#0f172a" }}>EP — European Plan</div>
+                <div style={{ fontSize: "12px", color: "var(--color-text-secondary)", marginTop: "2px" }}>Without Breakfast (Room Only)</div>
+                <div className="mono font-bold text-primary" style={{ marginTop: "6px", fontSize: "15px" }}>{formatCurrency(stayRate.averageRate)} / night</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMealPlan("CP")}
+                style={{
+                  padding: "14px 16px",
+                  borderRadius: "var(--radius-md)",
+                  border: mealPlan === "CP" ? "2px solid var(--color-primary)" : "1px solid var(--color-border)",
+                  background: mealPlan === "CP" ? "var(--color-primary-light)" : "white",
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                <div style={{ fontWeight: 800, fontSize: "14px", color: "#0f172a" }}>CP — Continental Plan</div>
+                <div style={{ fontSize: "12px", color: "var(--color-text-secondary)", marginTop: "2px" }}>With Breakfast Included</div>
+                <div className="mono font-bold text-primary" style={{ marginTop: "6px", fontSize: "15px" }}>{formatCurrency(stayRate.averageRate + (selectedRoomTypeId === "suite-room" ? 700 : 500))} / night</div>
+              </button>
+            </div>
+          </div>
+
           <div className="form-group">
             <label className="form-label">Assign Specific Room Number</label>
             <select className="form-select" value={effectiveSelectedRoomNumber} onChange={(e) => setSelectedRoomNumber(e.target.value)}>
@@ -265,6 +318,74 @@ export default function CreateReservationClient() {
               <input type="tel" className="form-input" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </div>
           </div>
+
+          {/* Corporate / Company Booking Option */}
+          <div style={{ marginTop: "20px", paddingTop: "16px", borderTop: "1px solid var(--color-border)" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", fontWeight: 700, fontSize: "14px", color: "var(--color-text-primary)" }}>
+              <input
+                type="checkbox"
+                checked={isCorporate}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setIsCorporate(checked);
+                  if (checked && bookingSource !== "CORPORATE") {
+                    setBookingSource("CORPORATE");
+                  }
+                }}
+              />
+              Guest is from a Company / Corporate Account
+            </label>
+
+            {isCorporate && (
+              <div style={{ marginTop: "16px", padding: "18px", background: "var(--color-bg-tertiary)", borderRadius: "var(--radius-md)", display: "flex", flexDirection: "column", gap: "14px", border: "1px solid var(--color-border)" }}>
+                <h4 style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>Company / Corporate Details</h4>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Company Name *</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. Tata Consultancy Services Ltd."
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Contact Person Name</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. Ramesh Kumar (HR Manager)"
+                      value={companyContact}
+                      onChange={(e) => setCompanyContact(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Company GSTIN</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. 08AAAAA0000A1Z5"
+                      value={companyGstin}
+                      onChange={(e) => setCompanyGstin(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Company Billing Address</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. Cyber City, Phase-2, Gurugram"
+                      value={companyAddress}
+                      onChange={(e) => setCompanyAddress(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px" }}>
             <button className="btn btn-secondary" onClick={() => setStep(2)}><ArrowLeft size={16} /> Back</button>
             <button className="btn btn-primary" onClick={() => setStep(4)} disabled={!firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim()}>Next: Source & Notes <ArrowRight size={16} /></button>
@@ -310,15 +431,32 @@ export default function CreateReservationClient() {
           </div>
           <div className="form-group">
             <label className="form-label">Advance Deposit Collected (₹)</label>
-            <input type="number" className="form-input" min={0} max={pricing.total} value={depositAmount} onChange={(e) => setDepositAmount(Math.min(pricing.total, Math.max(0, Number(e.target.value))))} />
+            <input
+              type="number"
+              className="form-input"
+              min={0}
+              max={pricing.total}
+              value={depositAmount === 0 ? "" : depositAmount}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "") {
+                  setDepositAmount("");
+                } else {
+                  setDepositAmount(Math.min(pricing.total, Math.max(0, Number(val))));
+                }
+              }}
+              placeholder="0"
+            />
           </div>
           <div className="form-group">
             <label className="form-label">Payment Method</label>
             <select className="form-select" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-              <option value="UPI">UPI</option>
+              <option value="UPI">UPI / PhonePe / GPay</option>
               <option value="CASH">Cash</option>
               <option value="CREDIT_CARD">Credit Card</option>
               <option value="BANK_TRANSFER">Bank Transfer</option>
+              <option value="OTA_COLLECT">OTA Collect (Pre-paid via OTA)</option>
+              <option value="BTC">BTC (Bill To Company / Credit)</option>
             </select>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px" }}>
