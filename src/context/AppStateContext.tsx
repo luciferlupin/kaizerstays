@@ -140,6 +140,7 @@ interface AppStateContextType {
   importOTAReservations: (records: NormalizedOTAReservation[]) => OTAReservationImportSummary;
   updateRoomRatesAndInventory: (rates: Record<string, number>, inventory?: Record<string, number>) => void;
   checkInGuest: (reservationId: string, roomNumber: string) => void;
+  undoCheckIn: (reservationId: string) => void;
   markReservationAsPrepaid: (reservationId: string) => void;
   checkOutGuest: (reservationId: string) => void;
   cancelReservation: (reservationId: string) => void;

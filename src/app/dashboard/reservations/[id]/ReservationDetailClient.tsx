@@ -324,7 +324,7 @@ export default function ReservationDetailClient() {
                   </div>
                   <h3>Payment Recorded!</h3>
                   <p className="text-sm text-secondary" style={{ marginTop: "8px" }}>
-                    {formatCurrency(payAmount)} received via {payMethod}. Folio updated.
+                    {formatCurrency(Number(payAmount) || 0)} received via {payMethod}. Folio updated.
                   </p>
                 </div>
               ) : (
