@@ -126,7 +126,7 @@ import { useAppState } from "@/context/AppStateContext";
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, logoutUser } = useAppState();
+  const { currentUser, logoutUser, guestRequests, housekeepingTasks } = useAppState();
 
   const user = currentUser || {
     name: "Ninaad Khera",
@@ -204,6 +204,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             {group.items.map((item) => {
               const IconComponent = ICON_MAP[item.icon] || LayoutDashboard;
               const active = isActive(item.href);
+              const badgeCount =
+                item.href === "/dashboard/requests"
+                  ? guestRequests.filter((r) => r.status !== "COMPLETED").length
+                  : item.href === "/dashboard/housekeeping"
+                  ? housekeepingTasks.filter((t) => t.status !== "COMPLETED").length
+                  : item.badge;
               return (
                 <Link
                   key={item.href}
@@ -213,8 +219,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 >
                   <IconComponent className="sidebar-link-icon" size={18} />
                   <span>{item.label}</span>
-                  {item.badge ? (
-                    <span className="sidebar-link-badge">{item.badge}</span>
+                  {badgeCount ? (
+                    <span className="sidebar-link-badge">{badgeCount}</span>
                   ) : null}
                 </Link>
               );

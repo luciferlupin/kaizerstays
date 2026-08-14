@@ -221,6 +221,7 @@ export default function RequestsClient() {
             <input
               type="text"
               className="form-control search-input text-xs"
+              aria-label="Search guest service requests"
               placeholder="Search room, guest, or item..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}

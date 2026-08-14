@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { demoReservations } from "@/lib/demo-data";
 import { prisma } from "@/lib/prisma";
+import { calculateInclusiveHotelGST } from "@/lib/gst";
 
 export async function GET() {
   try {
@@ -30,6 +31,14 @@ export async function POST(req: Request) {
     const isPlaceholder = process.env.DATABASE_URL?.includes("placeholder");
 
     const confNo = `KZ-SHM-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const nights = Math.max(1, Number(body.nights) || 1);
+    const roomRate = Math.max(0, Number(body.roomRate) || 2800);
+    const totalAmount = Math.max(
+      0,
+      Number(body.totalAmount ?? roomRate * nights)
+    );
+    const gst = calculateInclusiveHotelGST(totalAmount);
+    const paidAmount = Math.max(0, Number(body.paidAmount) || 0);
 
     const newRes = {
       id: `res_${Date.now()}`,
@@ -39,17 +48,17 @@ export async function POST(req: Request) {
       status: "CONFIRMED",
       checkIn: body.checkIn || new Date().toISOString(),
       checkOut: body.checkOut || new Date().toISOString(),
-      nights: body.nights || 2,
+      nights,
       roomNumber: body.roomNumber || "301",
       roomType: body.roomType || "Deluxe Room",
       adults: body.adults || 2,
       children: body.children || 0,
       bookingSource: body.bookingSource || "DIRECT",
-      roomRate: body.roomRate || 5500,
-      totalAmount: body.totalAmount || 12320,
-      taxAmount: body.taxAmount || 1320,
-      paidAmount: body.paidAmount || 5000,
-      balanceAmount: body.balanceAmount || 7320,
+      roomRate,
+      totalAmount: gst.totalInclusive,
+      taxAmount: gst.totalTax,
+      paidAmount,
+      balanceAmount: Math.max(0, gst.totalInclusive - paidAmount),
       createdAt: new Date().toISOString(),
     };
 

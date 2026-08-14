@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { demoRoomTypes, demoProperty } from "@/lib/demo-data";
 import { formatCurrency, formatDate, getToday } from "@/lib/utils";
+import {
+  HOTEL_ACCOMMODATION_GST_RATE,
+  calculateInclusiveHotelGST,
+  roundMoney,
+} from "@/lib/gst";
 import { useAppState } from "@/context/AppStateContext";
 import { PromoCode, promoCodes } from "@/lib/channels-data";
 import { getAverageRateForStay, getDateKeys, getRestrictionKey, loadRateRestrictions, toDateKey } from "@/lib/rates";
@@ -73,10 +78,7 @@ export default function BookingClient() {
     const availableRooms = getAvailableRoomsForStay(selectedRoom.id);
     const roomNumber = availableRooms[0]?.number;
     if (!roomNumber) return;
-    const stayRate = getAverageRateForStay(selectedRoom.id, checkIn, checkOut, selectedRoom.baseRate);
-    const total = getFinalTotal(selectedRoom);
-    const subtotalAfterDiscount = Math.round(total / 1.12);
-    const tax = total - subtotalAfterDiscount;
+    const pricing = getRoomPricingDetails(selectedRoom);
     const booking = addReservation({
       guestId: `guest_web_${guestEmail.trim().toLowerCase()}`,
       guestName: guestName.trim(),
@@ -91,11 +93,11 @@ export default function BookingClient() {
       adults,
       children: 0,
       bookingSource: "WEBSITE",
-      roomRate: stayRate.averageRate,
-      totalAmount: total,
-      taxAmount: tax,
+      roomRate: pricing.nightlyRate,
+      totalAmount: pricing.totalInclusive,
+      taxAmount: pricing.gstTax,
       paidAmount: 0,
-      balanceAmount: total,
+      balanceAmount: pricing.totalInclusive,
       notes: activePromo ? `Direct booking promo: ${activePromo.code}` : "Direct website booking",
     });
     setConfirmationNo(booking.confirmationNumber);
@@ -104,30 +106,69 @@ export default function BookingClient() {
   };
 
   const getAvailableRoomsForStay = (roomTypeId: string) => {
-    if (!nights) return [];
+    if (!nights || nights <= 0) return [];
     const requestedStart = new Date(`${checkIn}T12:00:00`);
     const requestedEnd = new Date(`${checkOut}T12:00:00`);
     const restrictions = loadRateRestrictions();
     const dateKeys = getDateKeys(checkIn, checkOut);
-    if (dateKeys.some((date) => restrictions[getRestrictionKey(roomTypeId, date)]?.stopSell)) return [];
-    const physical = rooms.filter((room) => {
-      if (room.roomTypeId !== roomTypeId || !room.isActive || ["OCCUPIED", "MAINTENANCE", "OUT_OF_SERVICE"].includes(room.status)) return false;
-      return !reservations.some((reservation) => reservation.roomNumber === room.number && !["CANCELLED", "CHECKED_OUT"].includes(reservation.status) && requestedStart < new Date(reservation.checkOut) && requestedEnd > new Date(reservation.checkIn));
-    });
-    const caps = dateKeys.map((date) => restrictions[getRestrictionKey(roomTypeId, date)]?.availabilityCap).filter((cap): cap is number => typeof cap === "number");
+
+    if (dateKeys.some((date) => restrictions[getRestrictionKey(roomTypeId, date)]?.stopSell)) {
+      return [];
+    }
+
+    const physical = rooms.filter(
+      (room) => room.roomTypeId === roomTypeId && room.isActive && !["MAINTENANCE", "OUT_OF_SERVICE"].includes(room.status)
+    );
+
+    const activeBookingsCount = reservations.filter((res) => {
+      if (["CANCELLED", "CHECKED_OUT"].includes(res.status)) return false;
+      const cIn = new Date(res.checkIn);
+      const cOut = new Date(res.checkOut);
+      if (requestedStart >= cOut || requestedEnd <= cIn) return false;
+
+      if (res.roomNumber) {
+        const assignedRoom = rooms.find((r) => r.number === res.roomNumber);
+        if (assignedRoom) return assignedRoom.roomTypeId === roomTypeId;
+      }
+      const rtStr = (res.roomType || "").toLowerCase();
+      if (roomTypeId === "twin-room") return rtStr.includes("twin");
+      if (roomTypeId === "suite-room") return rtStr.includes("suite");
+      return rtStr.includes("deluxe") || (!rtStr.includes("twin") && !rtStr.includes("suite"));
+    }).length;
+
+    const caps = dateKeys
+      .map((date) => restrictions[getRestrictionKey(roomTypeId, date)]?.availabilityCap)
+      .filter((cap): cap is number => typeof cap === "number");
+
     const cap = caps.length ? Math.min(...caps) : physical.length;
-    return physical.slice(0, Math.max(0, cap));
+    const netAvailable = Math.max(0, Math.min(cap, physical.length - activeBookingsCount));
+    return physical.slice(0, netAvailable);
   };
 
-  const getFinalTotal = (roomType: typeof demoRoomTypes[0]) => {
-    const stayRate = getAverageRateForStay(roomType.id, checkIn, checkOut, roomType.baseRate);
-    const subtotal = stayRate.averageRate * nights;
+  const getRoomPricingDetails = (roomType: typeof demoRoomTypes[0]) => {
+    const pmsType = roomTypes.find((r) => r.id === roomType.id || r.code === roomType.code);
+    const liveBaseRate = pmsType?.baseRate || roomType.baseRate;
+    const stayRateInfo = getAverageRateForStay(roomType.id, checkIn, checkOut, liveBaseRate);
+    const nightlyRate = stayRateInfo.averageRate;
+    const baseSubtotal = nightlyRate * Math.max(1, nights);
+
     const discount = activePromo?.discountType === "PERCENTAGE"
-      ? Math.round(subtotal * (activePromo.discountValue / 100))
-      : Math.min(subtotal, activePromo?.discountValue || 0);
-    const taxable = subtotal - discount;
-    const tax = Math.round(taxable * 0.12);
-    return taxable + tax;
+      ? Math.round(baseSubtotal * (activePromo.discountValue / 100))
+      : Math.min(baseSubtotal, activePromo?.discountValue || 0);
+
+    const discountedSubtotal = Math.max(0, baseSubtotal - discount);
+    const gstTax = Math.round(discountedSubtotal * 0.12);
+    const totalInclusive = discountedSubtotal + gstTax;
+
+    return {
+      nightlyRate,
+      baseSubtotal,
+      discount,
+      discountedSubtotal,
+      gstTax,
+      totalInclusive,
+      minStay: stayRateInfo.minStay,
+    };
   };
 
   return (
@@ -224,13 +265,16 @@ export default function BookingClient() {
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             <h2 style={{ fontSize: "20px", fontWeight: 800 }}>Select Available Room Categories ({nights} Nights)</h2>
             {roomTypes.map((rt) => {
-              const total = getFinalTotal(rt);
-              const availability = getAvailableRoomsForStay(rt.id).length;
-              const stayRate = getAverageRateForStay(rt.id, checkIn, checkOut, rt.baseRate);
+              const pricing = getRoomPricingDetails(rt);
+              const availableRooms = getAvailableRoomsForStay(rt.id);
+              const availability = availableRooms.length;
               return (
-                <div key={rt.id} className="card" style={{ padding: "24px", display: "grid", gridTemplateColumns: "1fr 220px", gap: "20px", alignItems: "center" }}>
+                <div key={rt.id} className="card" style={{ padding: "24px", display: "grid", gridTemplateColumns: "1fr 240px", gap: "20px", alignItems: "center" }}>
                   <div>
-                    <h3 style={{ fontSize: "18px", fontWeight: 800 }}>{rt.name} ({rt.code})</h3>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <h3 style={{ fontSize: "18px", fontWeight: 800 }}>{rt.name}</h3>
+                      <span className="badge badge-primary">{rt.code}</span>
+                    </div>
                     <p className="text-sm text-secondary" style={{ margin: "6px 0 12px" }}>
                       {rt.description} • {rt.beds} • {rt.size}
                     </p>
@@ -242,16 +286,34 @@ export default function BookingClient() {
                   </div>
 
                   <div style={{ textAlign: "right", borderLeft: "1px solid var(--color-border-subtle)", paddingLeft: "20px" }}>
-                    <div className="text-xs text-tertiary">Total for {nights} Nights</div>
-                    <div className="mono font-bold text-primary" style={{ fontSize: "22px", margin: "4px 0" }}>
-                      {formatCurrency(total)}
+                    <div className="text-xs text-secondary font-semibold">
+                      {formatCurrency(pricing.nightlyRate)} <span className="text-tertiary">/ night</span>
                     </div>
-                    <div className={`text-xs font-semibold ${availability ? "text-success" : "text-danger"}`}>{availability ? `${availability} room${availability === 1 ? "" : "s"} available` : "Sold out or stop-sold"}</div>
+                    <div className="mono font-bold text-primary" style={{ fontSize: "22px", margin: "4px 0" }}>
+                      {formatCurrency(pricing.totalInclusive)}
+                    </div>
+                    <div className="text-xs text-tertiary" style={{ marginBottom: "6px" }}>
+                      Total for {nights} Night{nights > 1 ? "s" : ""} (incl. 12% GST)
+                    </div>
+                    <div className={`text-xs font-semibold ${availability ? "text-success" : "text-danger"}`}>
+                      {availability ? `${availability} room${availability === 1 ? "" : "s"} available` : "Sold out or stop-sold"}
+                    </div>
                     {activePromo && (
-                      <div className="text-xs text-success font-semibold">Includes promo discount</div>
+                      <div className="text-xs text-success font-semibold" style={{ marginTop: "2px" }}>
+                        Includes promo discount (-{formatCurrency(pricing.discount)})
+                      </div>
                     )}
-                    {nights < stayRate.minStay && <div className="text-xs text-warning">Minimum stay: {stayRate.minStay} nights</div>}
-                    <button className="btn btn-primary w-full" style={{ marginTop: "12px" }} onClick={() => handleSelectRoom(rt)} disabled={!availability || !nights || nights < stayRate.minStay}>
+                    {nights < pricing.minStay && (
+                      <div className="text-xs text-warning" style={{ marginTop: "2px" }}>
+                        Min stay: {pricing.minStay} nights
+                      </div>
+                    )}
+                    <button
+                      className="btn btn-primary w-full"
+                      style={{ marginTop: "12px" }}
+                      onClick={() => handleSelectRoom(rt)}
+                      disabled={!availability || !nights || nights < pricing.minStay}
+                    >
                       Book This Room
                     </button>
                   </div>
@@ -274,34 +336,53 @@ export default function BookingClient() {
                 Booking {selectedRoom.name} for {nights} nights at Hotel Shemron Neemrana.
               </p>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <div className="form-group">
-                  <label className="form-label">Full Name *</label>
-                  <input type="text" className="form-input" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="e.g. Rajesh Sharma" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Email Address *</label>
-                  <input type="email" className="form-input" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} placeholder="rajesh@example.com" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Mobile Number *</label>
-                  <input type="tel" className="form-input" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} placeholder="+91 98100 45678" />
-                </div>
+              {(() => {
+                const pricing = getRoomPricingDetails(selectedRoom);
+                return (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    <div className="form-group">
+                      <label className="form-label">Full Name *</label>
+                      <input type="text" className="form-input" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="e.g. Rajesh Sharma" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Email Address *</label>
+                      <input type="email" className="form-input" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} placeholder="rajesh@example.com" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Mobile Number *</label>
+                      <input type="tel" className="form-input" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} placeholder="+91 98100 45678" />
+                    </div>
 
-                <div style={{ background: "var(--color-bg-tertiary)", padding: "16px", borderRadius: "var(--radius-md)", margin: "8px 0" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", fontWeight: 700 }}>
-                    <span>Total Payable Amount</span>
-                    <span className="mono text-primary">{formatCurrency(getFinalTotal(selectedRoom))}</span>
+                    <div style={{ background: "var(--color-bg-tertiary)", padding: "16px", borderRadius: "var(--radius-md)", margin: "8px 0" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", marginBottom: "6px" }}>
+                        <span className="text-secondary">Base Rate ({nights} Nights @ {formatCurrency(pricing.nightlyRate)}/n)</span>
+                        <span className="mono font-semibold">{formatCurrency(pricing.baseSubtotal)}</span>
+                      </div>
+                      {pricing.discount > 0 && (
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "var(--green-600)", marginBottom: "6px" }}>
+                          <span>Promo Discount ({activePromo?.code})</span>
+                          <span className="mono font-semibold">-{formatCurrency(pricing.discount)}</span>
+                        </div>
+                      )}
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", marginBottom: "8px" }}>
+                        <span className="text-secondary">Hotel Accommodation GST (12%)</span>
+                        <span className="mono font-semibold">{formatCurrency(pricing.gstTax)}</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "15px", fontWeight: 800, paddingTop: "8px", borderTop: "1px solid var(--color-border-subtle)" }}>
+                        <span>Total Payable Amount</span>
+                        <span className="mono text-primary">{formatCurrency(pricing.totalInclusive)}</span>
+                      </div>
+                      <span className="text-xs text-secondary" style={{ marginTop: "6px", display: "block" }}>
+                        No advance payment needed; pay at hotel during check-in.
+                      </span>
+                    </div>
+
+                    <button className="btn btn-success w-full" onClick={handleCompleteBooking} disabled={!guestName.trim() || !guestEmail.trim() || !guestPhone.trim()}>
+                      <ShieldCheck size={18} /> Confirm Reservation Now
+                    </button>
                   </div>
-                  <span className="text-xs text-secondary" style={{ marginTop: "4px", display: "block" }}>
-                    No advance payment needed. Pay at hotel during check-in.
-                  </span>
-                </div>
-
-                <button className="btn btn-success w-full" onClick={handleCompleteBooking} disabled={!guestName.trim() || !guestEmail.trim() || !guestPhone.trim()}>
-                  <ShieldCheck size={18} /> Confirm Reservation Now
-                </button>
-              </div>
+                );
+              })()}
             </div>
           </div>
         )}
@@ -318,24 +399,29 @@ export default function BookingClient() {
               Thank you, {guestName}! Your booking at Hotel Shemron Neemrana is active.
             </p>
 
-            <div style={{ background: "var(--color-bg-tertiary)", padding: "20px", borderRadius: "var(--radius-md)", margin: "24px 0", textAlign: "left" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                <span className="text-xs text-tertiary">Confirmation No.</span>
-                <span className="mono font-bold text-primary">{confirmationNo}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                <span className="text-xs text-tertiary">Room Reserved</span>
-                <span className="font-semibold">{selectedRoom.name} · Room #{assignedRoomNumber}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                <span className="text-xs text-tertiary">Check-In Date</span>
-                <span className="font-semibold">{formatDate(new Date(`${checkIn}T12:00:00`), "dd MMM yyyy")}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span className="text-xs text-tertiary">Total Amount</span>
-                <span className="mono font-bold text-success">{formatCurrency(getFinalTotal(selectedRoom))}</span>
-              </div>
-            </div>
+            {(() => {
+              const pricing = getRoomPricingDetails(selectedRoom);
+              return (
+                <div style={{ background: "var(--color-bg-tertiary)", padding: "20px", borderRadius: "var(--radius-md)", margin: "24px 0", textAlign: "left" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                    <span className="text-xs text-tertiary">Confirmation No.</span>
+                    <span className="mono font-bold text-primary">{confirmationNo}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                    <span className="text-xs text-tertiary">Room Reserved</span>
+                    <span className="font-semibold">{selectedRoom.name} · Room #{assignedRoomNumber}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                    <span className="text-xs text-tertiary">Check-In Date</span>
+                    <span className="font-semibold">{formatDate(new Date(`${checkIn}T12:00:00`), "dd MMM yyyy")}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span className="text-xs text-tertiary">Total Amount</span>
+                    <span className="mono font-bold text-success">{formatCurrency(pricing.totalInclusive)}</span>
+                  </div>
+                </div>
+              );
+            })()}
 
             <p className="text-xs text-tertiary">The reservation is saved in KaizerStays and visible to the front desk. Automated SMS, WhatsApp and email delivery are not connected yet.</p>
           </div>

@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { useAppState } from "@/context/AppStateContext";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+import {
+  HOTEL_ACCOMMODATION_CGST_RATE,
+  HOTEL_ACCOMMODATION_GST_RATE,
+  HOTEL_ACCOMMODATION_SGST_RATE,
+  calculateInclusiveHotelGST,
+} from "@/lib/gst";
 import {
   ClipboardList,
   Download,
@@ -11,16 +17,12 @@ import {
   Loader2,
   TrendingUp,
   Receipt,
-  Building,
-  ShieldCheck,
-  FileText,
   Calendar,
   Clock,
-  Filter,
 } from "lucide-react";
 
 export default function ReportsClient() {
-  const { property, reservations, payments, expenses, rooms } = useAppState();
+  const { property, reservations } = useAppState();
   const [downloading, setDownloading] = useState<string | null>(null);
   const [downloaded, setDownloaded] = useState<string[]>([]);
   const [activeReportTab, setActiveReportTab] = useState<"all" | "gst" | "financial" | "operations">("all");
@@ -29,8 +31,8 @@ export default function ReportsClient() {
   const [endDate, setEndDate] = useState("2026-08-08");
 
   const reportsList = [
-    { id: "r1", title: "GSTR-1 Sales & Tax Invoice Register (SAC 9963)", desc: "B2B invoices with GSTIN, B2C summary, 12% & 18% GST tax breakdown for filing", type: "Tax & Compliance", category: "gst", timing: "MONTH" },
-    { id: "r2", title: "GSTR-3B Monthly Tax Liability & Input Credit (ITC)", desc: "Summary of output tax collected on room charges and input tax credit on purchases", type: "Tax & Compliance", category: "gst", timing: "MONTH" },
+    { id: "r1", title: "GSTR-1 Sales & Tax Invoice Register (SAC 9963)", desc: `${HOTEL_ACCOMMODATION_GST_RATE}% hotel accommodation GST register with CGST ${HOTEL_ACCOMMODATION_CGST_RATE}% and SGST ${HOTEL_ACCOMMODATION_SGST_RATE}%`, type: "Tax & Compliance", category: "gst", timing: "MONTH" },
+    { id: "r2", title: "GSTR-3B Monthly Tax Liability", desc: "Summary of GST included in room accommodation revenue; the 5% accommodation rate is without ITC", type: "Tax & Compliance", category: "gst", timing: "MONTH" },
     { id: "r3", title: "Shift Handover & Front Desk Cashier Register", desc: "Front desk shift balance, physical cash in drawer, UPI settlements & shift log", type: "Operations", category: "operations", timing: "TODAY" },
     { id: "r4", title: "Daily Manager's Flash Report & P&L Closeout", desc: "Detailed breakdown of daily cash, UPI, card, room charges, F&B revenue, and daily P&L", type: "Financial", category: "financial", timing: "YESTERDAY" },
     { id: "r5", title: "RevPAR, ADR & TrevPAR Performance Matrix", desc: "Room occupancy rates, RevPAR (Revenue Per Available Room), ADR, and TrevPAR", type: "Financial", category: "financial", timing: "WEEK" },
@@ -52,8 +54,25 @@ export default function ReportsClient() {
       const dateStr = formatDate(new Date(), "yyyy-MM-dd");
 
       if (id === "r1") {
-        csvContent = `GSTIN,Invoice Number,Invoice Date,Guest Name,Room Rate,Taxable Value,CGST (6%/9%),SGST (6%/9%),Total Amount\n`;
-        csvContent += `08AABCT1332L1ZR,INV-2026-0001,${dateStr},"Anand Verma",5500,5500,330,330,6160\n`;
+        csvContent = `GSTIN,Confirmation Number,Invoice Date,Guest Name,Room Rate (GST Inclusive),Taxable Value,CGST (${HOTEL_ACCOMMODATION_CGST_RATE}%),SGST (${HOTEL_ACCOMMODATION_SGST_RATE}%),Total Amount\n`;
+        csvContent += reservations
+          .filter((reservation) => reservation.status !== "CANCELLED")
+          .map((reservation) => {
+            const gst = calculateInclusiveHotelGST(reservation.totalAmount);
+            return [
+              property.gstin,
+              reservation.confirmationNumber,
+              formatDate(reservation.checkIn, "yyyy-MM-dd"),
+              `"${reservation.guestName.replaceAll('"', '""')}"`,
+              reservation.roomRate,
+              gst.taxableValue,
+              gst.cgst,
+              gst.sgst,
+              gst.totalInclusive,
+            ].join(",");
+          })
+          .join("\n");
+        if (reservations.length) csvContent += "\n";
       } else if (id === "r3") {
         csvContent = `Shift Date,Auditor,Opening Balance,Cash Collected,UPI Received,Card Payments,Closing Drawer Cash,Discrepancies\n`;
         csvContent += `${dateStr},"Ninaad Khera (GM)",10000,35000,125000,36700,45000,0\n`;
@@ -97,7 +116,7 @@ export default function ReportsClient() {
         <div>
           <h1 className="page-title">Operational, GST & Financial Reports</h1>
           <p className="page-description">
-            StayFlexi-grade GST filing registers, Manager's Flash Reports, GSTR-1, GSTR-3B, RevPAR metrics, and timing-specific audit statements.
+            StayFlexi-grade GST filing registers, Manager&apos;s Flash Reports, GSTR-1, GSTR-3B, RevPAR metrics, and timing-specific audit statements.
           </p>
         </div>
       </div>

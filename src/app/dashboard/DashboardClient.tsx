@@ -32,8 +32,12 @@ export default function DashboardClient() {
   const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
 
   const todayKey = toDateKey(new Date());
-  const arrivals = reservations.filter((r) => r.status === "CONFIRMED" && toDateKey(new Date(r.checkIn)) === todayKey);
-  const departures = reservations.filter((r) => r.status === "CHECKED_IN" && toDateKey(new Date(r.checkOut)) === todayKey);
+  const arrivals = reservations.filter(
+    (r) => r.status === "CONFIRMED" && toDateKey(new Date(r.checkIn)) <= todayKey
+  );
+  const departures = reservations.filter(
+    (r) => r.status === "CHECKED_IN" && toDateKey(new Date(r.checkOut)) <= todayKey
+  );
   const inHouseReservations = reservations.filter((r) => r.status === "CHECKED_IN");
   const inHouseGuestsCount = inHouseReservations.reduce((sum, r) => sum + r.adults + (r.children || 0), 0);
 

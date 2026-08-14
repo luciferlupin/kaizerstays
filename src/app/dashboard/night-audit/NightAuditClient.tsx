@@ -4,6 +4,10 @@ import { useState } from "react";
 import { NightAuditRecord } from "@/lib/channels-data";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
+  HOTEL_ACCOMMODATION_GST_RATE,
+  calculateInclusiveHotelGST,
+} from "@/lib/gst";
+import {
   Moon,
   Play,
   CheckCircle2,
@@ -37,7 +41,7 @@ export default function NightAuditClient() {
 
   const initialSteps: AuditStep[] = [
     { id: 1, name: "Verify Room Occupancy & Unassigned Arrivals", description: "Audit 43 rooms and verify checked-in guest folios", status: "idle" },
-    { id: 2, name: "Batch Post Room Tariffs & GST Taxes (SAC 9963)", description: "Batch post room tariffs & GST (12% / 18%) to guest folios", status: "idle" },
+    { id: 2, name: "Batch Post Room Tariffs & GST Taxes (SAC 9963)", description: `Batch post room tariffs with ${HOTEL_ACCOMMODATION_GST_RATE}% GST included in guest folios`, status: "idle" },
     { id: 3, name: "Reconcile Restaurant POS & Outlet Room Charges", description: "Consolidate KOT bills & room charges from F&B outlets", status: "idle" },
     { id: 4, name: "Assess Late Check-out Penalties & No-Show Auto-Cancels", description: "Process no-show fees & late checkout surcharges", status: "idle" },
     { id: 5, name: "Settle City Ledger & Corporate Credit Aging", description: "Reconcile direct billing corporate accounts & guest ledgers", status: "idle" },
@@ -48,7 +52,7 @@ export default function NightAuditClient() {
 
   const checkedInReservations = reservations.filter((reservation) => reservation.status === "CHECKED_IN");
   const pendingTariffs = checkedInReservations.reduce((total, reservation) => total + reservation.roomRate, 0);
-  const pendingTax = Math.round(pendingTariffs * 0.12);
+  const pendingTax = calculateInclusiveHotelGST(pendingTariffs).totalTax;
 
   const exportEODReport = (selectedRecord?: NightAuditRecord) => {
     const record = selectedRecord || auditResult || {
@@ -64,7 +68,7 @@ Auditor: ${selectedRecord?.runBy || currentUser?.name || "Hotel user"}
 === FINANCIAL SUMMARY ===
 Rooms Charged: ${record.roomsCharged}
 Total Revenue Posted: INR ${record.revenuePosted}
-GST Tax Collected (12%/18%): INR ${record.taxCollected}
+GST Tax Collected (${HOTEL_ACCOMMODATION_GST_RATE}% included): INR ${record.taxCollected}
 Open Guest Folios: ${record.openFolios}
 Record Status: AUDIT SNAPSHOT SAVED
 `;
@@ -188,9 +192,9 @@ Record Status: AUDIT SNAPSHOT SAVED
         </div>
 
         <div className="stat-card">
-          <span className="stat-card-label">GST Tax Liability (12%)</span>
+          <span className="stat-card-label">GST Tax Liability ({HOTEL_ACCOMMODATION_GST_RATE}% included)</span>
           <div className="stat-card-value text-warning">{formatCurrency(pendingTax)}</div>
-          <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>Calculated at 12%</span>
+          <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>Extracted from GST-inclusive room tariffs</span>
         </div>
 
         <div className="stat-card">

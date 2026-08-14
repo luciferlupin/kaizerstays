@@ -8,11 +8,14 @@ import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
-  Filter,
   Search,
   Plus,
-  Info,
+  Users,
+  CheckCircle,
+  Clock,
+  Bed,
 } from "lucide-react";
+import { getShemronRoomCategory } from "@/lib/demo-data";
 
 export default function CalendarClient() {
   const { rooms, reservations, roomTypes } = useAppState();
@@ -21,7 +24,9 @@ export default function CalendarClient() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [startDate, setStartDate] = useState<Date>(getToday());
 
-  // Generate date columns
+  const todayStr = getToday().toISOString().split("T")[0];
+
+  // Generate date columns based on viewDays
   const dateColumns: Date[] = [];
   for (let i = 0; i < viewDays; i++) {
     const d = new Date(startDate);
@@ -29,16 +34,16 @@ export default function CalendarClient() {
     dateColumns.push(d);
   }
 
-  // Shift dates
+  // Shift dates by viewDays
   const handlePrev = () => {
     const d = new Date(startDate);
-    d.setDate(startDate.getDate() - 7);
+    d.setDate(startDate.getDate() - viewDays);
     setStartDate(d);
   };
 
   const handleNext = () => {
     const d = new Date(startDate);
-    d.setDate(startDate.getDate() + 7);
+    d.setDate(startDate.getDate() + viewDays);
     setStartDate(d);
   };
 
@@ -59,6 +64,23 @@ export default function CalendarClient() {
     return true;
   });
 
+  // Calculate metrics for visible range
+  const startDateStr = dateColumns[0]?.toISOString().split("T")[0] || todayStr;
+  const endDateStr = dateColumns[dateColumns.length - 1]?.toISOString().split("T")[0] || todayStr;
+
+  const activeReservationsInRange = reservations.filter((r) => {
+    if (r.status === "CANCELLED") return false;
+    const cIn = new Date(r.checkIn).toISOString().split("T")[0];
+    const cOut = new Date(r.checkOut).toISOString().split("T")[0];
+    return cOut > startDateStr && cIn <= endDateStr;
+  });
+
+  const occupiedRoomNumbers = new Set(activeReservationsInRange.map((r) => r.roomNumber));
+  const totalRoomsCount = filteredRooms.length;
+  const occupiedRoomsCount = occupiedRoomNumbers.size;
+  const availableRoomsCount = Math.max(0, totalRoomsCount - occupiedRoomsCount);
+  const occupancyPercentage = totalRoomsCount > 0 ? Math.round((occupiedRoomsCount / totalRoomsCount) * 100) : 0;
+
   return (
     <div className="page-content">
       {/* Header */}
@@ -66,13 +88,107 @@ export default function CalendarClient() {
         <div>
           <h1 className="page-title">Reservation Calendar & Tape Chart</h1>
           <p className="page-description">
-            Interactive room allocation grid across all 50 rooms at Hotel Shemron.
+            Interactive room allocation grid across all 32 physical rooms at Hotel Shemron Neemrana ({viewDays}-Day View).
           </p>
         </div>
         <div className="page-actions">
           <Link href="/dashboard/reservations/new" className="btn btn-primary">
             <Plus size={16} /> New Booking
           </Link>
+        </div>
+      </div>
+
+      {/* KPI Overview Bar */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: "16px",
+          marginBottom: "20px",
+        }}
+      >
+        <div className="card" style={{ padding: "16px", display: "flex", alignItems: "center", gap: "12px" }}>
+          <div
+            style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "8px",
+              background: "rgba(0, 113, 227, 0.1)",
+              color: "var(--accent-color, #0071E3)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Bed size={20} />
+          </div>
+          <div>
+            <div className="text-xs text-secondary">Total Inventory</div>
+            <div style={{ fontSize: "20px", fontWeight: 800 }}>{totalRoomsCount} Rooms</div>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: "16px", display: "flex", alignItems: "center", gap: "12px" }}>
+          <div
+            style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "8px",
+              background: "rgba(16, 185, 129, 0.1)",
+              color: "#10B981",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <CheckCircle size={20} />
+          </div>
+          <div>
+            <div className="text-xs text-secondary">Occupied ({viewDays}D Period)</div>
+            <div style={{ fontSize: "20px", fontWeight: 800 }}>{occupiedRoomsCount} Rooms</div>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: "16px", display: "flex", alignItems: "center", gap: "12px" }}>
+          <div
+            style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "8px",
+              background: "rgba(245, 158, 11, 0.1)",
+              color: "#F59E0B",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Clock size={20} />
+          </div>
+          <div>
+            <div className="text-xs text-secondary">Available ({viewDays}D Period)</div>
+            <div style={{ fontSize: "20px", fontWeight: 800 }}>{availableRoomsCount} Rooms</div>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: "16px", display: "flex", alignItems: "center", gap: "12px" }}>
+          <div
+            style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "8px",
+              background: "rgba(139, 92, 246, 0.1)",
+              color: "#8B5CF6",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Users size={20} />
+          </div>
+          <div>
+            <div className="text-xs text-secondary">Occupancy Rate</div>
+            <div style={{ fontSize: "20px", fontWeight: 800 }}>{occupancyPercentage}%</div>
+          </div>
         </div>
       </div>
 
@@ -84,10 +200,10 @@ export default function CalendarClient() {
             <button className="btn btn-secondary btn-sm" onClick={handleToday}>
               Today
             </button>
-            <button className="btn btn-secondary btn-icon btn-sm" onClick={handlePrev}>
+            <button className="btn btn-secondary btn-icon btn-sm" onClick={handlePrev} title={`Previous ${viewDays} Days`}>
               <ChevronLeft size={16} />
             </button>
-            <button className="btn btn-secondary btn-icon btn-sm" onClick={handleNext}>
+            <button className="btn btn-secondary btn-icon btn-sm" onClick={handleNext} title={`Next ${viewDays} Days`}>
               <ChevronRight size={16} />
             </button>
             <span style={{ fontSize: "14px", fontWeight: 700, marginLeft: "8px" }}>
@@ -95,8 +211,8 @@ export default function CalendarClient() {
             </span>
           </div>
 
-          {/* Filters */}
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          {/* Filters & View Preset Switcher */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
             <div className="search-input-wrapper" style={{ width: "180px" }}>
               <Search className="search-icon" size={14} />
               <input
@@ -139,69 +255,149 @@ export default function CalendarClient() {
 
       {/* Tape Chart Grid */}
       <div className="card" style={{ padding: 0, overflowX: "auto" }}>
-        <table className="calendar-grid-table">
+        <table className={`calendar-grid-table ${viewDays === 14 ? "view-14d" : viewDays === 30 ? "view-30d" : ""}`}>
           <thead>
             <tr>
               <th className="room-col">Room Inventory</th>
-              {dateColumns.map((date, idx) => (
-                <th key={idx} className="date-col">
-                  <div className="text-xs text-secondary">{formatDate(date, "EEE")}</div>
-                  <div style={{ fontSize: "14px", fontWeight: 800 }}>{formatDate(date, "dd")}</div>
-                  <div className="text-xs text-tertiary" style={{ fontSize: "10px" }}>{formatDate(date, "MMM")}</div>
-                </th>
-              ))}
+              {dateColumns.map((date, idx) => {
+                const dateStr = date.toISOString().split("T")[0];
+                const isToday = dateStr === todayStr;
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+
+                return (
+                  <th
+                    key={idx}
+                    className={`date-col ${isToday ? "today-header" : ""} ${isWeekend ? "weekend-header" : ""}`}
+                  >
+                    <div className="text-xs text-secondary" style={{ fontSize: viewDays === 30 ? "9px" : "11px" }}>
+                      {formatDate(date, viewDays === 30 ? "EE" : "EEE")}
+                    </div>
+                    <div style={{ fontSize: viewDays === 30 ? "12px" : "14px", fontWeight: 800 }}>
+                      {formatDate(date, "dd")}
+                    </div>
+                    <div className="text-xs text-tertiary" style={{ fontSize: viewDays === 30 ? "9px" : "10px" }}>
+                      {formatDate(date, "MMM")}
+                    </div>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
-            {filteredRooms.map((room) => (
-              <tr key={room.id}>
-                <td className="room-cell-info">
-                  <div style={{ fontWeight: 700 }}>#{room.number}</div>
-                  <div className="text-xs text-secondary">{room.typeName}</div>
-                </td>
-                {dateColumns.map((date, dateIdx) => {
-                  const dateStr = date.toISOString().split("T")[0];
+            {filteredRooms.map((room) => {
+              const cells = [];
+              let colIdx = 0;
+              const totalCols = dateColumns.length;
 
-                  // Find reservation matching this room and date
-                  const res = reservations.find((r) => {
-                    if (r.roomNumber !== room.number) return false;
-                    const cIn = new Date(r.checkIn).toISOString().split("T")[0];
-                    const cOut = new Date(r.checkOut).toISOString().split("T")[0];
-                    return dateStr >= cIn && dateStr < cOut;
-                  });
+              while (colIdx < totalCols) {
+                const date = dateColumns[colIdx];
+                const dateStr = date.toISOString().split("T")[0];
 
-                  if (res) {
-                    return (
-                      <td key={dateIdx} className="grid-cell occupied-cell">
-                        <Link
-                          href={`/dashboard/reservations/${res.id}`}
-                          className={`res-block ${
-                            res.status === "CHECKED_IN"
-                              ? "status-checked-in"
-                              : res.status === "CONFIRMED"
-                              ? "status-confirmed"
-                              : "status-other"
-                          }`}
-                          title={`${res.guestName} (${res.confirmationNumber})`}
-                        >
-                          <span className="res-name">{res.guestName}</span>
-                        </Link>
-                      </td>
-                    );
-                  }
+                // Find matching active reservation for this room on dateStr
+                const res = reservations.find((r) => {
+                  if (r.roomNumber !== room.number) return false;
+                  if (r.status === "CANCELLED") return false;
+                  const cIn = new Date(r.checkIn).toISOString().split("T")[0];
+                  const cOut = new Date(r.checkOut).toISOString().split("T")[0];
+                  return dateStr >= cIn && dateStr < cOut;
+                });
 
-                  return (
-                    <td key={dateIdx} className="grid-cell empty-cell">
+                if (!res) {
+                  const isToday = dateStr === todayStr;
+                  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+
+                  cells.push(
+                    <td
+                      key={`empty-${room.id}-${dateStr}`}
+                      className={`grid-cell empty-cell ${isToday ? "today-cell" : ""} ${isWeekend ? "weekend-cell" : ""}`}
+                    >
                       <Link
                         href={`/dashboard/reservations/new?room=${room.number}&date=${dateStr}`}
-                        style={{ display: "block", width: "100%", height: "100%" }}
+                        className="empty-cell-link"
                         title={`Click to book Room #${room.number} on ${formatDate(date, "dd MMM yyyy")}`}
-                      />
+                      >
+                        +
+                      </Link>
                     </td>
                   );
-                })}
-              </tr>
-            ))}
+                  colIdx++;
+                } else {
+                  // Reservation found: Calculate continuous span across dateColumns
+                  const cIn = new Date(res.checkIn).toISOString().split("T")[0];
+                  const cOut = new Date(res.checkOut).toISOString().split("T")[0];
+
+                  let span = 0;
+                  while (colIdx + span < totalCols) {
+                    const nextDateStr = dateColumns[colIdx + span].toISOString().split("T")[0];
+                    if (nextDateStr >= cIn && nextDateStr < cOut) {
+                      span++;
+                    } else {
+                      break;
+                    }
+                  }
+
+                  span = Math.max(span, 1);
+
+                  const viewStartStr = dateColumns[0].toISOString().split("T")[0];
+                  const viewEndStr = dateColumns[totalCols - 1].toISOString().split("T")[0];
+                  const startsBeforeView = cIn < viewStartStr;
+                  const endsAfterView = cOut > viewEndStr;
+
+                  const statusClass =
+                    res.status === "CHECKED_IN"
+                      ? "status-checked-in"
+                      : res.status === "CONFIRMED"
+                      ? "status-confirmed"
+                      : res.status === "CHECKED_OUT"
+                      ? "status-checked-out"
+                      : res.status === "PENDING"
+                      ? "status-pending"
+                      : "status-other";
+
+                  cells.push(
+                    <td
+                      key={`res-${res.id}-${dateStr}`}
+                      colSpan={span}
+                      className="grid-cell occupied-cell"
+                    >
+                      <Link
+                        href={`/dashboard/reservations/${res.id}`}
+                        className={`res-block ${statusClass}`}
+                        style={{
+                          borderTopLeftRadius: startsBeforeView ? "0px" : "6px",
+                          borderBottomLeftRadius: startsBeforeView ? "0px" : "6px",
+                          borderTopRightRadius: endsAfterView ? "0px" : "6px",
+                          borderBottomRightRadius: endsAfterView ? "0px" : "6px",
+                        }}
+                        title={`${res.guestName} (${res.confirmationNumber || res.id})\nStatus: ${res.status.replace("_", " ")}\nCheck-in: ${cIn} | Check-out: ${cOut}`}
+                      >
+                        <div className="res-content">
+                          <span className="res-name">{res.guestName}</span>
+                          {span > 1 && (
+                            <span className="res-details">
+                              {" "}· {res.status.replace("_", " ")}
+                            </span>
+                          )}
+                        </div>
+                      </Link>
+                    </td>
+                  );
+
+                  colIdx += span;
+                }
+              }
+
+              const cat = getShemronRoomCategory(room.number);
+              return (
+                <tr key={room.id}>
+                  <td className="room-cell-info">
+                    <div style={{ fontWeight: 700 }}>#{room.number}</div>
+                    <div className="text-xs text-secondary">{cat.typeName}</div>
+                  </td>
+                  {cells}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

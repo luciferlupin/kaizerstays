@@ -29,6 +29,7 @@ import {
   AiosellLiveSummary,
   AiosellApiLog,
 } from "@/lib/aiosell-sync-service";
+import { loadRateRestrictions, getRestrictionKey } from "@/lib/rates";
 import { formatCurrency } from "@/lib/utils";
 import {
   NormalizedOTAReservation,
@@ -297,7 +298,7 @@ export default function ChannelsClient({
   const DEFAULT_AIOSELL_DISCOVERED_ROOMS: DiscoveredRoomType[] = [
     {
       id: "deluxe-room",
-      name: "Deluxe Room (26 Rooms)",
+      name: "Deluxe Room (28 Rooms)",
       code: "DELUXE",
       ratePlans: [
         { id: "deluxe-room-d-ep", name: "Room Only (EP Double ₹2,800)", mealPlan: "EP" },
@@ -1743,11 +1744,19 @@ export default function ChannelsClient({
                           <span className={styles.cellDayNum}>{cell.dayNumber}</span>
                           {cell.isToday ? <span className={styles.todayBadge}>Today</span> : null}
                         </div>
-                        <div className={styles.cellRatesList}>
-                          <div className={styles.ratePillDeluxe}>D: ₹{((Number(deluxeRate) || 0) / 1000).toFixed(1)}k</div>
-                          <div className={styles.ratePillTwin}>T: ₹{((Number(twinRate) || 0) / 1000).toFixed(1)}k</div>
-                          <div className={styles.ratePillSuite}>S: ₹{((Number(suiteRate) || 0) / 1000).toFixed(1)}k</div>
-                        </div>
+                        {(() => {
+                          const cellRestrictions = loadRateRestrictions();
+                          const dlxVal = cellRestrictions[getRestrictionKey("deluxe-room", cell.dateStr)]?.rate || Number(deluxeRate) || 2800;
+                          const twnVal = cellRestrictions[getRestrictionKey("twin-room", cell.dateStr)]?.rate || Number(twinRate) || 2800;
+                          const steVal = cellRestrictions[getRestrictionKey("suite-room", cell.dateStr)]?.rate || Number(suiteRate) || 5500;
+                          return (
+                            <div className={styles.cellRatesList}>
+                              <div className={styles.ratePillDeluxe}>D: ₹{(dlxVal / 1000).toFixed(1)}k</div>
+                              <div className={styles.ratePillTwin}>T: ₹{(twnVal / 1000).toFixed(1)}k</div>
+                              <div className={styles.ratePillSuite}>S: ₹{(steVal / 1000).toFixed(1)}k</div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     );
                   })}

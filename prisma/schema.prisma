@@ -130,7 +130,7 @@ model PropertySettings {
   checkOutTime      String @default("11:00")
   lateCheckoutFee   Float  @default(0)
   earlyCheckinFee   Float  @default(0)
-  taxPercentage     Float  @default(12)
+  taxPercentage     Float  @default(5)
   serviceTaxName    String @default("GST")
   cancellationHours Int    @default(24)
   bookingPrefix     String @default("KS")

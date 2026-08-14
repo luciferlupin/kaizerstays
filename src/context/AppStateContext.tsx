@@ -13,10 +13,12 @@ import {
   demoActivity,
   demoExpenses,
   demoStaff,
+  getShemronRoomCategory,
 } from "@/lib/demo-data";
 import { posTables, activeKOTs, KitchenOrder } from "@/lib/pos-data";
 import { otaChannels, nightAuditHistory, NightAuditRecord } from "@/lib/channels-data";
 import type { NormalizedOTAReservation } from "@/lib/ota-fallback";
+import { calculateInclusiveHotelGST } from "@/lib/gst";
 
 export interface FolioItem {
   id: string;
@@ -133,6 +135,7 @@ interface AppStateContextType {
   importOTAReservations: (records: NormalizedOTAReservation[]) => OTAReservationImportSummary;
   updateRoomRatesAndInventory: (rates: Record<string, number>, inventory?: Record<string, number>) => void;
   checkInGuest: (reservationId: string, roomNumber: string) => void;
+  markReservationAsPrepaid: (reservationId: string) => void;
   checkOutGuest: (reservationId: string) => void;
   cancelReservation: (reservationId: string) => void;
   updateRoomStatus: (roomId: string, newStatus: string, hkStatus?: string) => void;
@@ -178,15 +181,19 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [roomTypes, setRoomTypes] = useState(demoRoomTypes);
   const [guests, setGuests] = useState(demoGuests);
   const [reservations, setReservations] = useState<ExtendedReservation[]>(
-    demoReservations.map((r) => ({
-      ...r,
-      status: r.status as any,
-      folio: [
-        { id: `f_rm_${r.id}`, description: `${r.roomType} (${r.nights} Nights)`, category: "ROOM_CHARGE", amount: r.roomRate * r.nights, date: r.checkIn },
-        { id: `f_tx_${r.id}`, description: "GST Tax (12%)", category: "TAX", amount: r.taxAmount, date: r.checkIn },
-        ...(r.paidAmount > 0 ? [{ id: `f_py_${r.id}`, description: "Payment Received", category: "PAYMENT" as const, amount: -r.paidAmount, date: r.checkIn }] : []),
-      ],
-    }))
+    demoReservations.map((r) => {
+      const gst = calculateInclusiveHotelGST(r.totalAmount);
+      return {
+        ...r,
+        taxAmount: gst.totalTax,
+        status: r.status as any,
+        folio: [
+          { id: `f_rm_${r.id}`, description: `${r.roomType} (${r.nights} Nights)`, category: "ROOM_CHARGE", amount: gst.taxableValue, date: r.checkIn },
+          { id: `f_tx_${r.id}`, description: "GST Tax (5% included)", category: "TAX", amount: gst.totalTax, date: r.checkIn },
+          ...(r.paidAmount > 0 ? [{ id: `f_py_${r.id}`, description: "Payment Received", category: "PAYMENT" as const, amount: -r.paidAmount, date: r.checkIn }] : []),
+        ],
+      };
+    })
   );
   const [housekeepingTasks, setHousekeepingTasks] = useState(demoHousekeepingTasks);
   const [guestRequests, setGuestRequests] = useState(demoGuestRequests);
@@ -201,6 +208,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<{ name: string; role: string; email: string; staffId: string } | null>(null);
   const [inventoryItems, setInventoryItems] = useState<StockInventoryItem[]>(initialStockItems);
   const [requisitions, setRequisitions] = useState<StockRequisition[]>(initialRequisitions);
+  const [hasHydrated, setHasHydrated] = useState(false);
 
   // ─── LocalStorage Hydration & Persistence (Zero Data Loss) ───
   useEffect(() => {
@@ -209,23 +217,37 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.property) setProperty((current) => ({ ...current, ...parsed.property }));
-        if (parsed.rooms?.length) setRooms(parsed.rooms);
-        if (parsed.reservations) setReservations(parsed.reservations.filter((r: any) =>
-          r.id !== "res_001" &&
-          !r.guestName?.includes("Anand Verma") &&
-          !r.id?.startsWith("res_agd_") &&
-          !r.id?.startsWith("res_bcom_")
-        ));
-        if (parsed.guests) setGuests(parsed.guests.filter((g: any) =>
-          g.id !== "guest_001" &&
-          g.firstName !== "Anand" &&
-          !g.id?.startsWith("guest_agd_") &&
-          !g.id?.startsWith("guest_bcom_")
-        ));
-        if (parsed.housekeepingTasks) setHousekeepingTasks(parsed.housekeepingTasks.filter((h: any) => h.id !== "hk_001"));
-        if (parsed.guestRequests) setGuestRequests(parsed.guestRequests.filter((r: any) => r.id !== "req_001"));
-        if (parsed.payments) setPayments(parsed.payments.filter((p: any) => p.id !== "pay_001"));
-        if (parsed.expenses) setExpenses(parsed.expenses.filter((e: any) => e.id !== "exp_001"));
+        if (parsed.rooms?.length) {
+          setRooms(
+            parsed.rooms.map((room: typeof demoRooms[number]) => ({
+              ...room,
+              ...getShemronRoomCategory(room.number),
+            }))
+          );
+        }
+        if (parsed.reservations)
+          setReservations(
+            parsed.reservations.filter(
+              (r: any) =>
+                !r.id?.startsWith("res_") &&
+                !r.guestName?.includes("Anand Verma") &&
+                !r.guestName?.includes("Pankaj Tanwar") &&
+                !r.guestName?.includes("Rahul Verma")
+            )
+          );
+        if (parsed.guests)
+          setGuests(
+            parsed.guests.filter(
+              (g: any) =>
+                !g.id?.startsWith("guest_") &&
+                g.firstName !== "Anand" &&
+                g.firstName !== "Pankaj"
+            )
+          );
+        if (parsed.housekeepingTasks) setHousekeepingTasks(parsed.housekeepingTasks.filter((h: any) => !h.id?.startsWith("hk_")));
+        if (parsed.guestRequests) setGuestRequests(parsed.guestRequests.filter((r: any) => !r.id?.startsWith("req_")));
+        if (parsed.payments) setPayments(parsed.payments.filter((p: any) => !p.id?.startsWith("pay_")));
+        if (parsed.expenses) setExpenses(parsed.expenses.filter((e: any) => !e.id?.startsWith("exp_")));
         if (parsed.staff?.length) setStaff(parsed.staff);
         if (parsed.inventoryItems?.length) setInventoryItems(parsed.inventoryItems);
         if (parsed.requisitions?.length) setRequisitions(parsed.requisitions);
@@ -248,10 +270,13 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (e) {
       console.warn("LocalStorage state hydration failed:", e);
+    } finally {
+      setHasHydrated(true);
     }
   }, []);
 
   useEffect(() => {
+    if (!hasHydrated) return;
     try {
       const stateToSave = {
         property,
@@ -273,7 +298,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.warn("LocalStorage state save failed:", e);
     }
-  }, [property, rooms, reservations, guests, housekeepingTasks, guestRequests, payments, expenses, activity, staff, channels, currentUser, inventoryItems, requisitions]);
+  }, [hasHydrated, property, rooms, reservations, guests, housekeepingTasks, guestRequests, payments, expenses, activity, staff, channels, currentUser, inventoryItems, requisitions]);
 
   const updatePropertySettings = (updates: Partial<typeof demoProperty>) => {
     setProperty((current) => ({ ...current, ...updates }));
@@ -358,14 +383,16 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const addReservation = (resData: Omit<ExtendedReservation, "id" | "confirmationNumber">) => {
     const newId = `res_${Date.now()}`;
     const confNo = `KZ-SHM-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const gst = calculateInclusiveHotelGST(resData.totalAmount);
 
     const newRes: ExtendedReservation = {
       ...resData,
+      taxAmount: gst.totalTax,
       id: newId,
       confirmationNumber: confNo,
       folio: [
-        { id: `f_rm_${newId}`, description: `${resData.roomType} (${resData.nights} Nights)`, category: "ROOM_CHARGE", amount: resData.roomRate * resData.nights, date: resData.checkIn },
-        { id: `f_tx_${newId}`, description: "GST Tax (12%)", category: "TAX", amount: resData.taxAmount, date: resData.checkIn },
+        { id: `f_rm_${newId}`, description: `${resData.roomType} (${resData.nights} Nights)`, category: "ROOM_CHARGE", amount: gst.taxableValue, date: resData.checkIn },
+        { id: `f_tx_${newId}`, description: "GST Tax (5% included)", category: "TAX", amount: gst.totalTax, date: resData.checkIn },
         ...(resData.paidAmount > 0 ? [{ id: `f_py_${newId}`, description: "Advance Payment", category: "PAYMENT" as const, amount: -resData.paidAmount, date: new Date() }] : []),
       ],
     };
@@ -470,36 +497,58 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         Math.round((checkOut.getTime() - checkIn.getTime()) / 86_400_000)
       );
       const importKey = stableImportKey(`${bookingSource}:${extId}`);
-      const paidAmount = existing?.paidAmount || 0;
+      const gst = calculateInclusiveHotelGST(record.totalAmount);
+      const isOtaPrepaid = (bookingSource as string) !== "WALK_IN" && (bookingSource as string) !== "DIRECT";
+      const paidAmount = existing ? existing.paidAmount : (isOtaPrepaid ? gst.totalInclusive : 0);
+      const balanceAmount = Math.max(0, gst.totalInclusive - paidAmount);
+      const preservedStatus =
+        existing?.status === "CHECKED_IN" || existing?.status === "CHECKED_OUT"
+          ? existing.status
+          : record.status;
+      const preservedRoomNumber = existing?.roomNumber || "";
 
       const imported: ExtendedReservation = {
         id: existing?.id || `res_ota_${rawProvider}_${extId}`,
         confirmationNumber: extId,
         guestId: existing?.guestId || `guest_ota_${rawProvider}_${extId}`,
         guestName: record.guestName,
-        status: record.status,
+        status: preservedStatus,
         checkIn,
         checkOut,
         nights,
-        roomNumber: existing?.roomNumber || "",
+        roomNumber: preservedRoomNumber,
         roomType: record.roomType,
         adults: record.adults,
         children: record.children,
         bookingSource,
         roomRate: record.totalAmount > 0 ? record.totalAmount / nights : 0,
-        totalAmount: record.totalAmount,
-        taxAmount: 0,
+        totalAmount: gst.totalInclusive,
+        taxAmount: gst.totalTax,
         paidAmount,
-        balanceAmount: Math.max(0, record.totalAmount - paidAmount),
-        notes: `Imported from ${bookingSource} via Aiosell Channel Manager.`,
-        folio: [
+        balanceAmount,
+        notes: `Imported from ${bookingSource} via Aiosell Channel Manager (Prepaid).`,
+        folio: existing?.folio || [
           {
             id: `f_ota_${rawProvider}_${extId}`,
             description: `${record.roomType} (${nights} Nights) — imported OTA value`,
             category: "ROOM_CHARGE",
-            amount: record.totalAmount,
+            amount: gst.taxableValue,
             date: checkIn,
           },
+          {
+            id: `f_ota_tax_${rawProvider}_${extId}`,
+            description: "GST Tax (5% included)",
+            category: "TAX",
+            amount: gst.totalTax,
+            date: checkIn,
+          },
+          ...(paidAmount > 0 ? [{
+            id: `f_ota_py_${rawProvider}_${extId}`,
+            description: `Prepaid OTA Payment (${bookingSource})`,
+            category: "PAYMENT" as const,
+            amount: -paidAmount,
+            date: checkIn,
+          }] : []),
         ],
       };
 
@@ -639,10 +688,16 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
   // ─── Check-In Guest (connected to Room Status OCCUPIED) ───
   const checkInGuest = (reservationId: string, roomNumber: string) => {
+    const assignedRoom = rooms.find((room) => room.number === roomNumber);
     setReservations((prev) =>
       prev.map((r) =>
         r.id === reservationId
-          ? { ...r, status: "CHECKED_IN", roomNumber: roomNumber || r.roomNumber }
+          ? {
+              ...r,
+              status: "CHECKED_IN",
+              roomNumber: roomNumber || r.roomNumber,
+              roomType: assignedRoom?.typeName || r.roomType,
+            }
           : r
       )
     );
@@ -655,6 +710,35 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
     const res = reservations.find((r) => r.id === reservationId);
     addActivity("Guest Checked In", "checkin", reservationId, `${res?.guestName || "Guest"} checked into Room #${roomNumber}`);
+  };
+
+  // ─── Mark Reservation as Prepaid (Zero Out Balance) ───
+  const markReservationAsPrepaid = (reservationId: string) => {
+    setReservations((prev) =>
+      prev.map((r) => {
+        if (r.id !== reservationId && r.confirmationNumber !== reservationId) return r;
+        const total = r.totalAmount || 0;
+        const existingPayment = r.folio?.some((f) => f.category === "PAYMENT");
+        const newFolio = existingPayment
+          ? r.folio
+          : [
+              ...(r.folio || []),
+              {
+                id: `f_py_prepaid_${Date.now()}`,
+                description: `Prepaid OTA Payment (${r.bookingSource || "Channel Direct"})`,
+                category: "PAYMENT" as const,
+                amount: -total,
+                date: new Date(),
+              },
+            ];
+        return {
+          ...r,
+          paidAmount: total,
+          balanceAmount: 0,
+          folio: newFolio,
+        };
+      })
+    );
   };
 
   // ─── Check-Out Guest (connected to Room Status DIRTY & Auto Housekeeping Task) ───
@@ -871,7 +955,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       .filter((r) => r.status === "CHECKED_IN")
       .reduce((sum, r) => sum + r.roomRate, 0);
 
-    const tax = Math.round(totalTariffs * 0.12);
+    const tax = calculateInclusiveHotelGST(totalTariffs).totalTax;
 
     const newRecord: NightAuditRecord = {
       id: `na_${Date.now()}`,
@@ -979,6 +1063,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         importOTAReservations,
         updateRoomRatesAndInventory,
         checkInGuest,
+        markReservationAsPrepaid,
         checkOutGuest,
         cancelReservation,
         updateRoomStatus,

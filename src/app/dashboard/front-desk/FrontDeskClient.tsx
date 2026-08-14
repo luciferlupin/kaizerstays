@@ -8,17 +8,13 @@ import {
   LogIn,
   LogOut,
   UserCheck,
-  Building,
-  CreditCard,
-  CheckCircle2,
-  AlertCircle,
   Plus,
   X,
   Check,
 } from "lucide-react";
 
 export default function FrontDeskClient() {
-  const { reservations, checkInGuest, checkOutGuest } = useAppState();
+  const { reservations, rooms, checkInGuest, checkOutGuest, markReservationAsPrepaid } = useAppState();
   const [activeTab, setActiveTab] = useState<"arrivals" | "departures" | "in_house">("arrivals");
 
   const [checkInModal, setCheckInModal] = useState<typeof reservations[0] | null>(null);
@@ -26,13 +22,61 @@ export default function FrontDeskClient() {
   const [assignedRoomNumber, setAssignedRoomNumber] = useState("");
   const [actionDone, setActionDone] = useState(false);
 
-  const arrivals = reservations.filter((r) => r.status === "CONFIRMED");
-  const departures = reservations.filter((r) => r.status === "CHECKED_IN" && r.balanceAmount >= 0);
+  const todayKey = formatDate(new Date(), "yyyy-MM-dd");
+  const isToday = (date: Date | string) => formatDate(date, "yyyy-MM-dd") === todayKey;
+  const arrivals = reservations.filter((r) => r.status === "CONFIRMED" && isToday(r.checkIn));
+  const departures = reservations.filter((r) => r.status === "CHECKED_IN" && isToday(r.checkOut));
   const inHouse = reservations.filter((r) => r.status === "CHECKED_IN");
+
+  const getEffectiveRoomDetails = (r: (typeof reservations)[0]) => {
+    let roomNum = r.roomNumber;
+    let typeName = r.roomType;
+
+    if (roomNum) {
+      const physicalRoom = rooms.find((room) => room.number === roomNum);
+      if (physicalRoom) {
+        typeName = physicalRoom.typeName;
+      }
+    }
+
+    return { roomNum, typeName };
+  };
+
+  const handleOpenCheckInModal = (r: (typeof reservations)[0]) => {
+    setCheckInModal(r);
+    let defaultRoom = r.roomNumber;
+    if (!defaultRoom) {
+      const rtStr = (r.roomType || "").toLowerCase();
+      const targetTypeId = rtStr.includes("twin")
+        ? "twin-room"
+        : rtStr.includes("suite")
+        ? "suite-room"
+        : "deluxe-room";
+      const availableRoom = rooms.find(
+        (room) => room.roomTypeId === targetTypeId && (room.status === "AVAILABLE" || room.status === "CLEAN")
+      );
+      defaultRoom = availableRoom?.number || (targetTypeId === "twin-room" ? "102" : targetTypeId === "suite-room" ? "103" : "101");
+    }
+    setAssignedRoomNumber(defaultRoom);
+  };
 
   const handleConfirmCheckIn = () => {
     if (!checkInModal) return;
-    const roomToAssign = assignedRoomNumber || checkInModal.roomNumber || "301";
+    let roomToAssign = assignedRoomNumber || checkInModal.roomNumber;
+    if (!roomToAssign) {
+      const rtStr = (checkInModal.roomType || "").toLowerCase();
+      const targetTypeId = rtStr.includes("twin")
+        ? "twin-room"
+        : rtStr.includes("suite")
+        ? "suite-room"
+        : "deluxe-room";
+      const availableRoom = rooms.find(
+        (r) => r.roomTypeId === targetTypeId && (r.status === "AVAILABLE" || r.status === "CLEAN")
+      );
+      roomToAssign =
+        availableRoom?.number ||
+        (targetTypeId === "twin-room" ? "102" : targetTypeId === "suite-room" ? "103" : "101");
+    }
     checkInGuest(checkInModal.id, roomToAssign);
     setActionDone(true);
     setTimeout(() => {
@@ -117,55 +161,55 @@ export default function FrontDeskClient() {
                   : activeTab === "departures"
                   ? departures
                   : inHouse
-                ).map((r) => (
-                  <tr key={r.id}>
-                    <td className="font-semibold">{r.guestName}</td>
-                    <td className="mono text-xs">{r.confirmationNumber}</td>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{r.roomType}</div>
-                      <div className="text-xs text-primary" style={{ fontWeight: 700 }}>
-                        {r.roomNumber ? `Room #${r.roomNumber}` : "Unassigned"}
-                      </div>
-                    </td>
-                    <td className="text-sm">
-                      {formatDate(r.checkIn, "dd MMM")} → {formatDate(r.checkOut, "dd MMM")} ({r.nights}n)
-                    </td>
-                    <td>
-                      <span className="badge badge-default">{r.bookingSource}</span>
-                    </td>
-                    <td>
-                      {r.balanceAmount === 0 ? (
-                        <span className="badge badge-success">Paid</span>
-                      ) : (
-                        <span className="badge badge-warning">
-                          Due: {formatCurrency(r.balanceAmount)}
-                        </span>
-                      )}
-                    </td>
-                    <td className="text-right">
-                      {activeTab === "arrivals" && (
-                        <button
-                          className="btn btn-primary btn-sm"
-                          onClick={() => {
-                            setCheckInModal(r);
-                            setAssignedRoomNumber(r.roomNumber || "301");
-                          }}
-                        >
-                          <LogIn size={14} /> Check In
-                        </button>
-                      )}
+                ).map((r) => {
+                  const { roomNum, typeName } = getEffectiveRoomDetails(r);
+                  return (
+                    <tr key={r.id}>
+                      <td className="font-semibold">{r.guestName}</td>
+                      <td className="mono text-xs">{r.confirmationNumber}</td>
+                      <td>
+                        <div style={{ fontWeight: 600 }}>{typeName}</div>
+                        <div className="text-xs text-primary" style={{ fontWeight: 700 }}>
+                          {roomNum ? `Room #${roomNum}` : "Unassigned"}
+                        </div>
+                      </td>
+                      <td className="text-sm">
+                        {formatDate(r.checkIn, "dd MMM")} → {formatDate(r.checkOut, "dd MMM")} ({r.nights}n)
+                      </td>
+                      <td>
+                        <span className="badge badge-default">{r.bookingSource}</span>
+                      </td>
+                      <td>
+                        {r.balanceAmount === 0 ? (
+                          <span className="badge badge-success font-bold">Paid (₹0)</span>
+                        ) : (
+                          <span className="badge badge-warning font-bold">
+                            Due: {formatCurrency(r.balanceAmount)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="text-right">
+                        {activeTab === "arrivals" && (
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => handleOpenCheckInModal(r)}
+                          >
+                            <LogIn size={14} /> Check In
+                          </button>
+                        )}
 
-                      {(activeTab === "departures" || activeTab === "in_house") && (
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => setCheckOutModal(r)}
-                        >
-                          <LogOut size={14} /> Check Out
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                        {(activeTab === "departures" || activeTab === "in_house") && (
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => setCheckOutModal(r)}
+                          >
+                            <LogOut size={14} /> Check Out
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
@@ -211,9 +255,29 @@ export default function FrontDeskClient() {
                     />
                   </div>
 
-                  {checkInModal.balanceAmount > 0 && (
-                    <div style={{ background: "var(--amber-50)", padding: "12px", borderRadius: "var(--radius-md)", color: "var(--amber-800)", fontSize: "13px" }}>
-                      ⚠️ Outstanding Balance: {formatCurrency(checkInModal.balanceAmount)}. Collect at desk or charge to card.
+                  {checkInModal.balanceAmount > 0 ? (
+                    <div style={{ background: "var(--amber-50)", padding: "12px 14px", borderRadius: "var(--radius-md)", color: "var(--amber-800)", fontSize: "13px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+                        <span style={{ fontWeight: 600 }}>⚠️ Outstanding Balance: {formatCurrency(checkInModal.balanceAmount)}</span>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-xs"
+                          style={{ fontSize: "11px", padding: "4px 8px" }}
+                          onClick={() => {
+                            markReservationAsPrepaid(checkInModal.id);
+                            setCheckInModal((prev) => (prev ? { ...prev, paidAmount: prev.totalAmount, balanceAmount: 0 } : null));
+                          }}
+                        >
+                          ✓ Mark as Prepaid (OTA / Online Paid)
+                        </button>
+                      </div>
+                      <div className="text-xs text-secondary">
+                        If guest prepaid online via Booking.com, Agoda, or Aiosell, click above to clear outstanding balance.
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ background: "var(--green-50)", padding: "12px 14px", borderRadius: "var(--radius-md)", color: "var(--green-800)", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px" }}>
+                      ✓ Prepaid Booking / Balance Settled (₹0.00)
                     </div>
                   )}
                 </>

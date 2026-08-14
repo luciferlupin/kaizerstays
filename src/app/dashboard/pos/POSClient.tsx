@@ -11,7 +11,6 @@ import {
   POSTable,
   KitchenOrder,
 } from "@/lib/pos-data";
-import { demoReservations } from "@/lib/demo-data";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   Utensils,
@@ -648,11 +647,11 @@ export default function POSClient() {
                         value={selectedRoomNumber}
                         onChange={(e) => setSelectedRoomNumber(e.target.value)}
                       >
-                        {demoReservations
-                          .filter((r) => r.status === "CHECKED_IN")
+                        {reservations
+                          .filter((r) => r.status === "CHECKED_IN" || r.status === "CONFIRMED")
                           .map((r) => (
-                            <option key={r.id} value={r.roomNumber}>
-                              Room #{r.roomNumber} — {r.guestName}
+                            <option key={r.id} value={r.roomNumber || "101"}>
+                              Room #{r.roomNumber || "101"} — {r.guestName}
                             </option>
                           ))}
                       </select>

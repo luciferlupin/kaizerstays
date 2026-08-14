@@ -3,20 +3,6 @@
 // Provides realistic hotel data without requiring a database
 // ═══════════════════════════════════════════════════
 
-import { getToday } from "./utils";
-
-const today = getToday();
-const tomorrow = new Date(today);
-tomorrow.setDate(today.getDate() + 1);
-const yesterday = new Date(today);
-yesterday.setDate(today.getDate() - 1);
-
-function daysFromNow(days: number): Date {
-  const d = new Date(today);
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
 // ─── Organization ───
 export const demoOrganization = {
   id: "org_demo_001",
@@ -42,7 +28,7 @@ export const demoProperty = {
   zipCode: "301705",
   gstin: "08AABCT1332L1ZR",
   starRating: 4,
-  totalRooms: 50,
+  totalRooms: 32,
   currency: "INR",
   timezone: "Asia/Kolkata",
 };
@@ -54,7 +40,7 @@ export const demoRoomTypes = [
     propertyId: "62a25484e5",
     name: "Deluxe Room",
     code: "DELUXE",
-    description: "Deluxe Room — Live Aiosell Listing (26 Rooms)",
+    description: "Deluxe Room — Live Aiosell Listing (28 Rooms)",
     maxOccupancy: 2,
     maxAdults: 2,
     maxChildren: 1,
@@ -103,6 +89,30 @@ export const demoRoomTypes = [
 ];
 
 // ─── Rooms (Hotel Shemron, Neemrana - 32 Rooms Total) ───
+export function getShemronRoomCategory(roomNumber: string) {
+  if (roomNumber === "102" || roomNumber === "302") {
+    return {
+      roomTypeId: "twin-room",
+      typeName: "Twin Room",
+      typeCode: "TWIN",
+    } as const;
+  }
+
+  if (roomNumber === "103" || roomNumber === "303") {
+    return {
+      roomTypeId: "suite-room",
+      typeName: "Suite Room",
+      typeCode: "SUITE",
+    } as const;
+  }
+
+  return {
+    roomTypeId: "deluxe-room",
+    typeName: "Deluxe Room",
+    typeCode: "DELUXE",
+  } as const;
+}
+
 function generateRooms() {
   const rooms: Array<{
     id: string;
@@ -118,74 +128,36 @@ function generateRooms() {
     typeCode: string;
   }> = [];
 
-  // Floor 1 Deluxe Rooms (101 - 114: 14 Rooms)
+  // Floor 1 rooms (101 - 114). 102 is Twin and 103 is Suite.
   for (let i = 101; i <= 114; i++) {
+    const roomNumber = i.toString();
     rooms.push({
       id: `room_${i}`,
       propertyId: "62a25484e5",
-      roomTypeId: "deluxe-room",
+      ...getShemronRoomCategory(roomNumber),
       floorId: null,
-      number: i.toString(),
+      number: roomNumber,
       status: "AVAILABLE",
       housekeepingStatus: "CLEAN",
       isActive: true,
       floor: 1,
-      typeName: "Deluxe Room",
-      typeCode: "DELUXE",
     });
   }
 
-  // Floor 3 Deluxe Rooms (301 - 315, skipping 313: 14 Rooms)
-  const floor3DeluxeNumbers = [301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 311, 312, 314, 315];
-  for (const num of floor3DeluxeNumbers) {
+  // Floor 3 rooms (301 - 319, skipping 313). 302 is Twin and 303 is Suite.
+  const floor3Numbers = [301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 311, 312, 314, 315, 316, 317, 318, 319];
+  for (const num of floor3Numbers) {
+    const roomNumber = num.toString();
     rooms.push({
       id: `room_${num}`,
       propertyId: "62a25484e5",
-      roomTypeId: "deluxe-room",
+      ...getShemronRoomCategory(roomNumber),
       floorId: null,
-      number: num.toString(),
+      number: roomNumber,
       status: "AVAILABLE",
       housekeepingStatus: "CLEAN",
       isActive: true,
       floor: 3,
-      typeName: "Deluxe Room",
-      typeCode: "DELUXE",
-    });
-  }
-
-  // Floor 3 Twin Rooms (316, 317: 2 Rooms)
-  const floor3TwinNumbers = [316, 317];
-  for (const num of floor3TwinNumbers) {
-    rooms.push({
-      id: `room_${num}`,
-      propertyId: "62a25484e5",
-      roomTypeId: "twin-room",
-      floorId: null,
-      number: num.toString(),
-      status: "AVAILABLE",
-      housekeepingStatus: "CLEAN",
-      isActive: true,
-      floor: 3,
-      typeName: "Twin Room",
-      typeCode: "TWIN",
-    });
-  }
-
-  // Floor 3 Suite Rooms (318, 319: 2 Rooms)
-  const floor3SuiteNumbers = [318, 319];
-  for (const num of floor3SuiteNumbers) {
-    rooms.push({
-      id: `room_${num}`,
-      propertyId: "62a25484e5",
-      roomTypeId: "suite-room",
-      floorId: null,
-      number: num.toString(),
-      status: "AVAILABLE",
-      housekeepingStatus: "CLEAN",
-      isActive: true,
-      floor: 3,
-      typeName: "Suite Room",
-      typeCode: "SUITE",
     });
   }
 
@@ -231,7 +203,6 @@ export const demoReservations: Array<{
   balanceAmount: number;
 }> = [];
 
-// ─── Housekeeping Tasks ───
 export const demoHousekeepingTasks: Array<{
   id: string;
   roomNumber: string;
@@ -243,7 +214,6 @@ export const demoHousekeepingTasks: Array<{
   floor: number;
 }> = [];
 
-// ─── Guest Requests ───
 export const demoGuestRequests: Array<{
   id: string;
   roomNumber: string;
@@ -279,18 +249,7 @@ export const demoActivity: Array<{
   detail: string;
   createdAt: Date;
   icon: string;
-}> = [
-  {
-    id: "act_init_01",
-    action: "System Initialized",
-    entity: "system",
-    entityId: "62a25484e5",
-    user: "KaizerStays Engine",
-    detail: "Production PMS initialized for Hotel Shemron, Neemrana (32 Physical Rooms, Live Aiosell CM Bridge Connected).",
-    createdAt: new Date(),
-    icon: "CheckCircle",
-  },
-];
+}> = [];
 
 // ─── Expenses ───
 export const demoExpenses: Array<{
@@ -317,4 +276,3 @@ export const demoAttentionItems: Array<{
   severity: "info" | "warning" | "danger";
   link: string;
 }> = [];
-

@@ -1,44 +1,69 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { useAppState } from "@/context/AppStateContext";
+import { useAppState, type ExtendedReservation } from "@/context/AppStateContext";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
+  HOTEL_ACCOMMODATION_CGST_RATE,
+  HOTEL_ACCOMMODATION_GST_RATE,
+  HOTEL_ACCOMMODATION_SGST_RATE,
+  calculateInclusiveHotelGST,
+} from "@/lib/gst";
+import {
   FileText,
-  Download,
-  Send,
   Printer,
   Plus,
   Search,
-  CheckCircle2,
   X,
-  Building2,
-  Check,
 } from "lucide-react";
 
+interface InvoiceRecord {
+  id: string;
+  invoiceNumber: string;
+  billNumber: string;
+  guestName: string;
+  roomNumber: string;
+  amount: number;
+  taxableAmount: number;
+  tax: number;
+  cgst: number;
+  sgst: number;
+  status: "PAID" | "ISSUED";
+  date: Date;
+  resId: string;
+  isPostCheckout: boolean;
+  description?: string;
+  reservation: ExtendedReservation;
+}
+
+const formatInvoiceCurrency = (amount: number) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+
 export default function InvoicesClient() {
-  const { reservations, addPayment } = useAppState();
+  const { reservations } = useAppState();
 
   const [activeTab, setActiveTab] = useState<"ALL" | "IN_HOUSE" | "POST_CHECKOUT" | "OUTSTANDING">("ALL");
   const [search, setSearch] = useState("");
-  const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceRecord | null>(null);
   const [showPostCheckoutModal, setShowPostCheckoutModal] = useState(false);
 
   // Post checkout billing form state
   const [postResId, setPostResId] = useState(reservations[0]?.id || "");
   const [chargeDescription, setChargeDescription] = useState("Late Checkout Charge");
   const [chargeAmount, setChargeAmount] = useState<number>(1500);
-  const [taxPercent, setTaxPercent] = useState<number>(12);
-  const [generatedBill, setGeneratedBill] = useState<any | null>(null);
-
   // Custom post-checkout bills created in session
-  const [customPostCheckoutBills, setCustomPostCheckoutBills] = useState<any[]>([]);
+  const [customPostCheckoutBills, setCustomPostCheckoutBills] = useState<InvoiceRecord[]>([]);
 
   // System generated invoices list
-  const systemInvoices = useMemo(() => {
+  const systemInvoices = useMemo<InvoiceRecord[]>(() => {
     return reservations.map((res, idx) => {
       const isCheckedOut = res.status === "CHECKED_OUT";
+      const gst = calculateInclusiveHotelGST(res.totalAmount);
       const invNum = `INV-2026-${(new Date(res.checkIn).getMonth() + 1).toString().padStart(2, "0")}-${(idx + 101).toString().padStart(5, "0")}`;
       const billNum = `BILL-2026-${(idx + 201).toString().padStart(5, "0")}`;
       return {
@@ -47,8 +72,11 @@ export default function InvoicesClient() {
         billNumber: billNum,
         guestName: res.guestName,
         roomNumber: res.roomNumber || "101",
-        amount: res.totalAmount,
-        tax: res.taxAmount,
+        amount: gst.totalInclusive,
+        taxableAmount: gst.taxableValue,
+        tax: gst.totalTax,
+        cgst: gst.cgst,
+        sgst: gst.sgst,
         status: res.balanceAmount === 0 ? "PAID" : "ISSUED",
         date: new Date(res.checkIn),
         resId: res.id,
@@ -82,18 +110,20 @@ export default function InvoicesClient() {
   const handleGeneratePostCheckoutBill = (e: React.FormEvent) => {
     e.preventDefault();
     const res = reservations.find((r) => r.id === postResId) || reservations[0];
-    const subtotal = Number(chargeAmount) || 0;
-    const taxAmt = Math.round((subtotal * (Number(taxPercent) || 12)) / 100);
-    const total = subtotal + taxAmt;
+    if (!res) return;
+    const gst = calculateInclusiveHotelGST(chargeAmount);
 
-    const newBill = {
+    const newBill: InvoiceRecord = {
       id: `inv_post_${Date.now()}`,
       invoiceNumber: `INV-POST-${Math.floor(10000 + Math.random() * 90000)}`,
       billNumber: `BILL-POST-${Math.floor(1000 + Math.random() * 9000)}`,
       guestName: res.guestName,
       roomNumber: res.roomNumber || "101",
-      amount: total,
-      tax: taxAmt,
+      amount: gst.totalInclusive,
+      taxableAmount: gst.taxableValue,
+      tax: gst.totalTax,
+      cgst: gst.cgst,
+      sgst: gst.sgst,
       status: "ISSUED",
       date: new Date(),
       resId: res.id,
@@ -180,7 +210,7 @@ export default function InvoicesClient() {
                   <th>Bill Number</th>
                   <th>Guest Name</th>
                   <th>Room</th>
-                  <th>GST Tax (12%/18%)</th>
+                  <th>GST Included ({HOTEL_ACCOMMODATION_GST_RATE}%)</th>
                   <th>Total Amount</th>
                   <th>Bill Type / Status</th>
                   <th>Issued Date</th>
@@ -276,7 +306,7 @@ export default function InvoicesClient() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="form-label text-xs font-semibold">Charge Amount (₹ INR)</label>
+                  <label className="form-label text-xs font-semibold">Charge Amount (₹, GST inclusive)</label>
                   <input
                     type="number"
                     required
@@ -288,16 +318,10 @@ export default function InvoicesClient() {
                 </div>
 
                 <div>
-                  <label className="form-label text-xs font-semibold">GST Tax Rate</label>
-                  <select
-                    className="form-control text-sm"
-                    value={taxPercent}
-                    onChange={(e) => setTaxPercent(Number(e.target.value))}
-                  >
-                    <option value={12}>12% GST (Tariff ≤ ₹7,500)</option>
-                    <option value={18}>18% GST (Tariff {">"} ₹7,500)</option>
-                    <option value={0}>0% Tax Exempt</option>
-                  </select>
+                  <span className="form-label text-xs font-semibold">Hotel Accommodation GST</span>
+                  <div className="form-control text-sm" style={{ display: "flex", alignItems: "center" }}>
+                    {HOTEL_ACCOMMODATION_GST_RATE}% included · CGST {HOTEL_ACCOMMODATION_CGST_RATE}% + SGST {HOTEL_ACCOMMODATION_SGST_RATE}%
+                  </div>
                 </div>
               </div>
 
@@ -362,25 +386,25 @@ export default function InvoicesClient() {
                       {selectedInvoice.description || "Room Accommodation Tariff & Guest Services"}
                     </td>
                     <td style={{ padding: "8px 12px", textAlign: "right", fontWeight: 600 }}>
-                      {formatCurrency(selectedInvoice.amount - selectedInvoice.tax)}
+                      {formatInvoiceCurrency(selectedInvoice.taxableAmount)}
                     </td>
                   </tr>
                   <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
-                    <td style={{ padding: "8px 12px", color: "#64748b" }}>CGST (6% / 9%)</td>
+                    <td style={{ padding: "8px 12px", color: "#64748b" }}>CGST ({HOTEL_ACCOMMODATION_CGST_RATE}%)</td>
                     <td style={{ padding: "8px 12px", textAlign: "right", color: "#64748b" }}>
-                      {formatCurrency(Math.round(selectedInvoice.tax / 2))}
+                      {formatInvoiceCurrency(selectedInvoice.cgst)}
                     </td>
                   </tr>
                   <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
-                    <td style={{ padding: "8px 12px", color: "#64748b" }}>SGST (6% / 9%)</td>
+                    <td style={{ padding: "8px 12px", color: "#64748b" }}>SGST ({HOTEL_ACCOMMODATION_SGST_RATE}%)</td>
                     <td style={{ padding: "8px 12px", textAlign: "right", color: "#64748b" }}>
-                      {formatCurrency(Math.round(selectedInvoice.tax / 2))}
+                      {formatInvoiceCurrency(selectedInvoice.sgst)}
                     </td>
                   </tr>
                   <tr style={{ background: "#f8fafc", fontWeight: 800 }}>
                     <td style={{ padding: "10px 12px", fontSize: "13px" }}>Total Payable Amount</td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontSize: "16px", color: "#0071e3" }}>
-                      {formatCurrency(selectedInvoice.amount)}
+                      {formatInvoiceCurrency(selectedInvoice.amount)}
                     </td>
                   </tr>
                 </tbody>
@@ -390,7 +414,7 @@ export default function InvoicesClient() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", fontSize: "11px", color: "#64748b", marginBottom: "16px" }}>
               <div>
                 <div>Thank you for staying at Hotel Shemron Neemrana!</div>
-                <div>This is a GST compliant Tax Invoice.</div>
+                <div>{HOTEL_ACCOMMODATION_GST_RATE}% GST included without ITC · SAC 9963.</div>
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ borderBottom: "1px solid #000", width: "120px", marginBottom: "4px" }}></div>

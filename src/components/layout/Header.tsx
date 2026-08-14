@@ -55,7 +55,7 @@ export default function Header({ onToggleMobileMenu }: HeaderProps) {
 
         {/* Search trigger */}
         <button
-          className="search-input-wrapper"
+          className="search-input-wrapper header-search-trigger"
           onClick={() => setSearchOpen(!searchOpen)}
           style={{
             background: "var(--color-bg-secondary)",

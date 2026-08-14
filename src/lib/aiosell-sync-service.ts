@@ -170,7 +170,7 @@ export async function fetchLiveAiosellSummary(): Promise<AiosellLiveSummary> {
     code: r.id.toUpperCase(),
     totalRooms: r.totalCount,
     availableRooms: typeof todayInv[r.id] === "number" ? todayInv[r.id] : r.totalCount,
-    baseRate: 2800,
+    baseRate: r.id.includes("suite") ? 5500 : 2800,
   }));
 
   const totalRooms = roomTypes.reduce((acc, r) => acc + r.totalRooms, 0);

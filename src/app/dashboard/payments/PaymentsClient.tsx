@@ -10,31 +10,61 @@ import {
   Check,
   Printer,
   X,
-  Building2,
-  Phone,
-  Mail,
-  Send,
+  Download,
+  Filter,
 } from "lucide-react";
 
 export default function PaymentsClient() {
-  const { payments, reservations, addPayment } = useAppState();
+  const { payments, reservations, addPayment, addActivity } = useAppState();
   const [methodFilter, setMethodFilter] = useState("ALL");
   const [search, setSearch] = useState("");
   const [showRecordModal, setShowRecordModal] = useState(false);
-  const [selectedReceipt, setSelectedReceipt] = useState<typeof payments[0] | null>(null);
+  const [selectedReceipt, setSelectedReceipt] = useState<{
+    id: string;
+    paymentNumber: string;
+    reservationId: string;
+    guestName: string;
+    amount: number;
+    method: string;
+    reference: string;
+    receivedAt: Date;
+  } | null>(null);
+
   const [saved, setSaved] = useState(false);
 
   // Record Payment Form state
-  const [selectedResId, setSelectedResId] = useState(reservations[0]?.id || "res_001");
-  const [amount, setAmount] = useState<number>(5500);
+  const [selectedResId, setSelectedResId] = useState(() => reservations[0]?.id || "res_001");
+  const [amount, setAmount] = useState<number>(2800);
   const [method, setMethod] = useState("UPI");
   const [ref, setRef] = useState("UPI987654321");
 
-  const totalCollected = useMemo(() => payments.reduce((sum, p) => sum + p.amount, 0), [payments]);
+  // Derive complete payments list combining logged payments + prepaid reservation folios
+  const allPaymentsList = useMemo(() => {
+    const derivedFromReservations = reservations
+      .filter((r) => r.paidAmount > 0 && !payments.some((p) => p.reservationId === r.id))
+      .map((r, idx) => ({
+        id: `py_derived_${r.id}`,
+        paymentNumber: `RCT-2026-${(idx + 101).toString().padStart(4, "0")}`,
+        reservationId: r.id,
+        guestName: r.guestName,
+        amount: r.paidAmount,
+        method: r.bookingSource === "WALK_IN" ? "CASH" : r.bookingSource === "DIRECT" ? "UPI" : "OTA_SETTLEMENT",
+        reference: `${r.bookingSource} Prepaid`,
+        receivedAt: new Date(r.checkIn),
+      }));
+
+    return [...payments, ...derivedFromReservations];
+  }, [payments, reservations]);
+
+  const totalCollected = useMemo(
+    () => allPaymentsList.reduce((sum, p) => sum + p.amount, 0),
+    [allPaymentsList]
+  );
 
   const handleRecordPaymentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const res = reservations.find((r) => r.id === selectedResId) || reservations[0];
+    if (!res) return;
     addPayment({
       reservationId: res.id,
       guestName: res.guestName,
@@ -42,6 +72,7 @@ export default function PaymentsClient() {
       method,
       reference: ref,
     });
+    addActivity("Payment Recorded", "payments", res.id, `${formatCurrency(amount)} received via ${method} for ${res.guestName}`);
     setSaved(true);
     setTimeout(() => {
       setShowRecordModal(false);
@@ -50,7 +81,7 @@ export default function PaymentsClient() {
   };
 
   const filtered = useMemo(() => {
-    return payments.filter((p) => {
+    return allPaymentsList.filter((p) => {
       if (methodFilter !== "ALL" && p.method !== methodFilter) return false;
       if (search) {
         const q = search.toLowerCase();
@@ -62,13 +93,41 @@ export default function PaymentsClient() {
       }
       return true;
     });
-  }, [payments, methodFilter, search]);
+  }, [allPaymentsList, methodFilter, search]);
 
-  // Find reservation detail for printed receipt
   const receiptReservation = useMemo(() => {
     if (!selectedReceipt) return null;
     return reservations.find((r) => r.id === selectedReceipt.reservationId) || reservations[0];
   }, [selectedReceipt, reservations]);
+
+  const exportPaymentsCSV = () => {
+    const csvContent = `KaizerStays OS — Hotel Shemron Payments Collection Ledger
+Export Date: ${new Date().toISOString()}
+Total Collections: INR ${totalCollected}
+Total Transactions: ${allPaymentsList.length}
+
+=== PAYMENT TRANSACTIONS LIST ===
+Receipt #,Guest Name,Room #,Confirmation #,Method,Reference,Timestamp,Amount (INR)
+${filtered
+  .map((p) => {
+    const res = reservations.find((r) => r.id === p.reservationId);
+    return `"${p.paymentNumber}","${p.guestName.replace(/"/g, '""')}","${
+      res?.roomNumber || "101"
+    }","${res?.confirmationNumber || "RES-001"}","${p.method}","${(p.reference || "").replace(
+      /"/g,
+      '""'
+    )}","${formatDate(p.receivedAt, "yyyy-MM-dd HH:mm")}",${p.amount}`;
+  })
+  .join("\n")}
+`;
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `KaizerStays_Payments_Ledger_${formatDate(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+  };
 
   return (
     <div className="page-content">
@@ -84,6 +143,9 @@ export default function PaymentsClient() {
           </p>
         </div>
         <div className="page-actions">
+          <button className="btn btn-secondary" onClick={exportPaymentsCSV} disabled={allPaymentsList.length === 0}>
+            <Download size={16} /> Export Payments CSV
+          </button>
           <button className="btn btn-primary" onClick={() => setShowRecordModal(true)}>
             <Plus size={16} /> Record Payment
           </button>
@@ -95,16 +157,19 @@ export default function PaymentsClient() {
         <div className="stat-card">
           <span className="stat-card-label">Total Collections</span>
           <div className="stat-card-value text-success">{formatCurrency(totalCollected)}</div>
+          <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>Gross payment ledger</span>
         </div>
         <div className="stat-card">
-          <span className="stat-card-label font-semibold">Total Payment Receipts Issued</span>
-          <div className="stat-card-value">{payments.length}</div>
+          <span className="stat-card-label font-semibold">Payment Receipts Issued</span>
+          <div className="stat-card-value">{allPaymentsList.length}</div>
+          <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>Receipt transactions</span>
         </div>
         <div className="stat-card">
-          <span className="stat-card-label">In-House Active Reservations</span>
+          <span className="stat-card-label">In-House & Active Bookings</span>
           <div className="stat-card-value text-primary">
             {reservations.filter((r) => r.status === "CHECKED_IN" || r.status === "CONFIRMED").length}
           </div>
+          <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>Hotel Shemron guests</span>
         </div>
       </div>
 
@@ -113,7 +178,7 @@ export default function PaymentsClient() {
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold text-secondary">Method Filter:</span>
-            {["ALL", "UPI", "CASH", "CREDIT_CARD", "BANK_TRANSFER"].map((m) => (
+            {["ALL", "UPI", "CASH", "CREDIT_CARD", "BANK_TRANSFER", "OTA_SETTLEMENT"].map((m) => (
               <button
                 key={m}
                 type="button"
@@ -179,7 +244,15 @@ export default function PaymentsClient() {
                         </span>
                       </td>
                       <td>
-                        <span className={`badge ${p.method === "UPI" ? "badge-info" : p.method === "CASH" ? "badge-success" : "badge-primary"}`}>
+                        <span
+                          className={`badge ${
+                            p.method === "UPI"
+                              ? "badge-info"
+                              : p.method === "CASH"
+                              ? "badge-success"
+                              : "badge-primary"
+                          }`}
+                        >
                           {p.method.replace("_", " ")}
                         </span>
                       </td>
@@ -208,8 +281,29 @@ export default function PaymentsClient() {
 
       {/* Record Payment Modal */}
       {showRecordModal && (
-        <div className="modal-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "16px" }}>
-          <div className="card modal-card" style={{ width: "100%", maxWidth: "500px", padding: "24px", background: "var(--color-bg, #0d0e12)", border: "1px solid var(--color-border)" }}>
+        <div
+          className="modal-backdrop"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "16px",
+          }}
+        >
+          <div
+            className="card modal-card"
+            style={{
+              width: "100%",
+              maxWidth: "500px",
+              padding: "24px",
+              background: "var(--color-bg, #0d0e12)",
+              border: "1px solid var(--color-border)",
+            }}
+          >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 className="text-lg font-bold flex items-center gap-2">
                 <CreditCard size={20} className="text-primary" />
@@ -222,7 +316,19 @@ export default function PaymentsClient() {
 
             {saved ? (
               <div style={{ textAlign: "center", padding: "20px" }}>
-                <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "var(--green-50)", color: "var(--green-600)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: "12px" }}>
+                <div
+                  style={{
+                    width: "48px",
+                    height: "48px",
+                    borderRadius: "50%",
+                    background: "var(--green-50)",
+                    color: "var(--green-600)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: "12px",
+                  }}
+                >
                   <Check size={24} />
                 </div>
                 <h3>Payment Recorded & Receipt Generated!</h3>
@@ -297,11 +403,45 @@ export default function PaymentsClient() {
 
       {/* Printable Official Payment Receipt Modal */}
       {selectedReceipt && (
-        <div className="modal-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "16px" }}>
-          <div className="card modal-card" style={{ width: "100%", maxWidth: "540px", padding: "24px", background: "#ffffff", color: "#000000", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "2px solid #000", paddingBottom: "12px" }}>
+        <div
+          className="modal-backdrop"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "16px",
+          }}
+        >
+          <div
+            className="card modal-card"
+            style={{
+              width: "100%",
+              maxWidth: "540px",
+              padding: "24px",
+              background: "#ffffff",
+              color: "#000000",
+              borderRadius: "12px",
+              border: "1px solid #e2e8f0",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "16px",
+                borderBottom: "2px solid #000",
+                paddingBottom: "12px",
+              }}
+            >
               <div>
-                <div style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b" }}>Official Payment Receipt</div>
+                <div style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b" }}>
+                  Official Payment Receipt
+                </div>
                 <h2 style={{ fontSize: "20px", fontWeight: 800, margin: "2px 0", color: "#0f172a" }}>HOTEL SHEMRON</h2>
                 <div style={{ fontSize: "11px", color: "#475569" }}>NH-48, Shahjahanpur, Neemrana, Rajasthan · GSTIN: 08AAAAH9821K1Z2</div>
               </div>
@@ -311,14 +451,29 @@ export default function PaymentsClient() {
             </div>
 
             {/* Receipt Details Grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: "#f8fafc", padding: "14px", borderRadius: "8px", border: "1px solid #e2e8f0", marginBottom: "16px" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "12px",
+                background: "#f8fafc",
+                padding: "14px",
+                borderRadius: "8px",
+                border: "1px solid #e2e8f0",
+                marginBottom: "16px",
+              }}
+            >
               <div>
                 <span style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase" }}>Receipt Number</span>
-                <div style={{ fontWeight: 800, fontSize: "14px", fontFamily: "monospace", color: "#0071e3" }}>{selectedReceipt.paymentNumber}</div>
+                <div style={{ fontWeight: 800, fontSize: "14px", fontFamily: "monospace", color: "#0071e3" }}>
+                  {selectedReceipt.paymentNumber}
+                </div>
               </div>
               <div>
                 <span style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase" }}>Date & Time</span>
-                <div style={{ fontWeight: 600, fontSize: "13px", color: "#1e293b" }}>{formatDate(selectedReceipt.receivedAt, "dd MMM yyyy, hh:mm a")}</div>
+                <div style={{ fontWeight: 600, fontSize: "13px", color: "#1e293b" }}>
+                  {formatDate(selectedReceipt.receivedAt, "dd MMM yyyy, hh:mm a")}
+                </div>
               </div>
               <div>
                 <span style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase" }}>Guest Name</span>
@@ -334,7 +489,16 @@ export default function PaymentsClient() {
 
             {/* Payment Summary */}
             <div style={{ border: "1px solid #e2e8f0", borderRadius: "8px", overflow: "hidden", marginBottom: "16px" }}>
-              <div style={{ background: "#f1f5f9", padding: "10px 14px", fontWeight: 700, fontSize: "12px", textTransform: "uppercase", color: "#334155" }}>
+              <div
+                style={{
+                  background: "#f1f5f9",
+                  padding: "10px 14px",
+                  fontWeight: 700,
+                  fontSize: "12px",
+                  textTransform: "uppercase",
+                  color: "#334155",
+                }}
+              >
                 Payment Transaction Details
               </div>
               <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -346,9 +510,20 @@ export default function PaymentsClient() {
                   <span style={{ color: "#475569" }}>Transaction Ref / UTR:</span>
                   <span style={{ fontFamily: "monospace", fontWeight: 700 }}>{selectedReceipt.reference || "N/A"}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", borderTop: "1px dashed #cbd5e1", paddingTop: "8px", marginTop: "4px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "13px",
+                    borderTop: "1px dashed #cbd5e1",
+                    paddingTop: "8px",
+                    marginTop: "4px",
+                  }}
+                >
                   <span style={{ fontWeight: 700, fontSize: "14px", color: "#0f172a" }}>Total Amount Received:</span>
-                  <span style={{ fontWeight: 800, fontSize: "18px", color: "#16a34a" }}>{formatCurrency(selectedReceipt.amount)}</span>
+                  <span style={{ fontWeight: 800, fontSize: "18px", color: "#16a34a" }}>
+                    {formatCurrency(selectedReceipt.amount)}
+                  </span>
                 </div>
               </div>
             </div>

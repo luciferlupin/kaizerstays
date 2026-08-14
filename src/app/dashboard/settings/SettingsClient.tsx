@@ -4,13 +4,16 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAppState } from "@/context/AppStateContext";
 import { Save, Check } from "lucide-react";
+import { HOTEL_ACCOMMODATION_GST_RATE } from "@/lib/gst";
+
+const PROPERTY_POLICIES_KEY = "kaizerstays_property_policies_v2";
 
 function loadPolicies() {
-  const defaults = { checkInTime: "14:00", checkOutTime: "11:00", taxRate: 12, wifiNetwork: "ShemronGuest_WiFi", wifiPass: "" };
+  const defaults = { checkInTime: "14:00", checkOutTime: "11:00", taxRate: HOTEL_ACCOMMODATION_GST_RATE, wifiNetwork: "ShemronGuest_WiFi", wifiPass: "" };
   if (typeof window === "undefined") return defaults;
   try {
-    const policies = localStorage.getItem("kaizerstays_property_policies_v1");
-    return policies ? { ...defaults, ...JSON.parse(policies) } : defaults;
+    const policies = localStorage.getItem(PROPERTY_POLICIES_KEY);
+    return policies ? { ...defaults, ...JSON.parse(policies), taxRate: HOTEL_ACCOMMODATION_GST_RATE } : defaults;
   } catch {
     return defaults;
   }
@@ -21,13 +24,13 @@ export default function SettingsClient() {
   const [initialPolicies] = useState(loadPolicies);
   const [checkInTime, setCheckInTime] = useState(initialPolicies.checkInTime);
   const [checkOutTime, setCheckOutTime] = useState(initialPolicies.checkOutTime);
-  const [taxRate, setTaxRate] = useState(initialPolicies.taxRate);
+  const [taxRate] = useState(initialPolicies.taxRate);
   const [wifiNetwork, setWifiNetwork] = useState(initialPolicies.wifiNetwork);
   const [wifiPass, setWifiPass] = useState(initialPolicies.wifiPass);
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
-    localStorage.setItem("kaizerstays_property_policies_v1", JSON.stringify({ checkInTime, checkOutTime, taxRate, wifiNetwork, wifiPass }));
+    localStorage.setItem(PROPERTY_POLICIES_KEY, JSON.stringify({ checkInTime, checkOutTime, taxRate, wifiNetwork, wifiPass }));
     addActivity("Property Settings Updated", "settings", property.id, "Hotel profile and operating policies were updated");
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
@@ -102,8 +105,9 @@ export default function SettingsClient() {
               </div>
             </div>
             <div className="form-group">
-              <label className="form-label">GST Tax Rate (%)</label>
-              <input type="number" className="form-input" value={taxRate} onChange={(e) => setTaxRate(Number(e.target.value))} />
+              <label className="form-label">Hotel Accommodation GST Rate (%)</label>
+              <input type="number" className="form-input" value={taxRate} readOnly />
+              <span className="form-hint">5% total, split as CGST 2.5% + SGST 2.5%, included in the room rate.</span>
             </div>
           </div>
         </div>

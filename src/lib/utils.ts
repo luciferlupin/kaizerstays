@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 import { format, formatDistanceToNow, differenceInDays, parseISO } from "date-fns";
+import { calculateInclusiveHotelGST } from "@/lib/gst";
 
 // ─── Currency Formatting ───
 
@@ -150,15 +151,14 @@ export function calculateTotal(amount: number, taxRate: number = 12): number {
 
 export function calculateRoomCharges(
   rate: number,
-  nights: number,
-  taxRate: number = 12
+  nights: number
 ): { subtotal: number; tax: number; total: number } {
-  const subtotal = rate * nights;
-  const tax = calculateTax(subtotal, taxRate);
+  const total = Math.round(rate * nights * 100) / 100;
+  const gst = calculateInclusiveHotelGST(total);
   return {
-    subtotal,
-    tax,
-    total: subtotal + tax,
+    subtotal: gst.taxableValue,
+    tax: gst.totalTax,
+    total: gst.totalInclusive,
   };
 }
 

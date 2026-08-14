@@ -5,6 +5,8 @@ import { useAppState } from "@/context/AppStateContext";
 import { formatCurrency } from "@/lib/utils";
 import { DoorOpen, Plus, Search, X, Check } from "lucide-react";
 
+import { getShemronRoomCategory } from "@/lib/demo-data";
+
 export default function RoomsClient() {
   const { rooms, roomTypes, updateRoomStatus, addRoom } = useAppState();
   const [activeTab, setActiveTab] = useState<"rooms" | "room_types">("rooms");
@@ -14,7 +16,7 @@ export default function RoomsClient() {
 
   // Add Room form state
   const [newRoomNumber, setNewRoomNumber] = useState("");
-  const [newRoomTypeId, setNewRoomTypeId] = useState("rt_standard");
+  const [newRoomTypeId, setNewRoomTypeId] = useState("deluxe-room");
   const [newFloor, setNewFloor] = useState(1);
   const [roomAdded, setRoomAdded] = useState(false);
 
@@ -127,30 +129,33 @@ export default function RoomsClient() {
 
           {/* Visual Grid View */}
           <div className="room-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))" }}>
-            {filteredRooms.slice(0, 50).map((room) => (
-              <div
-                key={room.id}
-                className={`room-cell ${
-                  room.status === "AVAILABLE"
-                    ? "room-available"
-                    : room.status === "OCCUPIED"
-                    ? "room-occupied"
-                    : room.status === "RESERVED"
-                    ? "room-reserved"
-                    : room.status === "DIRTY"
-                    ? "room-dirty"
-                    : room.status === "CLEANING"
-                    ? "room-cleaning"
-                    : "room-maintenance"
-                }`}
-                onClick={() => handleToggleStatus(room.id, room.status)}
-                title="Click to cycle room status"
-              >
-                <div className="room-cell-number">#{room.number}</div>
-                <div className="room-cell-type">{room.typeCode} • Floor {room.floor}</div>
-                <div style={{ fontSize: "10px", marginTop: "4px", fontWeight: 600 }}>{room.status}</div>
-              </div>
-            ))}
+            {filteredRooms.slice(0, 50).map((room) => {
+              const cat = getShemronRoomCategory(room.number);
+              return (
+                <div
+                  key={room.id}
+                  className={`room-cell ${
+                    room.status === "AVAILABLE"
+                      ? "room-available"
+                      : room.status === "OCCUPIED"
+                      ? "room-occupied"
+                      : room.status === "RESERVED"
+                      ? "room-reserved"
+                      : room.status === "DIRTY"
+                      ? "room-dirty"
+                      : room.status === "CLEANING"
+                      ? "room-cleaning"
+                      : "room-maintenance"
+                  }`}
+                  onClick={() => handleToggleStatus(room.id, room.status)}
+                  title="Click to cycle room status"
+                >
+                  <div className="room-cell-number">#{room.number}</div>
+                  <div className="room-cell-type">{cat.typeCode} • Floor {room.floor}</div>
+                  <div style={{ fontSize: "10px", marginTop: "4px", fontWeight: 600 }}>{room.status}</div>
+                </div>
+              );
+            })}
           </div>
         </>
       ) : (

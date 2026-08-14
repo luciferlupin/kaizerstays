@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAppState } from "@/context/AppStateContext";
 import { formatCurrency, calculateNights, calculateRoomCharges } from "@/lib/utils";
+import { HOTEL_ACCOMMODATION_GST_RATE } from "@/lib/gst";
 import { getAverageRateForStay, toDateKey } from "@/lib/rates";
 import { Check, ArrowRight, ArrowLeft, AlertTriangle } from "lucide-react";
 
@@ -44,7 +45,7 @@ export default function CreateReservationClient() {
   const selectedRoomType = roomTypes.find((rt) => rt.id === selectedRoomTypeId) || roomTypes[0];
   const nights = calculateNights(new Date(checkIn), new Date(checkOut));
   const stayRate = getAverageRateForStay(selectedRoomType.id, checkIn, checkOut, selectedRoomType.baseRate);
-  const pricing = calculateRoomCharges(stayRate.averageRate, nights, 12);
+  const pricing = calculateRoomCharges(stayRate.averageRate, nights);
   const datesValid = Boolean(checkIn && checkOut && new Date(checkOut) > new Date(checkIn));
   const stayAllowed = datesValid && stayRate.blockedDates.length === 0 && nights >= stayRate.minStay;
 
@@ -303,7 +304,7 @@ export default function CreateReservationClient() {
           <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "16px" }}>5. Deposit Settlement</h3>
           <div style={{ background: "var(--color-bg-tertiary)", padding: "16px", borderRadius: "var(--radius-md)", marginBottom: "16px" }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>Total Tariff ({nights} nights at average {formatCurrency(stayRate.averageRate)} + 12% GST):</span>
+              <span>Total Tariff ({nights} nights at average {formatCurrency(stayRate.averageRate)}, including {HOTEL_ACCOMMODATION_GST_RATE}% GST):</span>
               <span className="mono font-bold text-primary">{formatCurrency(pricing.total)}</span>
             </div>
           </div>

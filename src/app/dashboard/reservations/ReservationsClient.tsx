@@ -1,52 +1,100 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useAppState } from "@/context/AppStateContext";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   Search,
-  Filter,
   Plus,
   Calendar,
-  CalendarCheck,
   ArrowUpRight,
-  MoreVertical,
   CheckCircle2,
-  XCircle,
+  Download,
+  LogOut,
 } from "lucide-react";
 
 export default function ReservationsClient() {
-  const { reservations, cancelReservation } = useAppState();
+  const { reservations, rooms, cancelReservation, checkInGuest, checkOutGuest } = useAppState();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [sourceFilter, setSourceFilter] = useState("ALL");
 
-  const filtered = reservations.filter((res) => {
-    if (statusFilter !== "ALL" && res.status !== statusFilter) return false;
-    if (sourceFilter !== "ALL" && res.bookingSource !== sourceFilter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      return (
-        res.guestName.toLowerCase().includes(q) ||
-        res.confirmationNumber.toLowerCase().includes(q) ||
-        res.roomNumber.toLowerCase().includes(q)
-      );
+  const getEffectiveRoomDetails = (res: (typeof reservations)[0]) => {
+    let roomNum = res.roomNumber;
+    let typeName = res.roomType;
+
+    if (roomNum) {
+      const physicalRoom = rooms.find((r) => r.number === roomNum);
+      if (physicalRoom) {
+        typeName = physicalRoom.typeName;
+      }
     }
-    return true;
-  });
+
+    return { roomNum, typeName };
+  };
+
+  const filtered = useMemo(() => {
+    return reservations.filter((res) => {
+      if (statusFilter !== "ALL" && res.status !== statusFilter) return false;
+      if (sourceFilter !== "ALL" && res.bookingSource !== sourceFilter) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        return (
+          res.guestName.toLowerCase().includes(q) ||
+          res.confirmationNumber.toLowerCase().includes(q) ||
+          (res.roomNumber || "").toLowerCase().includes(q) ||
+          res.roomType.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [reservations, statusFilter, sourceFilter, search]);
+
+  const exportReservationsCSV = () => {
+    const csvContent = `KaizerStays OS — Hotel Shemron Reservations List
+Export Date: ${new Date().toISOString()}
+Total Bookings: ${reservations.length}
+
+=== RESERVATIONS MASTER LIST ===
+Confirmation #,Guest Name,Room #,Room Category,Check In,Check Out,Nights,Channel,Status,Total (INR),Balance (INR)
+${filtered
+  .map(
+    (res) =>
+      `"${res.confirmationNumber}","${res.guestName.replace(/"/g, '""')}","${res.roomNumber || "Unassigned"}","${
+        res.roomType
+      }","${formatDate(res.checkIn, "yyyy-MM-dd")}","${formatDate(res.checkOut, "yyyy-MM-dd")}",${
+        res.nights
+      },"${res.bookingSource}","${res.status}",${res.totalAmount},${res.balanceAmount}`
+  )
+  .join("\n")}
+`;
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `KaizerStays_Reservations_${formatDate(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+  };
 
   return (
     <div className="page-content">
       {/* Header */}
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="page-title">Reservations</h1>
+          <h1 className="page-title flex items-center gap-2">
+            <Calendar className="text-primary" size={24} />
+            Reservations Master Ledger
+          </h1>
           <p className="page-description">
-            Manage all hotel bookings, check-ins, and stay allocations.
+            Manage all hotel bookings, check-ins, room assignments, and stay allocations for Hotel Shemron.
           </p>
         </div>
         <div className="page-actions">
+          <button className="btn btn-secondary" onClick={exportReservationsCSV} disabled={reservations.length === 0}>
+            <Download size={16} /> Export CSV
+          </button>
           <Link href="/dashboard/reservations/new" className="btn btn-primary">
             <Plus size={16} /> Create Reservation
           </Link>
@@ -54,7 +102,7 @@ export default function ReservationsClient() {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="card" style={{ padding: "12px 16px" }}>
+      <div className="card" style={{ padding: "16px", marginBottom: "20px" }}>
         <div
           style={{
             display: "flex",
@@ -75,9 +123,9 @@ export default function ReservationsClient() {
             />
           </div>
 
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
             <select
-              className="form-select"
+              className="form-select text-xs"
               style={{ width: "160px" }}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -90,15 +138,16 @@ export default function ReservationsClient() {
             </select>
 
             <select
-              className="form-select"
-              style={{ width: "160px" }}
+              className="form-select text-xs"
+              style={{ width: "180px" }}
               value={sourceFilter}
               onChange={(e) => setSourceFilter(e.target.value)}
             >
               <option value="ALL">All Channels</option>
-              <option value="DIRECT">Direct</option>
+              <option value="DIRECT">Direct Desk</option>
               <option value="WALK_IN">Walk-In</option>
-              <option value="WEBSITE">Website</option>
+              <option value="WEBSITE">Website Direct</option>
+              <option value="AIOSELL_CHANNEL_MANAGER">Aiosell Channel Manager</option>
               <option value="BOOKING_COM">Booking.com</option>
               <option value="AGODA">Agoda</option>
             </select>
@@ -114,7 +163,7 @@ export default function ReservationsClient() {
               <Calendar size={36} className="text-tertiary" style={{ margin: "0 auto 12px auto" }} />
               <h3 style={{ fontSize: "16px", fontWeight: 700 }}>No Reservations Found</h3>
               <p className="text-xs text-secondary" style={{ marginTop: "4px", marginBottom: "16px" }}>
-                Create a new direct walk-in reservation or sync with OTA Extranets (Booking.com, Agoda) to import bookings.
+                Create a new direct walk-in reservation or sync with Aiosell Channel Manager to import bookings.
               </p>
               <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
                 <Link href="/dashboard/reservations/new" className="btn btn-primary btn-sm">
@@ -129,73 +178,126 @@ export default function ReservationsClient() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Guest & Confirmation</th>
-                  <th>Room Type / No</th>
-                  <th>Dates & Nights</th>
-                  <th>Channel</th>
-                  <th>Status</th>
-                  <th className="text-right">Total</th>
-                  <th className="text-right">Balance</th>
-                  <th className="text-right">Action</th>
+                  <th>Guest &amp; Confirmation</th>
+                  <th>Room Category / No</th>
+                  <th>Dates &amp; Stay</th>
+                  <th>Channel Source</th>
+                  <th>Check-in Status</th>
+                  <th className="text-right">Total Amount</th>
+                  <th className="text-right">Folio Balance</th>
+                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((res) => (
-                  <tr key={res.id}>
-                    <td>
-                      <div className="font-semibold">{res.guestName}</div>
-                      <div className="mono text-tertiary text-xs">{res.confirmationNumber}</div>
-                    </td>
-                    <td>
-                      <div>{res.roomType}</div>
-                      <div className="text-xs text-primary font-semibold">
-                        {res.roomNumber ? `Room #${res.roomNumber}` : "Unassigned"}
-                      </div>
-                    </td>
-                    <td>
-                      <div>{formatDate(res.checkIn, "dd MMM")} → {formatDate(res.checkOut, "dd MMM")}</div>
-                      <div className="text-xs text-tertiary">{res.nights} Nights • {res.adults} Adults</div>
-                    </td>
-                    <td>
-                      <span className="badge badge-default">{res.bookingSource}</span>
-                    </td>
-                    <td>
-                      <span
-                        className={`badge ${
-                          res.status === "CHECKED_IN"
-                            ? "badge-success"
-                            : res.status === "CONFIRMED"
-                            ? "badge-primary"
-                            : res.status === "CANCELLED"
-                            ? "badge-danger"
-                            : "badge-default"
-                        }`}
-                      >
-                        {res.status}
-                      </span>
-                    </td>
-                    <td className="text-right mono font-semibold">{formatCurrency(res.totalAmount)}</td>
-                    <td className="text-right mono font-semibold">
-                      {res.balanceAmount === 0 ? (
-                        <span className="text-success font-bold">Paid</span>
-                      ) : (
-                        <span className="text-warning">{formatCurrency(res.balanceAmount)}</span>
-                      )}
-                    </td>
-                    <td className="text-right">
-                      <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
-                        <Link href={`/dashboard/reservations/${res.id}`} className="btn btn-secondary btn-sm">
-                          View Folio <ArrowUpRight size={12} />
-                        </Link>
-                        {res.status === "CONFIRMED" && (
-                          <button className="btn btn-ghost btn-sm text-danger" onClick={() => cancelReservation(res.id)}>
-                            Cancel
-                          </button>
+                {filtered.map((res) => {
+                  const { roomNum, typeName } = getEffectiveRoomDetails(res);
+                  const isCheckedIn = res.status === "CHECKED_IN";
+                  const isConfirmed = res.status === "CONFIRMED";
+
+                  return (
+                    <tr key={res.id}>
+                      <td>
+                        <div className="font-bold">{res.guestName}</div>
+                        <div className="mono text-primary text-xs font-semibold">{res.confirmationNumber}</div>
+                      </td>
+                      <td>
+                        <div className="font-semibold text-sm">{typeName}</div>
+                        {roomNum ? (
+                          <span className="badge badge-primary text-xs" style={{ marginTop: "3px" }}>
+                            Room #{roomNum}
+                          </span>
+                        ) : (
+                          <span className="badge badge-warning text-xs" style={{ marginTop: "3px" }}>
+                            Unassigned
+                          </span>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td>
+                        <div className="font-medium text-sm">
+                          {formatDate(res.checkIn, "dd MMM")} → {formatDate(res.checkOut, "dd MMM yyyy")}
+                        </div>
+                        <div className="text-xs text-tertiary">
+                          {res.nights} {res.nights === 1 ? "Night" : "Nights"} • {res.adults} Adults
+                        </div>
+                      </td>
+                      <td>
+                        <span
+                          className={`badge ${
+                            res.bookingSource.includes("AIOSELL")
+                              ? "badge-info"
+                              : res.bookingSource === "DIRECT"
+                              ? "badge-primary"
+                              : "badge-default"
+                          }`}
+                        >
+                          {res.bookingSource.replace(/_/g, " ")}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          className={`badge ${
+                            isCheckedIn
+                              ? "badge-success font-bold"
+                              : isConfirmed
+                              ? "badge-primary"
+                              : res.status === "CHECKED_OUT"
+                              ? "badge-secondary"
+                              : res.status === "CANCELLED"
+                              ? "badge-danger"
+                              : "badge-default"
+                          }`}
+                        >
+                          {res.status.replace("_", " ")}
+                        </span>
+                      </td>
+                      <td className="text-right mono font-semibold">{formatCurrency(res.totalAmount)}</td>
+                      <td className="text-right mono font-semibold">
+                        {res.balanceAmount === 0 ? (
+                          <span className="badge badge-success text-xs font-bold">Settled (₹0)</span>
+                        ) : (
+                          <span className="text-warning font-bold">{formatCurrency(res.balanceAmount)}</span>
+                        )}
+                      </td>
+                      <td className="text-right">
+                        <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
+                          <Link href={`/dashboard/reservations/${res.id}`} className="btn btn-secondary btn-sm">
+                            View Folio <ArrowUpRight size={12} />
+                          </Link>
+
+                          {isConfirmed && (
+                            <button
+                              className="btn btn-primary btn-sm"
+                              onClick={() => {
+                                const targetRoom = roomNum || "101";
+                                checkInGuest(res.id, targetRoom);
+                              }}
+                            >
+                              <CheckCircle2 size={13} /> Check In
+                            </button>
+                          )}
+
+                          {isCheckedIn && (
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => checkOutGuest(res.id)}
+                            >
+                              <LogOut size={13} /> Check Out
+                            </button>
+                          )}
+
+                          {isConfirmed && (
+                            <button
+                              className="btn btn-ghost btn-sm text-danger"
+                              onClick={() => cancelReservation(res.id)}
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
