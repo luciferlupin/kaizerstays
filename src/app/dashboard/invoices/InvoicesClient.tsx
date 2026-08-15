@@ -359,7 +359,6 @@ export default function InvoicesClient() {
                 Motel No 1, RIICO Industrial Area Sahjahanpur<br />
                 District Alwar-301706<br />
                 Alwar<br />
-                Email: gauravsharma86401@yahoo.com<br />
                 <strong style={{ fontSize: "12px" }}>GSTIN : 08AAPCS3946P1ZD</strong>
               </div>
             </div>
@@ -376,7 +375,6 @@ export default function InvoicesClient() {
                 <div><strong>Company Name &amp; Address</strong> : {selectedInvoice.reservation?.companyName || "N/A"}</div>
                 {selectedInvoice.reservation?.companyAddress && <div style={{ fontSize: "10px", color: "#333", paddingLeft: "8px" }}>{selectedInvoice.reservation.companyAddress}</div>}
                 <div style={{ marginTop: "4px" }}><strong>Guest Name</strong> : {selectedInvoice.guestName}</div>
-                <div><strong>Email</strong> : {selectedInvoice.reservation?.guestEmail || ""}</div>
                 <div><strong>GSTIN No.</strong> : {selectedInvoice.reservation?.companyGstin || selectedInvoice.gstin || ""}</div>
               </div>
 
