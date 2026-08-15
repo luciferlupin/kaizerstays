@@ -191,7 +191,8 @@ export default function DashboardClient() {
                 <thead>
                   <tr>
                     <th>Guest Name</th>
-                    <th>Dates</th>
+                    <th>Room &amp; Type</th>
+                    <th>Stay Dates</th>
                     <th>Source</th>
                     <th>Balance</th>
                     <th className="text-right">Action</th>
@@ -202,7 +203,7 @@ export default function DashboardClient() {
                     <tr key={r.id}>
                       <td className="font-semibold">{r.guestName}</td>
                       <td>
-                        <div>{r.roomType}</div>
+                        <div>{r.roomType || "Deluxe Room"}</div>
                         <div className="text-xs text-primary font-semibold">
                           {r.roomNumber ? `Room #${r.roomNumber}` : "Unassigned"}
                         </div>
@@ -211,7 +212,11 @@ export default function DashboardClient() {
                         {formatDate(r.checkIn, "dd MMM")} → {formatDate(r.checkOut, "dd MMM")}
                       </td>
                       <td>
-                        <span className="badge badge-default">{r.bookingSource}</span>
+                        <span className="badge badge-secondary">
+                          {r.bookingSource === "AIOSELL_CHANNEL_MANAGER"
+                            ? "Aiosell CM"
+                            : r.bookingSource.replace(/_/g, " ")}
+                        </span>
                       </td>
                       <td className="mono font-semibold text-sm">
                         {r.balanceAmount === 0 ? (
