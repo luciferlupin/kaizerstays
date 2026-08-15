@@ -38,16 +38,28 @@ export default function GuestPortalClient({ reservationId }: { reservationId: st
   const [searchVal, setSearchVal] = useState("");
   const cleanId = String(reservationId || "").trim().toLowerCase();
 
-  const matchedRes = reservations.find(
-    (item) =>
-      item.id === reservationId ||
-      item.confirmationNumber === reservationId ||
-      item.roomNumber === reservationId ||
-      item.id.toLowerCase() === cleanId ||
-      (item.confirmationNumber && item.confirmationNumber.toLowerCase() === cleanId) ||
-      (item.roomNumber && item.roomNumber.toLowerCase() === cleanId) ||
-      (searchVal && (item.roomNumber === searchVal || item.confirmationNumber.toLowerCase().includes(searchVal.toLowerCase())))
+  const activeResList = reservations.filter(
+    (item) => item.status === "CHECKED_IN" || item.status === "CONFIRMED"
   );
+
+  const matchedRes =
+    activeResList.find(
+      (item) =>
+        (item.roomNumber && item.roomNumber.toLowerCase() === cleanId) ||
+        item.id === reservationId ||
+        item.confirmationNumber === reservationId ||
+        item.id.toLowerCase() === cleanId ||
+        (item.confirmationNumber && item.confirmationNumber.toLowerCase() === cleanId) ||
+        (searchVal && (item.roomNumber === searchVal || item.confirmationNumber.toLowerCase().includes(searchVal.toLowerCase())))
+    ) ||
+    reservations.find(
+      (item) =>
+        (item.roomNumber && item.roomNumber.toLowerCase() === cleanId) ||
+        item.id === reservationId ||
+        item.confirmationNumber === reservationId ||
+        item.id.toLowerCase() === cleanId ||
+        (item.confirmationNumber && item.confirmationNumber.toLowerCase() === cleanId)
+    );
 
   const phoneLink = property.phone ? `tel:${property.phone.replace(/\s/g, "")}` : undefined;
   const whatsappLink = property.phone ? `https://wa.me/${property.phone.replace(/\D/g, "")}` : undefined;
