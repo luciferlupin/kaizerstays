@@ -387,6 +387,41 @@ export default function ChannelsClient({
     [roomTypes]
   );
 
+  const displayBookings = useMemo(() => {
+    const fromSummary = (liveSummary?.liveReservations || []).map((b) => ({
+      bookingId: String(b.bookingId || "AIO-RES"),
+      guestName: String(b.guestName || "Aiosell OTA Guest"),
+      checkIn: String(b.checkIn || "").slice(0, 10),
+      checkOut: String(b.checkOut || "").slice(0, 10),
+      roomTypeName: String(b.roomTypeName || b.roomCode || "Deluxe Room"),
+      channel: String(b.channel || "Aiosell Channel Manager"),
+      totalAmount: Number(b.totalAmount || 0),
+      status: String(b.status || "CONFIRMED"),
+    }));
+
+    const fromState = reservations.map((r) => ({
+      bookingId: r.confirmationNumber || r.id,
+      guestName: r.guestName,
+      checkIn: typeof r.checkIn === "string" ? String(r.checkIn).slice(0, 10) : new Date(r.checkIn).toISOString().slice(0, 10),
+      checkOut: typeof r.checkOut === "string" ? String(r.checkOut).slice(0, 10) : new Date(r.checkOut).toISOString().slice(0, 10),
+      roomTypeName: r.roomType || "Deluxe Room",
+      channel: r.bookingSource === "AIOSELL_CHANNEL_MANAGER"
+        ? "Aiosell Channel Manager (OTA)"
+        : r.bookingSource.replace(/_/g, " "),
+      totalAmount: r.totalAmount,
+      status: r.status,
+    }));
+
+    const merged = [...fromSummary];
+    fromState.forEach((item) => {
+      if (!merged.some((m) => m.bookingId === item.bookingId)) {
+        merged.push(item);
+      }
+    });
+
+    return merged;
+  }, [reservations, liveSummary]);
+
   const productionConnections = managerState.connections.filter(
     (connection) =>
       connection.environment === "PRODUCTION" && connection.status === "HEALTHY"
@@ -394,15 +429,9 @@ export default function ChannelsClient({
   const sandboxConnections = managerState.connections.filter(
     (connection) => connection.status === "SANDBOX_ACTIVE"
   );
-  const liveBookingsCount = liveSummary?.liveReservations ? liveSummary.liveReservations.length : reservations.filter(
-    (r) => r.bookingSource === "BOOKING_COM" || r.bookingSource === "AGODA" || r.bookingSource === "AIOSELL_CHANNEL_MANAGER"
-  ).length;
+  const liveBookingsCount = displayBookings.length;
 
-  const liveBookingsRevenue = liveSummary?.liveReservations && liveSummary.liveReservations.length > 0
-    ? liveSummary.liveReservations.reduce((sum, r) => sum + (r.totalAmount || 0), 0)
-    : reservations
-        .filter((r) => r.bookingSource === "BOOKING_COM" || r.bookingSource === "AGODA" || r.bookingSource === "AIOSELL_CHANNEL_MANAGER")
-        .reduce((total, r) => total + r.totalAmount, 0);
+  const liveBookingsRevenue = displayBookings.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
   const latestJob = managerState.jobs[0];
   const connectionsWithSetup = managerState.connections.filter(
     (connection) => connection.propertyId || connection.mappings.length > 0
@@ -1908,16 +1937,20 @@ export default function ChannelsClient({
                   </tr>
                 </thead>
                 <tbody>
-                  {liveSummary?.liveReservations && liveSummary.liveReservations.length > 0 ? (
-                    liveSummary.liveReservations.map((b, idx) => (
+                  {displayBookings.length > 0 ? (
+                    displayBookings.map((b, idx) => (
                       <tr key={b.bookingId || idx}>
                         <td className="font-semibold text-primary">{b.bookingId}</td>
-                        <td>{b.guestName}</td>
-                        <td>{b.checkIn} → {b.checkOut}</td>
-                        <td><span className="badge badge-info">{b.roomTypeName || "Deluxe Room"}</span></td>
-                        <td>{b.channel}</td>
-                        <td className="font-bold">₹{(b.totalAmount || 0).toLocaleString("en-IN")}</td>
-                        <td><span className="badge badge-success">{b.status || "CONFIRMED"}</span></td>
+                        <td className="font-medium">{b.guestName}</td>
+                        <td className="text-xs">{b.checkIn} → {b.checkOut}</td>
+                        <td><span className="badge badge-info">{b.roomTypeName}</span></td>
+                        <td className="text-xs font-semibold">{b.channel}</td>
+                        <td className="font-bold">₹{Number(b.totalAmount || 0).toLocaleString("en-IN")}</td>
+                        <td>
+                          <span className={`badge ${b.status === "CANCELLED" ? "badge-danger" : b.status === "CHECKED_IN" ? "badge-primary" : "badge-success"}`}>
+                            {b.status}
+                          </span>
+                        </td>
                       </tr>
                     ))
                   ) : (
