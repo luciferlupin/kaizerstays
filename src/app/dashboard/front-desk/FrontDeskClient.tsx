@@ -64,17 +64,30 @@ export default function FrontDeskClient() {
   const handleOpenCheckInModal = (r: (typeof reservations)[0]) => {
     setCheckInModal(r);
     let defaultRoom = r.roomNumber;
-    if (!defaultRoom) {
+
+    const assignedRooms = new Set(
+      reservations
+        .filter((res) => res.id !== r.id && res.status !== "CANCELLED" && res.status !== "CHECKED_OUT" && res.roomNumber)
+        .map((res) => res.roomNumber)
+    );
+
+    if (!defaultRoom || assignedRooms.has(defaultRoom)) {
       const rtStr = (r.roomType || "").toLowerCase();
       const targetTypeId = rtStr.includes("twin")
         ? "twin-room"
         : rtStr.includes("suite")
         ? "suite-room"
         : "deluxe-room";
-      const availableRoom = rooms.find(
-        (room) => room.roomTypeId === targetTypeId && (room.status === "AVAILABLE" || room.status === "CLEAN")
+
+      const candidateRoom = rooms.find(
+        (room) =>
+          room.roomTypeId === targetTypeId &&
+          room.isActive &&
+          room.status !== "OCCUPIED" &&
+          !assignedRooms.has(room.number)
       );
-      defaultRoom = availableRoom?.number || (targetTypeId === "twin-room" ? "102" : targetTypeId === "suite-room" ? "103" : "101");
+
+      defaultRoom = candidateRoom?.number || "";
     }
     setAssignedRoomNumber(defaultRoom);
   };
@@ -82,20 +95,32 @@ export default function FrontDeskClient() {
   const handleConfirmCheckIn = () => {
     if (!checkInModal) return;
     let roomToAssign = assignedRoomNumber || checkInModal.roomNumber;
-    if (!roomToAssign) {
+
+    const assignedRooms = new Set(
+      reservations
+        .filter((res) => res.id !== checkInModal.id && res.status !== "CANCELLED" && res.status !== "CHECKED_OUT" && res.roomNumber)
+        .map((res) => res.roomNumber)
+    );
+
+    if (!roomToAssign || assignedRooms.has(roomToAssign)) {
       const rtStr = (checkInModal.roomType || "").toLowerCase();
       const targetTypeId = rtStr.includes("twin")
         ? "twin-room"
         : rtStr.includes("suite")
         ? "suite-room"
         : "deluxe-room";
-      const availableRoom = rooms.find(
-        (r) => r.roomTypeId === targetTypeId && (r.status === "AVAILABLE" || r.status === "CLEAN")
+
+      const candidateRoom = rooms.find(
+        (room) =>
+          room.roomTypeId === targetTypeId &&
+          room.isActive &&
+          room.status !== "OCCUPIED" &&
+          !assignedRooms.has(room.number)
       );
-      roomToAssign =
-        availableRoom?.number ||
-        (targetTypeId === "twin-room" ? "102" : targetTypeId === "suite-room" ? "103" : "101");
+
+      roomToAssign = candidateRoom?.number || "101";
     }
+
     checkInGuest(checkInModal.id, roomToAssign);
     setActionDone(true);
     setTimeout(() => {
