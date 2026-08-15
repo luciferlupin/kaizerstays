@@ -519,10 +519,36 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           : rtStr.includes("suite")
           ? "suite-room"
           : "deluxe-room";
-        const candidateRoom = rooms.find(
-          (room) => room.roomTypeId === targetTypeId && room.isActive
+
+        const assignedOnDates = new Set<string>();
+        reservations.forEach((r) => {
+          if (r.status !== "CANCELLED" && r.status !== "CHECKED_OUT" && r.roomNumber) {
+            const rIn = new Date(r.checkIn).getTime();
+            const rOut = new Date(r.checkOut).getTime();
+            const curIn = checkIn.getTime();
+            const curOut = checkOut.getTime();
+            if (curIn < rOut && curOut > rIn) {
+              assignedOnDates.add(r.roomNumber);
+            }
+          }
+        });
+
+        additions.forEach((r) => {
+          if (r.roomNumber) {
+            const rIn = new Date(r.checkIn).getTime();
+            const rOut = new Date(r.checkOut).getTime();
+            const curIn = checkIn.getTime();
+            const curOut = checkOut.getTime();
+            if (curIn < rOut && curOut > rIn) {
+              assignedOnDates.add(r.roomNumber);
+            }
+          }
+        });
+
+        const availableCandidate = rooms.find(
+          (room) => room.roomTypeId === targetTypeId && room.isActive && !assignedOnDates.has(room.number)
         );
-        effectiveRoomNumber = candidateRoom?.number || (targetTypeId === "twin-room" ? "102" : targetTypeId === "suite-room" ? "103" : "101");
+        effectiveRoomNumber = availableCandidate ? availableCandidate.number : "";
       }
 
       const imported: ExtendedReservation = {
@@ -639,7 +665,45 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           }
         });
 
-        return deduplicated;
+        // 3. Guarantee ZERO duplicate room assignments on overlapping stay dates
+        const assignedRoomDates = new Map<string, Array<{ id: string; in: number; out: number }>>();
+
+        return deduplicated.map((r) => {
+          if (!r.roomNumber || r.status === "CANCELLED" || r.status === "CHECKED_OUT") return r;
+
+          const rtStr = (r.roomType || "").toLowerCase();
+          const targetTypeId = rtStr.includes("twin")
+            ? "twin-room"
+            : rtStr.includes("suite")
+            ? "suite-room"
+            : "deluxe-room";
+
+          const curIn = new Date(r.checkIn).getTime();
+          const curOut = new Date(r.checkOut).getTime();
+
+          const existingAssigned = assignedRoomDates.get(r.roomNumber) || [];
+          const isConflict = existingAssigned.some((existing) => curIn < existing.out && curOut > existing.in);
+
+          if (isConflict) {
+            const freeRoom = rooms.find((rm) => {
+              if (rm.roomTypeId !== targetTypeId || !rm.isActive) return false;
+              const rmAssignments = assignedRoomDates.get(rm.number) || [];
+              return !rmAssignments.some((existing) => curIn < existing.out && curOut > existing.in);
+            });
+
+            const newRoomNum = freeRoom ? freeRoom.number : "";
+            if (newRoomNum) {
+              const updatedAssigned = assignedRoomDates.get(newRoomNum) || [];
+              updatedAssigned.push({ id: r.id, in: curIn, out: curOut });
+              assignedRoomDates.set(newRoomNum, updatedAssigned);
+            }
+            return { ...r, roomNumber: newRoomNum };
+          } else {
+            existingAssigned.push({ id: r.id, in: curIn, out: curOut });
+            assignedRoomDates.set(r.roomNumber, existingAssigned);
+            return r;
+          }
+        });
       });
 
       if (guestAdditions.length) {
