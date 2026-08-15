@@ -46,9 +46,12 @@ export default function GuestsClient() {
   const guestReservations = useMemo(() => {
     if (!selectedGuest) return [];
     const fullName = `${selectedGuest.firstName} ${selectedGuest.lastName}`.toLowerCase().trim();
+    const firstName = selectedGuest.firstName.toLowerCase().trim();
     return reservations.filter(
       (r) =>
+        r.guestId === selectedGuest.id ||
         r.guestName.toLowerCase().trim() === fullName ||
+        r.guestName.toLowerCase().includes(firstName) ||
         (selectedGuest.email && r.guestEmail && r.guestEmail.toLowerCase() === selectedGuest.email.toLowerCase())
     );
   }, [selectedGuest, reservations]);
