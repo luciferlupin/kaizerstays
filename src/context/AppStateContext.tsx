@@ -488,7 +488,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       );
       const importKey = stableImportKey(`${bookingSource}:${extId}`);
       const gst = calculateInclusiveHotelGST(record.totalAmount);
-      const isOtaPrepaid = (bookingSource as string) !== "WALK_IN" && (bookingSource as string) !== "DIRECT";
+      // Booking.com and Aiosell OTA bookings are Pay-at-Hotel (UNPAID) by default until guest arrives & pays at front desk
+      const isOtaPrepaid = (record as any).isPrepaid === true;
       const paidAmount = existing ? existing.paidAmount : (isOtaPrepaid ? gst.totalInclusive : 0);
       const balanceAmount = Math.max(0, gst.totalInclusive - paidAmount);
       const todayKey = new Date().toISOString().split("T")[0];
@@ -543,7 +544,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         taxAmount: gst.totalTax,
         paidAmount,
         balanceAmount,
-        notes: `Imported from ${bookingSource} via Aiosell Channel Manager (Prepaid).`,
+        notes: `Imported from ${bookingSource} via Aiosell Channel Manager (Pay at Hotel - Unpaid).`,
         folio: existing?.folio || [
           {
             id: `f_ota_${rawProvider}_${extId}`,
