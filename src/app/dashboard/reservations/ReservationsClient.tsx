@@ -132,11 +132,11 @@ ${filtered
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
-              <option value="ALL">All Statuses</option>
-              <option value="CONFIRMED">Confirmed</option>
-              <option value="CHECKED_IN">Checked In</option>
-              <option value="CHECKED_OUT">Checked Out</option>
-              <option value="CANCELLED">Cancelled</option>
+              <option value="ALL">All Bookings (Past, Current & Future)</option>
+              <option value="CONFIRMED">Upcoming Future Bookings (Confirmed)</option>
+              <option value="CHECKED_IN">In-House Guests (Checked In)</option>
+              <option value="CHECKED_OUT">Historical Past Stays (Checked Out)</option>
+              <option value="CANCELLED">Cancelled Bookings</option>
             </select>
 
             <select

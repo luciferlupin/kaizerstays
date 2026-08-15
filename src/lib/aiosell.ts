@@ -470,13 +470,13 @@ export class AiosellClient {
     }
 
     const todayStr = new Date().toISOString().split("T")[0];
-    const nextMonthStr = new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0];
-    const lastMonthStr = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
+    const futureDateStr = new Date(Date.now() + 365 * 86400000).toISOString().split("T")[0];
+    const pastDateStr = "2024-01-01";
 
     try {
       // 1. Query Aiosell RMS Live Bookings API (v1 /bookings/id)
       let res = await fetch(
-        `${this.baseUrl}/bookings/${targetHotelId}?start=${lastMonthStr}&end=${nextMonthStr}`,
+        `${this.baseUrl}/bookings/${targetHotelId}?start=${pastDateStr}&end=${futureDateStr}`,
         {
           headers: { Authorization: `BZ-JWT ${this.token}` },
           cache: "no-store",
@@ -486,7 +486,7 @@ export class AiosellClient {
       if (!res.ok) {
         // 2. Query Aiosell RMS Hotel Bookings API (v1 /hotels/id/bookings)
         res = await fetch(
-          `${this.baseUrl}/hotels/${targetHotelId}/bookings?start=${lastMonthStr}&end=${nextMonthStr}`,
+          `${this.baseUrl}/hotels/${targetHotelId}/bookings?start=${pastDateStr}&end=${futureDateStr}`,
           {
             headers: { Authorization: `BZ-JWT ${this.token}` },
             cache: "no-store",
@@ -497,7 +497,7 @@ export class AiosellClient {
       if (!res.ok) {
         // 3. Query Aiosell CM v2 Bookings API
         res = await fetch(
-          `https://live.aiosell.com/api/v2/cm/bookings/${targetHotelId}?start=${lastMonthStr}&end=${nextMonthStr}`,
+          `https://live.aiosell.com/api/v2/cm/bookings/${targetHotelId}?start=${pastDateStr}&end=${futureDateStr}`,
           {
             headers: {
               Authorization: AIOSELL_V2_CONFIG.basicAuthHeader,
@@ -537,7 +537,7 @@ export class AiosellClient {
               guestEmail: b.email || b.guest_email || b.customer_contact?.email || undefined,
               guestPhone: b.mobile || b.guest_phone || b.customer_contact?.phone || undefined,
               checkIn: String(b.checkin_date || b.check_in || b.checkIn || todayStr).slice(0, 10),
-              checkOut: String(b.checkout_date || b.check_out || b.checkOut || nextMonthStr).slice(0, 10),
+              checkOut: String(b.checkout_date || b.check_out || b.checkOut || futureDateStr).slice(0, 10),
               roomCode,
               roomTypeName,
               totalAmount: Number(b.total_price || b.total_amount || b.amount || b.balance || 0),
@@ -556,8 +556,8 @@ export class AiosellClient {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: lastMonthStr,
-          to: nextMonthStr,
+          from: pastDateStr,
+          to: futureDateStr,
           channels: [],
         }),
         cache: "no-store",
@@ -572,7 +572,7 @@ export class AiosellClient {
             guestEmail: b.guest_email ? String(b.guest_email) : undefined,
             guestPhone: b.guest_phone ? String(b.guest_phone) : undefined,
             checkIn: String(b.check_in || b.checkIn || b.stay_from || todayStr).slice(0, 10),
-            checkOut: String(b.check_out || b.checkOut || b.stay_to || nextMonthStr).slice(0, 10),
+            checkOut: String(b.check_out || b.checkOut || b.stay_to || futureDateStr).slice(0, 10),
             roomCode: String(b.room_code || b.room_id || b.roomType || "deluxe-room"),
             roomTypeName: String(b.room_type_name || b.room_type || "Deluxe Room"),
             totalAmount: Number(b.total_amount || b.amount || b.price || 0),

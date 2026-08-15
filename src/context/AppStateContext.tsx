@@ -490,10 +490,25 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       const isOtaPrepaid = (bookingSource as string) !== "WALK_IN" && (bookingSource as string) !== "DIRECT";
       const paidAmount = existing ? existing.paidAmount : (isOtaPrepaid ? gst.totalInclusive : 0);
       const balanceAmount = Math.max(0, gst.totalInclusive - paidAmount);
+      const todayKey = new Date().toISOString().split("T")[0];
+      const checkInKey = checkIn.toISOString().split("T")[0];
+      const checkOutKey = checkOut.toISOString().split("T")[0];
+
+      let computedStatus: ExtendedReservation["status"] = record.status === "CANCELLED" ? "CANCELLED" : "CONFIRMED";
+      if (record.status !== "CANCELLED") {
+        if (checkOutKey < todayKey) {
+          computedStatus = "CHECKED_OUT";
+        } else if (checkInKey <= todayKey && checkOutKey >= todayKey) {
+          computedStatus = "CHECKED_IN";
+        } else {
+          computedStatus = "CONFIRMED";
+        }
+      }
+
       const preservedStatus =
         existing?.status === "CHECKED_IN" || existing?.status === "CHECKED_OUT"
           ? existing.status
-          : record.status;
+          : computedStatus;
       let effectiveRoomNumber = existing?.roomNumber || "";
       if (!effectiveRoomNumber) {
         const rtStr = (record.roomType || "").toLowerCase();
