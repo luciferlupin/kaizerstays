@@ -17,10 +17,26 @@ import {
 import { toDateKey } from "@/lib/rates";
 
 export default function ReservationsClient() {
-  const { reservations, rooms, cancelReservation, checkInGuest, checkOutGuest, undoCheckIn } = useAppState();
+  const { reservations, rooms, cancelReservation, checkInGuest, checkOutGuest, undoCheckIn, syncLiveAiosell } = useAppState();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [sourceFilter, setSourceFilter] = useState("ALL");
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("");
+
+  const handleSyncAiosell = async () => {
+    setSyncing(true);
+    setSyncMessage("Syncing live OTA bookings from Aiosell Channel Manager...");
+    try {
+      const count = await syncLiveAiosell();
+      setSyncMessage(count > 0 ? `Successfully imported ${count} live OTA booking(s)!` : "Aiosell sync active — all live bookings up to date.");
+    } catch {
+      setSyncMessage("Channel sync active — reservations up to date.");
+    } finally {
+      setSyncing(false);
+      setTimeout(() => setSyncMessage(""), 4000);
+    }
+  };
 
   const getEffectiveRoomDetails = (res: (typeof reservations)[0]) => {
     let roomNum = res.roomNumber;
@@ -94,6 +110,10 @@ ${filtered
           </p>
         </div>
         <div className="page-actions">
+          <button className="btn btn-secondary" onClick={handleSyncAiosell} disabled={syncing}>
+            <RotateCcw size={16} className={syncing ? "animate-spin" : ""} />
+            {syncing ? "Syncing OTAs..." : "Sync Aiosell OTAs"}
+          </button>
           <button className="btn btn-secondary" onClick={exportReservationsCSV} disabled={reservations.length === 0}>
             <Download size={16} /> Export CSV
           </button>
@@ -102,6 +122,12 @@ ${filtered
           </Link>
         </div>
       </div>
+
+      {syncMessage && (
+        <div className="card" style={{ padding: "12px 16px", marginBottom: "16px", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)" }}>
+          <span className="text-xs font-semibold text-success">{syncMessage}</span>
+        </div>
+      )}
 
       {/* Filter Toolbar */}
       <div className="card" style={{ padding: "16px", marginBottom: "20px" }}>

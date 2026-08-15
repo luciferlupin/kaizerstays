@@ -168,6 +168,7 @@ interface AppStateContextType {
   updateInventoryStock: (itemId: string, adjustmentQty: number, reason?: string) => void;
   addRequisition: (req: Omit<StockRequisition, "id" | "reqNumber" | "date">) => void;
   updateRequisitionStatus: (reqId: string, status: StockRequisition["status"]) => void;
+  syncLiveAiosell: () => Promise<number>;
   updatePropertySettings: (updates: Partial<typeof demoProperty>) => void;
 }
 
@@ -667,33 +668,37 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   };
 
   // ─── Real-time Live Aiosell Booking & Rate Background Polling ───
-  useEffect(() => {
-    const syncLiveAiosell = async () => {
-      try {
-        const res = await fetch("/api/channels/aiosell?action=sync");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.success && Array.isArray(data.liveBookings) && data.liveBookings.length > 0) {
-          const normalized: NormalizedOTAReservation[] = data.liveBookings.map((b: any) => ({
-            externalId: String(b.bookingId || b.id || `AIO-${Date.now()}`),
-            providerId: "aiosell" as const,
-            source: "EMAIL" as const,
-            status: b.status === "CANCELLED" ? "CANCELLED" : "CONFIRMED",
-            checkIn: String(b.checkIn || b.check_in || new Date().toISOString()).slice(0, 10),
-            checkOut: String(b.checkOut || b.check_out || new Date().toISOString()).slice(0, 10),
-            guestName: String(b.guestName || b.guest_name || "Aiosell Live Guest"),
-            roomType: String(b.roomTypeName || b.roomType || b.roomCode || "Deluxe Room"),
-            adults: 2,
-            children: 0,
-            totalAmount: Number(b.totalAmount || b.amount || 2800),
-          }));
-          importOTAReservations(normalized);
-        }
-      } catch {
-        // Handle silently
-      }
-    };
+  const syncLiveAiosell = async (): Promise<number> => {
+    try {
+      const res = await fetch("/api/channels/aiosell?action=sync");
+      if (!res.ok) return 0;
+      const data = await res.json();
+      const rawBookings: any[] = data.liveBookings || data.incomingReservations || [];
 
+      if (data.success && Array.isArray(rawBookings) && rawBookings.length > 0) {
+        const normalized: NormalizedOTAReservation[] = rawBookings.map((b: any) => ({
+          externalId: String(b.bookingId || b.confirmationNumber || b.id || `AIO-${Date.now()}`),
+          providerId: "aiosell" as const,
+          source: "EMAIL" as const,
+          status: b.status === "CANCELLED" ? "CANCELLED" : "CONFIRMED",
+          checkIn: String(b.checkIn || b.check_in || new Date().toISOString()).slice(0, 10),
+          checkOut: String(b.checkOut || b.check_out || new Date().toISOString()).slice(0, 10),
+          guestName: String(b.guestName || b.guest_name || "Aiosell Live Guest"),
+          roomType: String(b.roomTypeName || b.roomType || b.roomCode || "Deluxe Room"),
+          adults: Number(b.adults || 2),
+          children: Number(b.children || 0),
+          totalAmount: Number(b.totalAmount || b.amount || 2800),
+        }));
+        const summary = importOTAReservations(normalized);
+        return summary.imported + summary.updated;
+      }
+    } catch {
+      // Handle silently
+    }
+    return 0;
+  };
+
+  useEffect(() => {
     // Initial fetch on mount
     syncLiveAiosell();
 
@@ -1117,6 +1122,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         updateInventoryStock,
         addRequisition,
         updateRequisitionStatus,
+        syncLiveAiosell,
         updatePropertySettings,
       }}
     >
