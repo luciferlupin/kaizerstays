@@ -289,6 +289,7 @@ VALUES (
     'ninaad.khera19@gmail.com',
     '+91 99994 90100',
     'OWNER',
+    '12345'
 ) ON CONFLICT (staff_id) DO UPDATE SET
     email = EXCLUDED.email,
     password_hash = EXCLUDED.password_hash;
