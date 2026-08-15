@@ -151,25 +151,24 @@ export default function BookingClient() {
     const pmsType = roomTypes.find((r) => r.id === roomType.id || r.code === roomType.code);
     const liveBaseRate = pmsType?.baseRate || roomType.baseRate;
     const stayRateInfo = getAverageRateForStay(roomType.id, checkIn, checkOut, liveBaseRate);
-    const breakfastSupplement = roomType.id === "suite-room" ? 700 : 500;
+    const breakfastSupplement = roomType.id === "suite-room" ? 1000 : 500;
     const nightlyRate = plan === "CP" ? stayRateInfo.averageRate + breakfastSupplement : stayRateInfo.averageRate;
-    const baseSubtotal = nightlyRate * Math.max(1, nights);
+    const totalInclusiveSubtotal = nightlyRate * Math.max(1, nights);
 
     const discount = activePromo?.discountType === "PERCENTAGE"
-      ? Math.round(baseSubtotal * (activePromo.discountValue / 100))
-      : Math.min(baseSubtotal, activePromo?.discountValue || 0);
+      ? Math.round(totalInclusiveSubtotal * (activePromo.discountValue / 100))
+      : Math.min(totalInclusiveSubtotal, activePromo?.discountValue || 0);
 
-    const discountedSubtotal = Math.max(0, baseSubtotal - discount);
-    const gstTax = Math.round(discountedSubtotal * 0.05);
-    const totalInclusive = discountedSubtotal + gstTax;
+    const finalTotalInclusive = Math.max(0, totalInclusiveSubtotal - discount);
+    const gstBreakdown = calculateInclusiveHotelGST(finalTotalInclusive);
 
     return {
       nightlyRate,
-      baseSubtotal,
+      baseSubtotal: totalInclusiveSubtotal,
       discount,
-      discountedSubtotal,
-      gstTax,
-      totalInclusive,
+      discountedSubtotal: gstBreakdown.taxableValue,
+      gstTax: gstBreakdown.totalTax,
+      totalInclusive: finalTotalInclusive,
       minStay: stayRateInfo.minStay,
     };
   };
@@ -317,10 +316,10 @@ export default function BookingClient() {
 
                   <div style={{ textAlign: "right", borderLeft: "1px solid var(--color-border-subtle)", paddingLeft: "20px" }}>
                     <div className="text-xs text-secondary font-semibold">
-                      Tariff: {formatCurrency(pricing.discountedSubtotal)} <span className="text-tertiary">({nights} n @ {formatCurrency(pricing.nightlyRate)}/n)</span>
+                      Net Tariff: {formatCurrency(pricing.discountedSubtotal)} <span className="text-tertiary">({nights} n @ {formatCurrency(pricing.nightlyRate)}/n)</span>
                     </div>
                     <div className="text-xs font-bold" style={{ color: "#0071e3", marginTop: "2px" }}>
-                      + GST (5%): <span className="mono">{formatCurrency(pricing.gstTax)}</span>
+                      + GST (5% Inclusive): <span className="mono">{formatCurrency(pricing.gstTax)}</span>
                     </div>
                     <div className="mono font-bold text-primary" style={{ fontSize: "22px", margin: "4px 0 2px" }}>
                       {formatCurrency(pricing.totalInclusive)}
