@@ -1913,18 +1913,10 @@ h5 { font-size: var(--text-base); font-weight: var(--font-medium); }
 /* ── Tape Chart Calendar Grid Styles ── */
 .calendar-grid-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
   font-size: var(--text-xs);
-  min-width: 900px;
-}
-
-.calendar-grid-table.view-14d {
-  min-width: 1100px;
-}
-
-.calendar-grid-table.view-30d {
-  min-width: 1500px;
 }
 
 .calendar-grid-table th.room-col {
@@ -1932,8 +1924,8 @@ h5 { font-size: var(--text-base); font-weight: var(--font-medium); }
   left: 0;
   z-index: 20;
   background: #FAFAFC;
-  width: 130px;
-  min-width: 130px;
+  width: 140px;
+  min-width: 140px;
   padding: 12px 14px;
   text-align: left;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
@@ -1947,7 +1939,6 @@ h5 { font-size: var(--text-base); font-weight: var(--font-medium); }
   background: rgba(245, 245, 247, 0.85);
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   border-right: 1px solid rgba(0, 0, 0, 0.05);
-  min-width: 60px;
   user-select: none;
 }
 

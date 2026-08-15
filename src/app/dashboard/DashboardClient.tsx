@@ -152,7 +152,7 @@ export default function DashboardClient() {
       )}
 
       {/* Main Grid: Arrivals/Departures + Room Status */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "24px", marginBottom: "24px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "24px", marginBottom: "24px" }}>
         {/* Left Column: Operations Quick Table */}
         <div className="card">
           <div className="card-header" style={{ padding: "16px 20px" }}>
