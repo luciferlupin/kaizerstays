@@ -31,7 +31,7 @@ export interface OTAChannel {
 }
 
 export const otaChannels: OTAChannel[] = [
-  { id: "ch_aiosell", name: "Aiosell Channel Manager", logo: "AS", category: "Domestic / Regional", status: "CONNECTED", lastSync: today, roomsPushed: 36, bookingsThisMonth: 58, revenueThisMonth: 695000, commission: 15, rateModifier: 0, hotelId: "2298", apiKeyConfigured: true, webhookActive: true },
+  { id: "ch_aiosell", name: "Aiosell Channel Manager", logo: "AS", category: "Domestic / Regional", status: "CONNECTED", lastSync: today, roomsPushed: 32, bookingsThisMonth: 0, revenueThisMonth: 0, commission: 15, rateModifier: 0, hotelId: "62a25484e5", apiKeyConfigured: true, webhookActive: true },
 ];
 
 // ─── Revenue Manager Data ───

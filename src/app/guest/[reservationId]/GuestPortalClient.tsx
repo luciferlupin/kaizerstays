@@ -35,19 +35,81 @@ export default function GuestPortalClient({ reservationId }: { reservationId: st
   const [requestedService, setRequestedService] = useState<string | null>(null);
   const [wifi] = useState(loadGuestWifi);
   const { wifiNetwork, wifiPass } = wifi;
-  const reservation = reservations.find((item) => item.id === reservationId);
+  const [searchVal, setSearchVal] = useState("");
+  const cleanId = String(reservationId || "").trim().toLowerCase();
 
-  if (!reservation) {
+  const matchedRes = reservations.find(
+    (item) =>
+      item.id === reservationId ||
+      item.confirmationNumber === reservationId ||
+      item.roomNumber === reservationId ||
+      item.id.toLowerCase() === cleanId ||
+      (item.confirmationNumber && item.confirmationNumber.toLowerCase() === cleanId) ||
+      (item.roomNumber && item.roomNumber.toLowerCase() === cleanId) ||
+      (searchVal && (item.roomNumber === searchVal || item.confirmationNumber.toLowerCase().includes(searchVal.toLowerCase())))
+  );
+
+  const phoneLink = property.phone ? `tel:${property.phone.replace(/\s/g, "")}` : undefined;
+  const whatsappLink = property.phone ? `https://wa.me/${property.phone.replace(/\D/g, "")}` : undefined;
+
+  if (!matchedRes) {
     return (
-      <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: "24px" }}>
-        <div className="card" style={{ maxWidth: "440px", padding: "28px", textAlign: "center" }}>
-          <ShieldAlert size={34} className="text-warning" style={{ margin: "0 auto 12px" }} />
-          <h1 style={{ fontSize: "20px", fontWeight: 800 }}>Stay link unavailable</h1>
-          <p className="text-sm text-secondary" style={{ marginTop: "8px" }}>This reservation is not available in the current KaizerStays workspace. Ask the front desk for a new signed guest link.</p>
+      <div style={{ maxWidth: "480px", margin: "0 auto", padding: "20px 16px", fontFamily: "var(--font-sans)" }}>
+        <div style={{ background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)", color: "white", borderRadius: "20px", padding: "24px 20px", marginBottom: "20px", textAlign: "center" }}>
+          <Hotel size={32} style={{ margin: "0 auto 10px", color: "#60A5FA" }} />
+          <h1 style={{ fontSize: "20px", fontWeight: 800 }}>{property.name}</h1>
+          <p style={{ fontSize: "12px", color: "#CBD5E1", marginTop: "4px" }}>Guest Self-Service Portal</p>
+        </div>
+
+        <div className="card" style={{ padding: "20px", marginBottom: "16px" }}>
+          <h2 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "6px" }}>Look Up Your Stay</h2>
+          <p className="text-xs text-secondary" style={{ marginBottom: "14px" }}>
+            Enter your Room Number or Booking Confirmation Number below to access your guest stay portal.
+          </p>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="e.g. 101 or Confirmation #"
+              value={searchVal}
+              onChange={(e) => setSearchVal(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: "20px", marginBottom: "16px", background: "linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)", border: "1px solid #BFDBFE" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "10px" }}>
+            <Wifi size={24} className="text-primary" />
+            <div>
+              <h3 style={{ fontSize: "15px", fontWeight: 700 }}>Hotel Guest Wi-Fi</h3>
+              <p className="text-xs text-secondary">Complimentary high-speed Wi-Fi</p>
+            </div>
+          </div>
+          {wifiNetwork ? (
+            <div style={{ background: "white", padding: "10px 14px", borderRadius: "8px", display: "flex", justifyContent: "space-between" }}>
+              <span className="text-xs text-secondary">Network:</span>
+              <strong className="mono text-primary">{wifiNetwork}</strong>
+            </div>
+          ) : (
+            <p className="text-xs text-secondary">Inquire at Front Desk for Wi-Fi credentials.</p>
+          )}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <a href={whatsappLink} className="card" style={{ padding: "16px", textDecoration: "none", color: "inherit", textAlign: "center" }}>
+            <MessageSquare size={24} style={{ color: "#25D366", margin: "0 auto 8px" }} />
+            <div style={{ fontSize: "13px", fontWeight: 600 }}>WhatsApp Desk</div>
+          </a>
+          <a href={phoneLink} className="card" style={{ padding: "16px", textDecoration: "none", color: "inherit", textAlign: "center" }}>
+            <Phone size={24} className="text-primary" style={{ margin: "0 auto 8px" }} />
+            <div style={{ fontSize: "13px", fontWeight: 600 }}>Call Front Desk</div>
+          </a>
         </div>
       </div>
     );
   }
+
+  const reservation = matchedRes;
 
   const sendRequest = (serviceName: string) => {
     addGuestRequest({ roomNumber: reservation.roomNumber, guestName: reservation.guestName, type: serviceName.toUpperCase().replaceAll(" ", "_"), description: serviceName });
@@ -55,8 +117,6 @@ export default function GuestPortalClient({ reservationId }: { reservationId: st
   };
   const folio = reservation.folio || [];
   const balance = reservation.balanceAmount;
-  const phoneLink = property.phone ? `tel:${property.phone.replace(/\s/g, "")}` : undefined;
-  const whatsappLink = property.phone ? `https://wa.me/${property.phone.replace(/\D/g, "")}` : undefined;
 
   return (
     <div style={{ maxWidth: "480px", margin: "0 auto", padding: "0 16px 40px", fontFamily: "var(--font-sans)" }}>

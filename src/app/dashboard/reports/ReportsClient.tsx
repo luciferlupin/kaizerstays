@@ -74,11 +74,14 @@ export default function ReportsClient() {
           .join("\n");
         if (reservations.length) csvContent += "\n";
       } else if (id === "r3") {
+        const totalPaid = reservations.reduce((sum, r) => sum + (r.paidAmount || 0), 0);
         csvContent = `Shift Date,Auditor,Opening Balance,Cash Collected,UPI Received,Card Payments,Closing Drawer Cash,Discrepancies\n`;
-        csvContent += `${dateStr},"Ninaad Khera (GM)",10000,35000,125000,36700,45000,0\n`;
+        csvContent += `${dateStr},"Ninaad Khera (GM)",0,0,${totalPaid},0,${totalPaid},0\n`;
       } else if (id === "r4") {
+        const totalRev = reservations.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+        const totalPaid = reservations.reduce((sum, r) => sum + (r.paidAmount || 0), 0);
         csvContent = `Date,Total Revenue,Room Tariffs,F&B Restaurant,UPI Collections,Cash,Card,Net Profit\n`;
-        csvContent += `${dateStr},1967000,1450000,517000,1250000,350000,367000,1255000\n`;
+        csvContent += `${dateStr},${totalRev},${totalRev},0,${totalPaid},0,0,${totalPaid}\n`;
       } else {
         csvContent = `Report Title: ${reportsList.find((r) => r.id === id)?.title}\nProperty: Hotel Shemron Neemrana\nTiming Horizon: ${timeFilter}\nDate Range: ${startDate} to ${endDate}\nGenerated At: ${new Date().toISOString()}\nStatus: Verified\n`;
       }

@@ -78,7 +78,7 @@ export default function AnalyticsClient() {
   );
 
   // Filter payments & expenses by period
-  const periodPayments = payments.filter((p) => isDateInPeriod(p.date, period));
+  const periodPayments = payments.filter((p) => isDateInPeriod((p as any).date || p.receivedAt, period));
   const periodExpenses = expenses.filter((e) => isDateInPeriod(e.date, period));
 
   // Revenue computations

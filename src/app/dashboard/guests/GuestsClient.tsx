@@ -55,7 +55,7 @@ export default function GuestsClient() {
 
   const handleOpenGuestCRM = (guest: (typeof guests)[0]) => {
     setSelectedGuest(guest);
-    setNotes((guest as any).notes || "Frequent guest at Hotel Shemron Neemrana. Prefers quiet deluxe room on upper floor.");
+    setNotes((guest as any).notes || "No guest notes recorded yet.");
     setEditingNotes(false);
   };
 

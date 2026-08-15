@@ -338,7 +338,7 @@ ${filtered
                 </div>
                 <h3>Payment Recorded & Receipt Generated!</h3>
                 <p className="text-sm text-secondary" style={{ marginTop: "8px" }}>
-                  {formatCurrency(amount)} received via {method}.
+                  {formatCurrency(Number(amount))} received via {method}.
                 </p>
               </div>
             ) : (

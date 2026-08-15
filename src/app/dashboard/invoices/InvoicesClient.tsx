@@ -34,6 +34,8 @@ interface InvoiceRecord {
   isPostCheckout: boolean;
   description?: string;
   reservation: ExtendedReservation;
+  gstin?: string;
+  roomType?: string;
 }
 
 const formatInvoiceCurrency = (amount: number) =>

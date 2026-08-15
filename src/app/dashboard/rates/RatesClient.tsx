@@ -12,6 +12,7 @@ import {
   toDateKey,
 } from "@/lib/rates";
 import { formatCurrency } from "@/lib/utils";
+import { getShemronRoomCategory } from "@/lib/demo-data";
 import {
   AlertTriangle,
   CalendarRange,
@@ -103,12 +104,25 @@ export default function RatesClient() {
     const dayStart = new Date(`${dateKey}T00:00:00`);
     const nextDay = new Date(`${dateKey}T00:00:00`);
     nextDay.setDate(nextDay.getDate() + 1);
-    return reservations.filter((reservation) => {
+    const todayKey = toDateKey(new Date());
+
+    const bookedByReservations = reservations.filter((reservation) => {
       if (["CANCELLED", "CHECKED_OUT"].includes(reservation.status)) return false;
       const effectiveRoomTypeId = getReservationRoomTypeId(reservation);
       if (effectiveRoomTypeId !== roomTypeId) return false;
       return new Date(reservation.checkIn) < nextDay && new Date(reservation.checkOut) > dayStart;
     }).length;
+
+    if (dateKey === todayKey) {
+      const occupiedPhysical = rooms.filter((r) => {
+        if (r.status !== "OCCUPIED") return false;
+        const rtId = r.roomTypeId || getShemronRoomCategory(r.number).roomTypeId;
+        return rtId === roomTypeId;
+      }).length;
+      return Math.max(bookedByReservations, occupiedPhysical);
+    }
+
+    return bookedByReservations;
   };
 
   const handleApplyBulkUpdate = () => {

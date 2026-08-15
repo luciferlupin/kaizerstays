@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAppState } from "@/context/AppStateContext";
 import { formatDate, getToday } from "@/lib/utils";
+import { toDateKey } from "@/lib/rates";
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -24,7 +25,7 @@ export default function CalendarClient() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [startDate, setStartDate] = useState<Date>(getToday());
 
-  const todayStr = getToday().toISOString().split("T")[0];
+  const todayStr = toDateKey(getToday());
 
   // Generate date columns based on viewDays
   const dateColumns: Date[] = [];
@@ -65,17 +66,20 @@ export default function CalendarClient() {
   });
 
   // Calculate metrics for visible range
-  const startDateStr = dateColumns[0]?.toISOString().split("T")[0] || todayStr;
-  const endDateStr = dateColumns[dateColumns.length - 1]?.toISOString().split("T")[0] || todayStr;
+  const startDateStr = toDateKey(dateColumns[0] || getToday());
+  const endDateStr = toDateKey(dateColumns[dateColumns.length - 1] || getToday());
 
   const activeReservationsInRange = reservations.filter((r) => {
     if (r.status === "CANCELLED") return false;
-    const cIn = new Date(r.checkIn).toISOString().split("T")[0];
-    const cOut = new Date(r.checkOut).toISOString().split("T")[0];
+    const cIn = toDateKey(new Date(r.checkIn));
+    const cOut = toDateKey(new Date(r.checkOut));
     return cOut > startDateStr && cIn <= endDateStr;
   });
 
-  const occupiedRoomNumbers = new Set(activeReservationsInRange.map((r) => r.roomNumber));
+  const occupiedRoomNumbers = new Set([
+    ...activeReservationsInRange.map((r) => r.roomNumber),
+    ...rooms.filter((rm) => rm.status === "OCCUPIED").map((rm) => rm.number),
+  ]);
   const totalRoomsCount = filteredRooms.length;
   const occupiedRoomsCount = occupiedRoomNumbers.size;
   const availableRoomsCount = Math.max(0, totalRoomsCount - occupiedRoomsCount);
@@ -291,7 +295,7 @@ export default function CalendarClient() {
 
               while (colIdx < totalCols) {
                 const date = dateColumns[colIdx];
-                const dateStr = date.toISOString().split("T")[0];
+                const dateStr = toDateKey(date);
 
                 // Find matching active reservation for this room on dateStr
                 const res = reservations.find((r) => {
@@ -300,8 +304,8 @@ export default function CalendarClient() {
                   const fallbackRoom = rtStr.includes("twin") ? "102" : rtStr.includes("suite") ? "103" : "101";
                   const effectiveRoomNum = r.roomNumber || fallbackRoom;
                   if (effectiveRoomNum !== room.number) return false;
-                  const cIn = new Date(r.checkIn).toISOString().split("T")[0];
-                  const cOut = new Date(r.checkOut).toISOString().split("T")[0];
+                  const cIn = toDateKey(new Date(r.checkIn));
+                  const cOut = toDateKey(new Date(r.checkOut));
                   return dateStr >= cIn && dateStr < cOut;
                 });
 
@@ -309,29 +313,48 @@ export default function CalendarClient() {
                   const isToday = dateStr === todayStr;
                   const isWeekend = date.getDay() === 0 || date.getDay() === 6;
 
-                  cells.push(
-                    <td
-                      key={`empty-${room.id}-${dateStr}`}
-                      className={`grid-cell empty-cell ${isToday ? "today-cell" : ""} ${isWeekend ? "weekend-cell" : ""}`}
-                    >
-                      <Link
-                        href={`/dashboard/reservations/new?room=${room.number}&date=${dateStr}`}
-                        className="empty-cell-link"
-                        title={`Click to book Room #${room.number} on ${formatDate(date, "dd MMM yyyy")}`}
+                  if (isToday && room.status === "OCCUPIED") {
+                    cells.push(
+                      <td
+                        key={`occupied-room-${room.id}-${dateStr}`}
+                        className="grid-cell occupied-cell"
                       >
-                        +
-                      </Link>
-                    </td>
-                  );
+                        <div
+                          className="res-block status-checked-in"
+                          style={{ borderRadius: "6px", cursor: "default", padding: "4px 8px" }}
+                          title={`Room #${room.number} is currently occupied at Front Desk.`}
+                        >
+                          <div className="res-content">
+                            <span className="res-name">Occupied</span>
+                          </div>
+                        </div>
+                      </td>
+                    );
+                  } else {
+                    cells.push(
+                      <td
+                        key={`empty-${room.id}-${dateStr}`}
+                        className={`grid-cell empty-cell ${isToday ? "today-cell" : ""} ${isWeekend ? "weekend-cell" : ""}`}
+                      >
+                        <Link
+                          href={`/dashboard/reservations/new?room=${room.number}&date=${dateStr}`}
+                          className="empty-cell-link"
+                          title={`Click to book Room #${room.number} on ${formatDate(date, "dd MMM yyyy")}`}
+                        >
+                          +
+                        </Link>
+                      </td>
+                    );
+                  }
                   colIdx++;
                 } else {
                   // Reservation found: Calculate continuous span across dateColumns
-                  const cIn = new Date(res.checkIn).toISOString().split("T")[0];
-                  const cOut = new Date(res.checkOut).toISOString().split("T")[0];
+                  const cIn = toDateKey(new Date(res.checkIn));
+                  const cOut = toDateKey(new Date(res.checkOut));
 
                   let span = 0;
                   while (colIdx + span < totalCols) {
-                    const nextDateStr = dateColumns[colIdx + span].toISOString().split("T")[0];
+                    const nextDateStr = toDateKey(dateColumns[colIdx + span]);
                     if (nextDateStr >= cIn && nextDateStr < cOut) {
                       span++;
                     } else {
@@ -341,8 +364,8 @@ export default function CalendarClient() {
 
                   span = Math.max(span, 1);
 
-                  const viewStartStr = dateColumns[0].toISOString().split("T")[0];
-                  const viewEndStr = dateColumns[totalCols - 1].toISOString().split("T")[0];
+                  const viewStartStr = toDateKey(dateColumns[0]);
+                  const viewEndStr = toDateKey(dateColumns[totalCols - 1]);
                   const startsBeforeView = cIn < viewStartStr;
                   const endsAfterView = cOut > viewEndStr;
 
