@@ -515,13 +515,22 @@ export class AiosellClient {
         if (bookingsList.length > 0) {
           bookingsList.forEach((b, idx) => {
             const guestName =
-              b.customer_blurb ||
               b.customer_name ||
+              b.customer_blurb ||
               b.guest_name ||
               b.guestName ||
+              b.name ||
+              b.guest ||
+              b.primary_guest ||
               (b.customer_contact?.firstName
                 ? `${b.customer_contact.firstName} ${b.customer_contact.lastName || ""}`.trim()
                 : "") ||
+              (b.customer?.firstName
+                ? `${b.customer.firstName} ${b.customer.lastName || ""}`.trim()
+                : "") ||
+              b.pms_guest_name ||
+              b.traveler_name ||
+              b.occupant_name ||
               "Aiosell Guest";
             const roomObj = b.rooms?.[0] || {};
             const roomCode = roomObj.roomId || b.room_code || b.room_id || "deluxe-room";
