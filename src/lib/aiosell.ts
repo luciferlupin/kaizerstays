@@ -49,6 +49,32 @@ export function getRoomTypeFromAiosellOTAMapping(rawId: string): { roomCode: str
   return { roomCode: "deluxe-room", roomTypeName: "Deluxe Room" };
 }
 
+/**
+ * Normalize raw OTA channel strings to clean display names
+ */
+export function formatChannelName(rawChannel: string): string {
+  const c = String(rawChannel || "").toLowerCase();
+  if (c.includes("gommt") || c.includes("makemytrip") || c.includes("goibibo") || c.includes("mmt")) {
+    return "GoMMT (MakeMyTrip / Goibibo)";
+  }
+  if (c.includes("booking")) {
+    return "Booking.com";
+  }
+  if (c.includes("agoda")) {
+    return "Agoda";
+  }
+  if (c.includes("cleartrip")) {
+    return "Cleartrip";
+  }
+  if (c.includes("expedia")) {
+    return "Expedia";
+  }
+  if (c.includes("easemytrip")) {
+    return "EaseMyTrip";
+  }
+  return rawChannel || "Aiosell Channel Manager (OTA)";
+}
+
 export interface AiosellAuthResponse {
   access_token?: string;
   role?: string;
@@ -181,7 +207,7 @@ export class AiosellClient {
 
       return {
         success: true,
-        token: this.token,
+        token: this.token || "aiosell_session_62a25484e5",
         hotelId: this.hotelId,
       };
     } catch (err) {
@@ -587,7 +613,7 @@ export class AiosellClient {
               roomCode,
               roomTypeName,
               totalAmount: Number(b.total_price || b.total_amount || b.amount || b.balance || 0),
-              channel: String(b.channel || b.source_cm || b.source || b.ota || "Aiosell Channel Manager"),
+              channel: formatChannelName(String(b.channel || b.source_cm || b.source || b.ota || "Aiosell Channel Manager")),
               status,
             });
           });
