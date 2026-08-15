@@ -160,7 +160,7 @@ export default function BookingClient() {
       : Math.min(baseSubtotal, activePromo?.discountValue || 0);
 
     const discountedSubtotal = Math.max(0, baseSubtotal - discount);
-    const gstTax = Math.round(discountedSubtotal * 0.12);
+    const gstTax = Math.round(discountedSubtotal * 0.05);
     const totalInclusive = discountedSubtotal + gstTax;
 
     return {
@@ -320,7 +320,7 @@ export default function BookingClient() {
                       Tariff: {formatCurrency(pricing.discountedSubtotal)} <span className="text-tertiary">({nights} n @ {formatCurrency(pricing.nightlyRate)}/n)</span>
                     </div>
                     <div className="text-xs font-bold" style={{ color: "#0071e3", marginTop: "2px" }}>
-                      + GST (12%): <span className="mono">{formatCurrency(pricing.gstTax)}</span>
+                      + GST (5%): <span className="mono">{formatCurrency(pricing.gstTax)}</span>
                     </div>
                     <div className="mono font-bold text-primary" style={{ fontSize: "22px", margin: "4px 0 2px" }}>
                       {formatCurrency(pricing.totalInclusive)}
@@ -398,7 +398,7 @@ export default function BookingClient() {
                         </div>
                       )}
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", marginBottom: "8px" }}>
-                        <span className="text-secondary">Hotel Accommodation GST (12%)</span>
+                        <span className="text-secondary">Hotel Accommodation GST (5%)</span>
                         <span className="mono font-semibold">{formatCurrency(pricing.gstTax)}</span>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "15px", fontWeight: 800, paddingTop: "8px", borderTop: "1px solid var(--color-border-subtle)" }}>
