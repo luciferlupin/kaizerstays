@@ -474,8 +474,8 @@ export class AiosellClient {
     const lastMonthStr = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
 
     try {
-      // Query Aiosell RMS Live Bookings API
-      const res = await fetch(
+      // 1. Query Aiosell RMS Live Bookings API (v1 /bookings/id)
+      let res = await fetch(
         `${this.baseUrl}/bookings/${targetHotelId}?start=${lastMonthStr}&end=${nextMonthStr}`,
         {
           headers: { Authorization: `BZ-JWT ${this.token}` },
@@ -483,21 +483,47 @@ export class AiosellClient {
         }
       );
 
+      if (!res.ok) {
+        // 2. Query Aiosell RMS Hotel Bookings API (v1 /hotels/id/bookings)
+        res = await fetch(
+          `${this.baseUrl}/hotels/${targetHotelId}/bookings?start=${lastMonthStr}&end=${nextMonthStr}`,
+          {
+            headers: { Authorization: `BZ-JWT ${this.token}` },
+            cache: "no-store",
+          }
+        );
+      }
+
+      if (!res.ok) {
+        // 3. Query Aiosell CM v2 Bookings API
+        res = await fetch(
+          `https://live.aiosell.com/api/v2/cm/bookings/${targetHotelId}?start=${lastMonthStr}&end=${nextMonthStr}`,
+          {
+            headers: {
+              Authorization: AIOSELL_V2_CONFIG.basicAuthHeader,
+            },
+            cache: "no-store",
+          }
+        );
+      }
+
       if (res.ok) {
         const data = await res.json();
-        const bookingsList: Record<string, any>[] = data.bookings || (Array.isArray(data) ? data : []);
+        const bookingsList: Record<string, any>[] = data.bookings || data.data || (Array.isArray(data) ? data : []);
         if (bookingsList.length > 0) {
           return bookingsList.map((b, idx) => {
             const guestName =
               b.customer_blurb ||
               b.customer_name ||
+              b.guest_name ||
+              b.guestName ||
               (b.customer_contact?.firstName
                 ? `${b.customer_contact.firstName} ${b.customer_contact.lastName || ""}`.trim()
                 : "") ||
               "Aiosell Guest";
             const roomObj = b.rooms?.[0] || {};
-            const roomCode = roomObj.roomId || b.room_code || "deluxe-room";
-            const roomTypeName = roomObj.displayName || roomObj.name || b.room_type_name || "Deluxe Room";
+            const roomCode = roomObj.roomId || b.room_code || b.room_id || "deluxe-room";
+            const roomTypeName = roomObj.displayName || roomObj.name || b.room_type_name || b.room_type || "Deluxe Room";
             const rawStatus = String(b.state || b.status || "CONFIRMED").toUpperCase();
             const status: "CONFIRMED" | "CANCELLED" | "MODIFIED" = rawStatus.includes("CANCEL")
               ? "CANCELLED"
@@ -506,23 +532,23 @@ export class AiosellClient {
               : "CONFIRMED";
 
             return {
-              bookingId: String(b.booking_id || b.cm_booking_id || b.pms_id || `AIO-${idx + 1}`),
+              bookingId: String(b.booking_id || b.cm_booking_id || b.pms_id || b.id || `AIO-${idx + 1}`),
               guestName,
-              guestEmail: b.email || b.customer_contact?.email || undefined,
-              guestPhone: b.mobile || b.customer_contact?.phone || undefined,
+              guestEmail: b.email || b.guest_email || b.customer_contact?.email || undefined,
+              guestPhone: b.mobile || b.guest_phone || b.customer_contact?.phone || undefined,
               checkIn: String(b.checkin_date || b.check_in || b.checkIn || todayStr).slice(0, 10),
               checkOut: String(b.checkout_date || b.check_out || b.checkOut || nextMonthStr).slice(0, 10),
               roomCode,
               roomTypeName,
-              totalAmount: Number(b.total_price || b.amount || b.balance || 0),
-              channel: String(b.channel || b.source_cm || b.source || "Aiosell Channel Manager"),
+              totalAmount: Number(b.total_price || b.total_amount || b.amount || b.balance || 0),
+              channel: String(b.channel || b.source_cm || b.source || b.ota || "Aiosell Channel Manager"),
               status,
             };
           });
         }
       }
 
-      // Secondary fallback endpoint
+      // 4. Secondary fallback endpoint (accounting2)
       const fallbackRes = await fetch(`${this.baseUrl}/accounting2/data/${targetHotelId}`, {
         method: "POST",
         headers: {
