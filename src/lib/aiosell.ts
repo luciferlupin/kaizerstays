@@ -16,6 +16,39 @@ export const AIOSELL_V2_CONFIG = {
 };
 
 
+/**
+ * Map live Aiosell OTA room mapping IDs (GoMMT, Booking.com, Agoda, Cleartrip) to PMS Room Types
+ */
+export function getRoomTypeFromAiosellOTAMapping(rawId: string): { roomCode: string; roomTypeName: string } {
+  const idStr = String(rawId || "").toLowerCase();
+
+  // 1. Check GoMMT Room IDs
+  if (idStr.includes("45001094979")) return { roomCode: "deluxe-room", roomTypeName: "Deluxe Room" };
+  if (idStr.includes("45001094976")) return { roomCode: "twin-room", roomTypeName: "Twin Room" };
+  if (idStr.includes("45000831160")) return { roomCode: "suite-room", roomTypeName: "Suite Room" };
+
+  // 2. Check Booking.com Room IDs
+  if (idStr.includes("1454204601")) return { roomCode: "deluxe-room", roomTypeName: "Deluxe Room" };
+  if (idStr.includes("1454204602")) return { roomCode: "twin-room", roomTypeName: "Twin Room" };
+  if (idStr.includes("1454204603")) return { roomCode: "suite-room", roomTypeName: "Suite Room" };
+
+  // 3. Check Agoda Room IDs
+  if (idStr.includes("1445499190")) return { roomCode: "deluxe-room", roomTypeName: "Deluxe Room" };
+  if (idStr.includes("1445501773")) return { roomCode: "twin-room", roomTypeName: "Twin Room" };
+  if (idStr.includes("1445503140")) return { roomCode: "suite-room", roomTypeName: "Suite Room" };
+
+  // 4. Check Cleartrip Room IDs
+  if (idStr.includes("534575")) return { roomCode: "deluxe-room", roomTypeName: "Deluxe Room" };
+  if (idStr.includes("534576")) return { roomCode: "twin-room", roomTypeName: "Twin Room" };
+  if (idStr.includes("534578")) return { roomCode: "suite-room", roomTypeName: "Suite Room" };
+
+  // Fallbacks
+  if (idStr.includes("twin")) return { roomCode: "twin-room", roomTypeName: "Twin Room" };
+  if (idStr.includes("suite")) return { roomCode: "suite-room", roomTypeName: "Suite Room" };
+
+  return { roomCode: "deluxe-room", roomTypeName: "Deluxe Room" };
+}
+
 export interface AiosellAuthResponse {
   access_token?: string;
   role?: string;
@@ -533,8 +566,10 @@ export class AiosellClient {
               b.occupant_name ||
               "Aiosell Guest";
             const roomObj = b.rooms?.[0] || {};
-            const roomCode = roomObj.roomId || b.room_code || b.room_id || "deluxe-room";
-            const roomTypeName = roomObj.displayName || roomObj.name || b.room_type_name || b.room_type || "Deluxe Room";
+            const rawRoomId = String(roomObj.roomId || b.room_code || b.room_id || b.ota_room_type_id || "");
+            const mappedRoom = getRoomTypeFromAiosellOTAMapping(rawRoomId);
+            const roomCode = mappedRoom.roomCode;
+            const roomTypeName = roomObj.displayName || roomObj.name || b.room_type_name || b.room_type || mappedRoom.roomTypeName;
             const rawStatus = String(b.state || b.status || "CONFIRMED").toUpperCase();
             const status: "CONFIRMED" | "CANCELLED" | "MODIFIED" = rawStatus.includes("CANCEL")
               ? "CANCELLED"

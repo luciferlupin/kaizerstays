@@ -280,3 +280,69 @@ export function getConnectionLabel(status: ChannelConnectionStatus) {
   };
   return labels[status];
 }
+
+export interface LiveOTAMappingSetup {
+  provider: string;
+  name: string;
+  hotelId: string;
+  accountKey?: string;
+  currency: string;
+  rateMultiplier: number;
+  roomMappings: {
+    deluxeRoomId: string;
+    twinRoomId: string;
+    suiteRoomId: string;
+  };
+}
+
+export const AIOSELL_LIVE_OTA_SETUP: LiveOTAMappingSetup[] = [
+  {
+    provider: "gommt",
+    name: "GoMMT (MakeMyTrip & Goibibo)",
+    hotelId: "1000339543",
+    accountKey: "0545af581a",
+    currency: "INR",
+    rateMultiplier: 1.0,
+    roomMappings: {
+      deluxeRoomId: "45001094979",
+      twinRoomId: "45001094976",
+      suiteRoomId: "45000831160",
+    },
+  },
+  {
+    provider: "booking",
+    name: "Booking.com",
+    hotelId: "14542046",
+    currency: "INR",
+    rateMultiplier: 1.0,
+    roomMappings: {
+      deluxeRoomId: "1454204601",
+      twinRoomId: "1454204602",
+      suiteRoomId: "1454204603",
+    },
+  },
+  {
+    provider: "agoda",
+    name: "Agoda",
+    hotelId: "33353419",
+    currency: "INR",
+    rateMultiplier: 1.4, // +40%
+    roomMappings: {
+      deluxeRoomId: "1445499190",
+      twinRoomId: "1445501773",
+      suiteRoomId: "1445503140",
+    },
+  },
+  {
+    provider: "cleartrip",
+    name: "Cleartrip",
+    hotelId: "534574",
+    currency: "INR",
+    rateMultiplier: 1.3, // +30%
+    roomMappings: {
+      deluxeRoomId: "534575",
+      twinRoomId: "534576",
+      suiteRoomId: "534578",
+    },
+  },
+];
