@@ -13,6 +13,8 @@ import {
   Download,
   LogOut,
   RotateCcw,
+  FileText,
+  Printer,
 } from "lucide-react";
 import { toDateKey } from "@/lib/rates";
 
@@ -286,11 +288,25 @@ ${filtered
                           <span className="text-warning font-bold">{formatCurrency(res.balanceAmount)}</span>
                         )}
                       </td>
-                      <td className="text-right">
-                        <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
-                          <Link href={`/dashboard/reservations/${res.id}`} className="btn btn-secondary btn-sm">
-                            View Folio <ArrowUpRight size={12} />
+                      <td className="text-right" style={{ minWidth: "190px" }}>
+                        <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end", alignItems: "center" }}>
+                          <Link
+                            href={`/dashboard/reservations/${res.id}`}
+                            className={`btn btn-sm ${res.status === "CHECKED_OUT" ? "btn-primary font-bold" : "btn-secondary"}`}
+                            title="View itemized folio ledger & guest profile"
+                          >
+                            <FileText size={13} /> View Folio <ArrowUpRight size={12} />
                           </Link>
+
+                          {res.status === "CHECKED_OUT" && (
+                            <Link
+                              href="/dashboard/invoices"
+                              className="btn btn-secondary btn-sm"
+                              title="Print official GST tax invoice"
+                            >
+                              <Printer size={13} /> Invoice
+                            </Link>
+                          )}
 
                           {isConfirmed && (
                             <button
