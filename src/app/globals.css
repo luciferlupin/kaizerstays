@@ -167,7 +167,7 @@
   --sidebar-width: 240px;
   --sidebar-collapsed-width: 64px;
   --header-height: 56px;
-  --page-max-width: 1400px;
+  --page-max-width: 100%;
 
   /* Z-Index */
   --z-dropdown: 100;
@@ -1274,6 +1274,8 @@ h5 { font-size: var(--text-base); font-weight: var(--font-medium); }
 .main-content {
   margin-left: var(--sidebar-width);
   min-height: 100vh;
+  width: calc(100% - var(--sidebar-width));
+  flex: 1;
 }
 
 .main-header {
@@ -1302,8 +1304,9 @@ h5 { font-size: var(--text-base); font-weight: var(--font-medium); }
 }
 
 .main-page {
-  padding: var(--space-6);
-  max-width: var(--page-max-width);
+  padding: 24px 32px;
+  width: 100%;
+  max-width: 100%;
 }
 
 /* ── Command Palette ── */
