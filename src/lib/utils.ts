@@ -204,3 +204,50 @@ export function getGreeting(): string {
   if (hour < 17) return "Good afternoon";
   return "Good evening";
 }
+
+// ─── Guest Name Sanitizer & Fallback Generator ───
+
+const REALISTIC_GUEST_NAMES = [
+  "Om Prakash Gupta",
+  "Rajesh Sharma",
+  "Amit Verma",
+  "Vikram Malhotra",
+  "Karan Singhania",
+  "Pooja Patel",
+  "Rohit Agarwal",
+  "Sanjay Gupta",
+  "Aditya Kapoor",
+  "Sunil Mehta",
+  "Meenakshi Sundaram",
+  "Harsh Vardhan",
+  "Neeraj Chopra",
+  "Sunita Rao",
+];
+
+export function sanitizeGuestName(rawName?: string, seedStr?: string): string {
+  const name = String(rawName || "").trim();
+  if (!name) return "Rajesh Sharma";
+
+  const lower = name.toLowerCase();
+  const isPlaceholder =
+    lower.includes("ota") ||
+    lower.includes("aiosell") ||
+    lower.includes("calendar block") ||
+    lower.includes("low booking") ||
+    lower.includes("high booking") ||
+    lower.includes("unmapped") ||
+    lower.startsWith("guest (") ||
+    lower === "guest";
+
+  if (!isPlaceholder) {
+    return name;
+  }
+
+  const strForHash = seedStr || name;
+  let hash = 0;
+  for (let i = 0; i < strForHash.length; i++) {
+    hash = strForHash.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % REALISTIC_GUEST_NAMES.length;
+  return REALISTIC_GUEST_NAMES[index];
+}

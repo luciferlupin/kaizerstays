@@ -25,6 +25,7 @@ export default function CreateReservationClient() {
   const [checkOut, setCheckOut] = useState<string>(() => futureDate(2));
   const [adults, setAdults] = useState<number>(2);
   const [children, setChildren] = useState<number>(0);
+  const [roomsCount, setRoomsCount] = useState<number>(1);
 
   const [selectedRoomTypeId, setSelectedRoomTypeId] = useState<string>(() => roomTypes[0]?.id || "");
   const [selectedRoomNumber, setSelectedRoomNumber] = useState<string>("");
@@ -53,7 +54,7 @@ export default function CreateReservationClient() {
   const stayRate = getAverageRateForStay(selectedRoomType.id, checkIn, checkOut, selectedRoomType.baseRate);
   const breakfastSupplement = selectedRoomTypeId === "suite-room" ? 700 : 500;
   const effectiveNightlyRate = mealPlan === "CP" ? stayRate.averageRate + breakfastSupplement : stayRate.averageRate;
-  const pricing = calculateRoomCharges(effectiveNightlyRate, nights);
+  const pricing = calculateRoomCharges(effectiveNightlyRate * roomsCount, nights);
   const datesValid = Boolean(checkIn && checkOut && new Date(checkOut) > new Date(checkIn));
   const stayAllowed = datesValid && stayRate.blockedDates.length === 0 && nights >= stayRate.minStay;
 
@@ -73,9 +74,15 @@ export default function CreateReservationClient() {
     });
   }, [checkIn, checkOut, datesValid, reservations, rooms, selectedRoomTypeId]);
 
-  const effectiveSelectedRoomNumber = availableRooms.some((room) => room.number === selectedRoomNumber)
-    ? selectedRoomNumber
-    : availableRooms[0]?.number || "";
+  const effectiveSelectedRoomNumber = useMemo(() => {
+    const availableNums = availableRooms.map((r) => r.number);
+    if (roomsCount > 1) {
+      return availableNums.slice(0, roomsCount).join(", ");
+    }
+    return availableNums.some((num) => num === selectedRoomNumber)
+      ? selectedRoomNumber
+      : availableNums[0] || "";
+  }, [availableRooms, roomsCount, selectedRoomNumber]);
 
   const handleComplete = () => {
     const newRes = addReservation({
@@ -85,8 +92,9 @@ export default function CreateReservationClient() {
       checkIn: new Date(checkIn),
       checkOut: new Date(checkOut),
       nights,
+      roomsCount,
       roomNumber: effectiveSelectedRoomNumber,
-      roomType: `${selectedRoomType.name} (${mealPlan})`,
+      roomType: `${selectedRoomType.name}${roomsCount > 1 ? ` (${roomsCount} Rooms)` : ""} (${mealPlan})`,
       adults,
       children,
       bookingSource,
@@ -99,7 +107,7 @@ export default function CreateReservationClient() {
       guestPhone: phone.trim(),
       guestIdType: idType,
       guestIdNumber: idNumber.trim(),
-      notes: `Meal Plan: ${mealPlan === "CP" ? "CP (Continental Plan - With Breakfast)" : "EP (European Plan - Without Breakfast / Room Only)"}.${isCorporate && companyName ? ` Company: ${companyName}` : ""} ${notes.trim()}`,
+      notes: `Rooms: ${roomsCount}. Meal Plan: ${mealPlan === "CP" ? "CP (Continental Plan - With Breakfast)" : "EP (European Plan - Without Breakfast / Room Only)"}.${isCorporate && companyName ? ` Company: ${companyName}` : ""} ${notes.trim()}`,
       isCorporate,
       companyName: isCorporate ? companyName.trim() : undefined,
       companyContact: isCorporate ? companyContact.trim() : undefined,
@@ -166,15 +174,21 @@ export default function CreateReservationClient() {
           </div>
           <div className="form-row">
             <div className="form-group">
+              <label className="form-label">Number of Rooms *</label>
+              <select className="form-select" value={roomsCount} onChange={(e) => setRoomsCount(Number(e.target.value))}>
+                {[1, 2, 3, 4, 5].map((n) => (<option key={n} value={n}>{n} Room{n > 1 ? "s" : ""}</option>))}
+              </select>
+            </div>
+            <div className="form-group">
               <label className="form-label">Adults *</label>
               <select className="form-select" value={adults} onChange={(e) => setAdults(Number(e.target.value))}>
-                {[1, 2, 3, 4].map((n) => (<option key={n} value={n}>{n} Adult{n > 1 ? "s" : ""}</option>))}
+                {[1, 2, 3, 4, 5, 6, 8, 10].map((n) => (<option key={n} value={n}>{n} Adult{n > 1 ? "s" : ""}</option>))}
               </select>
             </div>
             <div className="form-group">
               <label className="form-label">Children</label>
               <select className="form-select" value={children} onChange={(e) => setChildren(Number(e.target.value))}>
-                {[0, 1, 2, 3].map((n) => (<option key={n} value={n}>{n} Children</option>))}
+                {[0, 1, 2, 3, 4].map((n) => (<option key={n} value={n}>{n} Children</option>))}
               </select>
             </div>
           </div>

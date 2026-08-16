@@ -40,7 +40,7 @@ export default function NightAuditClient() {
   } | null>(null);
 
   const initialSteps: AuditStep[] = [
-    { id: 1, name: "Verify Room Occupancy & Unassigned Arrivals", description: "Audit 43 rooms and verify checked-in guest folios", status: "idle" },
+    { id: 1, name: "Verify Room Occupancy & Unassigned Arrivals", description: "Audit 32 rooms and verify checked-in guest folios", status: "idle" },
     { id: 2, name: "Batch Post Room Tariffs & GST Taxes (SAC 9963)", description: `Batch post room tariffs with ${HOTEL_ACCOMMODATION_GST_RATE}% GST included in guest folios`, status: "idle" },
     { id: 3, name: "Reconcile Restaurant POS & Outlet Room Charges", description: "Consolidate KOT bills & room charges from F&B outlets", status: "idle" },
     { id: 4, name: "Assess Late Check-out Penalties & No-Show Auto-Cancels", description: "Process no-show fees & late checkout surcharges", status: "idle" },

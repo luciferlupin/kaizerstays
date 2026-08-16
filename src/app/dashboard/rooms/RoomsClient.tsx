@@ -1,18 +1,33 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useAppState } from "@/context/AppStateContext";
 import { formatCurrency } from "@/lib/utils";
-import { DoorOpen, Plus, Search, X, Check } from "lucide-react";
+import {
+  DoorOpen,
+  Plus,
+  Search,
+  X,
+  Check,
+  MoreVertical,
+  LogIn,
+  Sparkles,
+  Wrench,
+} from "lucide-react";
 
 import { getShemronRoomCategory } from "@/lib/demo-data";
+import { getPagePermission } from "@/lib/role-permissions";
 
 export default function RoomsClient() {
-  const { rooms, roomTypes, updateRoomStatus, addRoom } = useAppState();
+  const { rooms, roomTypes, updateRoomStatus, addRoom, currentUser } = useAppState();
   const [activeTab, setActiveTab] = useState<"rooms" | "room_types">("rooms");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [showAddRoom, setShowAddRoom] = useState(false);
+  const [selectedMenuRoom, setSelectedMenuRoom] = useState<(typeof rooms)[0] | null>(null);
+
+  const perm = getPagePermission("/dashboard/rooms", currentUser?.role);
 
   // Add Room form state
   const [newRoomNumber, setNewRoomNumber] = useState("");
@@ -30,6 +45,7 @@ export default function RoomsClient() {
   });
 
   const handleAddRoomSubmit = () => {
+    if (perm.level === "VIEW_ONLY") return;
     if (!newRoomNumber.trim()) return;
     const roomType = roomTypes.find((rt) => rt.id === newRoomTypeId) || roomTypes[0];
     const newRoom = {
@@ -54,18 +70,18 @@ export default function RoomsClient() {
     }, 1500);
   };
 
-  const handleToggleStatus = (roomId: string, currentStatus: string) => {
-    const statusCycle: Record<string, string> = {
-      AVAILABLE: "OCCUPIED",
-      OCCUPIED: "DIRTY",
-      DIRTY: "CLEANING",
-      CLEANING: "INSPECTED",
-      INSPECTED: "AVAILABLE",
-      MAINTENANCE: "AVAILABLE",
-      RESERVED: "AVAILABLE",
-    };
-    const nextStatus = statusCycle[currentStatus] || "AVAILABLE";
-    updateRoomStatus(roomId, nextStatus);
+  const handleSelectStatus = (roomId: string, newStatus: string) => {
+    if (perm.level === "VIEW_ONLY") {
+      alert(`View-Only Mode (${currentUser?.role || "Staff"}): Modifying room status is restricted on this reference page.`);
+      return;
+    }
+    updateRoomStatus(roomId, newStatus);
+    setSelectedMenuRoom(null);
+  };
+
+  const handleOpenRoomMenu = (room: (typeof rooms)[0], e: React.MouseEvent) => {
+    e.preventDefault();
+    setSelectedMenuRoom(room);
   };
 
   return (
@@ -122,13 +138,14 @@ export default function RoomsClient() {
                 <option value="RESERVED">Reserved</option>
                 <option value="DIRTY">Dirty</option>
                 <option value="CLEANING">Cleaning</option>
+                <option value="INSPECTED">Inspected</option>
                 <option value="MAINTENANCE">Maintenance</option>
               </select>
             </div>
           </div>
 
           {/* Visual Grid View */}
-          <div className="room-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))" }}>
+          <div className="room-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: "12px", marginTop: "16px" }}>
             {filteredRooms.slice(0, 50).map((room) => {
               const cat = getShemronRoomCategory(room.number);
               return (
@@ -147,12 +164,19 @@ export default function RoomsClient() {
                       ? "room-cleaning"
                       : "room-maintenance"
                   }`}
-                  onClick={() => handleToggleStatus(room.id, room.status)}
-                  title="Click to cycle room status"
+                  onClick={(e) => handleOpenRoomMenu(room, e)}
+                  onContextMenu={(e) => handleOpenRoomMenu(room, e)}
+                  style={{ cursor: "pointer", position: "relative", userSelect: "none" }}
+                  title={`Room #${room.number} — Right-click or click to open actions menu`}
                 >
-                  <div className="room-cell-number">#{room.number}</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div className="room-cell-number">#{room.number}</div>
+                    <MoreVertical size={13} style={{ opacity: 0.6 }} />
+                  </div>
                   <div className="room-cell-type">{cat.typeCode} • Floor {room.floor}</div>
-                  <div style={{ fontSize: "10px", marginTop: "4px", fontWeight: 600 }}>{room.status}</div>
+                  <div style={{ fontSize: "10px", marginTop: "4px", fontWeight: 700, letterSpacing: "0.03em" }}>
+                    {room.status}
+                  </div>
                 </div>
               );
             })}
@@ -184,6 +208,153 @@ export default function RoomsClient() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Interactive Room Context / Actions Modal Menu */}
+      {selectedMenuRoom && (
+        <div
+          className="modal-backdrop"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "16px",
+          }}
+          onClick={() => setSelectedMenuRoom(null)}
+        >
+          <div
+            className="card"
+            style={{
+              width: "100%",
+              maxWidth: "420px",
+              padding: "24px",
+              background: "var(--color-bg, #0d0e12)",
+              border: "1px solid var(--color-border)",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+              borderRadius: "14px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+              <div>
+                <div className="text-xs font-semibold text-secondary uppercase tracking-wider">Room Options Menu</div>
+                <h3 className="text-xl font-bold" style={{ margin: "2px 0 0 0" }}>
+                  Room #{selectedMenuRoom.number}
+                </h3>
+                <div className="text-xs text-secondary">
+                  {selectedMenuRoom.typeName} • Floor {selectedMenuRoom.floor}
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn btn-ghost btn-icon-only btn-sm"
+                onClick={() => setSelectedMenuRoom(null)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Current Status Badge */}
+            <div style={{ marginBottom: "20px", padding: "12px", borderRadius: "8px", background: "var(--color-surface, rgba(255,255,255,0.04))", border: "1px solid var(--color-border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span className="text-xs font-semibold text-secondary">Current Operational Status:</span>
+              <span className={`badge ${
+                selectedMenuRoom.status === "AVAILABLE" ? "badge-success" :
+                selectedMenuRoom.status === "OCCUPIED" ? "badge-primary" :
+                selectedMenuRoom.status === "DIRTY" ? "badge-danger" :
+                selectedMenuRoom.status === "CLEANING" ? "badge-warning" : "badge-default"
+              }`}>
+                {selectedMenuRoom.status}
+              </span>
+            </div>
+
+            {/* Change Operational Status Section */}
+            <div style={{ marginBottom: "16px" }}>
+              <label className="text-xs font-semibold text-secondary uppercase tracking-wider block mb-2">Set Room Status To:</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ justifyContent: "flex-start", gap: "8px" }}
+                  onClick={() => handleSelectStatus(selectedMenuRoom.id, "AVAILABLE")}
+                >
+                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10b981" }} />
+                  Available
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ justifyContent: "flex-start", gap: "8px" }}
+                  onClick={() => handleSelectStatus(selectedMenuRoom.id, "OCCUPIED")}
+                >
+                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#3b82f6" }} />
+                  Occupied
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ justifyContent: "flex-start", gap: "8px" }}
+                  onClick={() => handleSelectStatus(selectedMenuRoom.id, "DIRTY")}
+                >
+                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#ef4444" }} />
+                  Dirty
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ justifyContent: "flex-start", gap: "8px" }}
+                  onClick={() => handleSelectStatus(selectedMenuRoom.id, "CLEANING")}
+                >
+                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#f59e0b" }} />
+                  Cleaning
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ justifyContent: "flex-start", gap: "8px" }}
+                  onClick={() => handleSelectStatus(selectedMenuRoom.id, "INSPECTED")}
+                >
+                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#06b6d4" }} />
+                  Inspected
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ justifyContent: "flex-start", gap: "8px" }}
+                  onClick={() => handleSelectStatus(selectedMenuRoom.id, "MAINTENANCE")}
+                >
+                  <Wrench size={12} className="text-warning" />
+                  Maintenance
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Actions Shortcuts */}
+            <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: "14px", display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label className="text-xs font-semibold text-secondary uppercase tracking-wider block mb-1">Quick Operational Actions:</label>
+              <Link
+                href={`/dashboard/reservations/new?room=${selectedMenuRoom.number}`}
+                className="btn btn-primary btn-sm"
+                style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => setSelectedMenuRoom(null)}
+              >
+                <LogIn size={14} /> Create Reservation for Room #{selectedMenuRoom.number}
+              </Link>
+              <Link
+                href="/dashboard/housekeeping"
+                className="btn btn-secondary btn-sm"
+                style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => setSelectedMenuRoom(null)}
+              >
+                <Sparkles size={14} /> Assign Housekeeping Cleaning Task
+              </Link>
+            </div>
+          </div>
         </div>
       )}
 

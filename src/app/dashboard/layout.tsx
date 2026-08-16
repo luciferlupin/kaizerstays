@@ -13,7 +13,11 @@ import {
   Sparkles,
   Menu,
   Lock,
+  Eye,
+  ShieldAlert,
+  ArrowRight,
 } from "lucide-react";
+import { getPagePermission } from "@/lib/role-permissions";
 
 function DashboardAuthGuard({ children }: { children: React.ReactNode }) {
   const { currentUser } = useAppState();
@@ -71,6 +75,8 @@ function DashboardAuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const permission = getPagePermission(pathname, currentUser.role);
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", position: "relative" }}>
       {/* Mobile Drawer Backdrop */}
@@ -90,7 +96,41 @@ function DashboardAuthGuard({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <div className="main-content">
         <Header onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)} />
-        <main className="main-page">{children}</main>
+        <main className="main-page">
+          {permission.level === "LOCKED" ? (
+            <div className="card" style={{ maxWidth: "560px", margin: "60px auto", padding: "40px 28px", textAlign: "center" }}>
+              <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: "16px" }}>
+                <Lock size={32} />
+              </div>
+              <h2 style={{ fontSize: "20px", fontWeight: 800 }}>Access Restricted</h2>
+              <p className="text-sm text-secondary" style={{ marginTop: "8px", lineHeight: "1.6" }}>
+                Logged in as <strong>{currentUser.name}</strong> ({currentUser.role}).
+                <br />
+                {permission.reason || "You do not have permission to access or edit this management module."}
+              </p>
+              <div style={{ marginTop: "24px" }}>
+                <Link href={permission.primaryWorkspace} className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                  Go to My Primary Work Workspace <ArrowRight size={16} />
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <>
+              {permission.level === "VIEW_ONLY" && (
+                <div style={{ background: "rgba(59, 130, 246, 0.12)", border: "1px solid rgba(59, 130, 246, 0.3)", padding: "10px 16px", borderRadius: "8px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
+                  <Eye size={16} className="text-primary" />
+                  <span className="text-xs font-semibold text-primary" style={{ flex: 1 }}>
+                    <strong>View-Only Reference Mode ({currentUser.role}):</strong> You have read-only access to this operational page. Creation & Editing features are locked for your role.
+                  </span>
+                  <Link href={permission.primaryWorkspace} className="btn btn-secondary btn-sm" style={{ padding: "4px 10px", fontSize: "11px" }}>
+                    My Work Page
+                  </Link>
+                </div>
+              )}
+              {children}
+            </>
+          )}
+        </main>
       </div>
 
       {/* Mobile Bottom Navigation Bar */}

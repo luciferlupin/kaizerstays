@@ -122,6 +122,7 @@ interface SidebarProps {
 }
 
 import { useAppState } from "@/context/AppStateContext";
+import { getPagePermission } from "@/lib/role-permissions";
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
@@ -137,10 +138,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const isOwnerOrGM =
     user.role.toLowerCase().includes("owner") ||
-    user.role.toLowerCase().includes("manager") ||
-    user.role.toLowerCase().includes("gm");
-
-  const isHousekeeping = user.role.toLowerCase().includes("house");
+    user.role.toLowerCase().includes("gm") ||
+    user.role.toLowerCase().includes("admin");
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -153,16 +152,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   };
 
   const filteredNavGroups = NAV_GROUPS.map((group) => {
-    const items = group.items.filter((item) => {
-      // Owner pages: Owner Console, Staff, Revenue Manager, Expenses, Analytics, Settings
-      if (item.href === "/dashboard/owner" || item.href === "/dashboard/staff" || item.href === "/dashboard/settings" || item.href === "/dashboard/revenue" || item.href === "/dashboard/expenses" || item.href === "/dashboard/analytics") {
-        return isOwnerOrGM;
-      }
-      if (isHousekeeping) {
-        return item.href === "/dashboard/housekeeping" || item.href === "/dashboard/rooms" || item.href === "/dashboard/requests" || item.href === "/dashboard";
-      }
-      return true;
-    });
+    const items = group.items
+      .map((item) => {
+        const perm = getPagePermission(item.href, user.role);
+        return {
+          ...item,
+          permission: perm,
+        };
+      })
+      .filter((item) => item.permission.level !== "LOCKED");
 
     return { ...group, items };
   }).filter((group) => group.items.length > 0);
@@ -187,12 +185,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* Property Switcher */}
       <div className="sidebar-property">
-        <button className="sidebar-property-name">
-          <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Hotel size={14} />
-            Hotel Shemron
+        <button className="sidebar-property-name" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px", width: "100%", padding: "8px 10px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 700, fontSize: "13px" }}>
+              <Hotel size={15} style={{ color: "#0071E3" }} />
+              Hotel Shemron
+            </span>
+            <ChevronDown size={13} style={{ color: "var(--color-text-tertiary)" }} />
+          </div>
+          <span style={{ fontSize: "10px", color: "#0071E3", fontWeight: 600, paddingLeft: "23px", letterSpacing: "0.02em" }}>
+            Neemrana • 5-Star Luxury Resort
           </span>
-          <ChevronDown size={14} />
         </button>
       </div>
 
@@ -218,8 +221,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   onClick={() => onClose && onClose()}
                 >
                   <IconComponent className="sidebar-link-icon" size={18} />
-                  <span>{item.label}</span>
-                  {badgeCount ? (
+                  <span style={{ flex: 1 }}>{item.label}</span>
+                  {item.permission.level === "VIEW_ONLY" ? (
+                    <span style={{ fontSize: "9px", padding: "2px 6px", borderRadius: "4px", background: "rgba(255,255,255,0.08)", color: "var(--color-text-tertiary)", fontWeight: 600 }}>
+                      View
+                    </span>
+                  ) : badgeCount ? (
                     <span className="sidebar-link-badge">{badgeCount}</span>
                   ) : null}
                 </Link>

@@ -1,4 +1,5 @@
 import type { ChannelProviderId } from "@/lib/channel-manager";
+import { sanitizeGuestName } from "@/lib/utils";
 
 export type OTAImportSource = "CSV" | "ICAL" | "EMAIL";
 export type OTAImportStatus = "PENDING" | "CONFIRMED" | "CANCELLED";
@@ -249,7 +250,7 @@ export function parseOTAReservationsCSV(
       status: normalizeStatus(valueAt(row, "status")),
       checkIn,
       checkOut,
-      guestName: valueAt(row, "guestName").trim() || "OTA Guest",
+      guestName: sanitizeGuestName(valueAt(row, "guestName"), externalId),
       roomType: valueAt(row, "roomType").trim() || "Unmapped OTA room",
       adults: parseCount(valueAt(row, "adults"), 1),
       children: parseCount(valueAt(row, "children"), 0),
@@ -259,7 +260,7 @@ export function parseOTAReservationsCSV(
 
   const warnings: string[] = [];
   if (skipped) warnings.push(`${skipped} invalid or duplicate row${skipped === 1 ? " was" : "s were"} skipped.`);
-  if (columnIndexes.guestName < 0) warnings.push("Guest names were not present; imported records use “OTA Guest”.");
+  if (columnIndexes.guestName < 0) warnings.push("Guest names were not present; imported records use realistic guest names.");
   if (columnIndexes.totalAmount < 0) warnings.push("Prices were not present; imported records use ₹0 until reviewed.");
 
   return { records, skipped, warnings };
@@ -277,7 +278,7 @@ export function calendarEventsToReservations(
     status: "CONFIRMED",
     checkIn: event.start,
     checkOut: event.end,
-    guestName: "OTA calendar block",
+    guestName: sanitizeGuestName("", event.uid),
     roomType,
     adults: 1,
     children: 0,

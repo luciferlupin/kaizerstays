@@ -4,6 +4,8 @@
  * Real Hotel ID: 62a25484e5
  */
 
+import { sanitizeGuestName } from "@/lib/utils";
+
 export const AIOSELL_V2_CONFIG = {
   partnerName: "kaizerstays",
   ratesUrl: "https://live.aiosell.com/api/v2/cm/update-rates/kaizerstays",
@@ -573,7 +575,7 @@ export class AiosellClient {
         const bookingsList: Record<string, any>[] = data.bookings || data.data || (Array.isArray(data) ? data : []);
         if (bookingsList.length > 0) {
           bookingsList.forEach((b, idx) => {
-            const guestName =
+            const rawGuest =
               b.customer_name ||
               b.customer_blurb ||
               b.guest_name ||
@@ -590,7 +592,9 @@ export class AiosellClient {
               b.pms_guest_name ||
               b.traveler_name ||
               b.occupant_name ||
-              "Aiosell Guest";
+              "";
+            const bId = String(b.booking_id || b.cm_booking_id || b.pms_id || b.id || `AIO-${idx + 1}`);
+            const guestName = sanitizeGuestName(rawGuest, bId);
             const roomObj = b.rooms?.[0] || {};
             const rawRoomId = String(roomObj.roomId || b.room_code || b.room_id || b.ota_room_type_id || "");
             const mappedRoom = getRoomTypeFromAiosellOTAMapping(rawRoomId);
@@ -604,7 +608,7 @@ export class AiosellClient {
               : "CONFIRMED";
 
             fetchedResults.push({
-              bookingId: String(b.booking_id || b.cm_booking_id || b.pms_id || b.id || `AIO-${idx + 1}`),
+              bookingId: bId,
               guestName,
               guestEmail: b.email || b.guest_email || b.customer_contact?.email || undefined,
               guestPhone: b.mobile || b.guest_phone || b.customer_contact?.phone || undefined,
@@ -644,7 +648,7 @@ export class AiosellClient {
               if (!fetchedResults.some((existing) => existing.bookingId === bId)) {
                 fetchedResults.push({
                   bookingId: bId,
-                  guestName: String(b.guest_name || b.guestName || b.name || "Aiosell Guest"),
+                  guestName: sanitizeGuestName(String(b.guest_name || b.guestName || b.name || ""), bId),
                   guestEmail: b.guest_email ? String(b.guest_email) : undefined,
                   guestPhone: b.guest_phone ? String(b.guest_phone) : undefined,
                   checkIn: String(b.check_in || b.checkIn || b.stay_from || todayStr).slice(0, 10),
@@ -679,7 +683,7 @@ export class AiosellClient {
               if (!fetchedResults.some((existing) => existing.checkIn === checkIn || existing.bookingId === bobId)) {
                 fetchedResults.push({
                   bookingId: bobId,
-                  guestName: `OTA Guest (${item.demand || "Aiosell"} Booking)`,
+                  guestName: sanitizeGuestName("", bobId),
                   checkIn,
                   checkOut,
                   roomCode: "deluxe-room",

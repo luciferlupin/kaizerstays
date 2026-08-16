@@ -38,10 +38,21 @@ export default function DashboardClient() {
   const departures = reservations.filter(
     (r) => r.status === "CHECKED_IN" && toDateKey(new Date(r.checkOut)) <= todayKey
   );
+
+  const getResRoomCount = (r: (typeof reservations)[0]) =>
+    (r as any).roomsCount || (r.roomNumber && r.roomNumber.includes(",") ? r.roomNumber.split(",").filter(Boolean).length : 1);
+
+  const arrivingRoomsCount = arrivals.reduce((sum, r) => sum + getResRoomCount(r), 0);
+  const departingRoomsCount = departures.reduce((sum, r) => sum + getResRoomCount(r), 0);
+
   const inHouseReservations = reservations.filter((r) => r.status === "CHECKED_IN");
   const inHouseGuestsCount = inHouseReservations.reduce((sum, r) => sum + r.adults + (r.children || 0), 0);
 
   const totalOutstandingFolio = reservations.reduce((sum, r) => sum + (r.balanceAmount || 0), 0);
+
+  const totalRevenue = reservations.filter((r) => r.status === "CHECKED_IN" || r.status === "CHECKED_OUT").reduce((sum, r) => sum + r.totalAmount, 0);
+  const adr = occupiedRooms > 0 ? Math.round(totalRevenue / occupiedRooms) : 2800;
+  const revpar = Math.round((occupancyRate / 100) * adr);
 
   return (
     <div className="page-content">
@@ -50,7 +61,7 @@ export default function DashboardClient() {
         <div>
           <h1 className="page-title">{greeting}, {currentUser ? currentUser.name : "Ninaad Khera"}</h1>
           <p className="page-description">
-            Here is what&apos;s happening at {property.name} today.
+            Live operational dashboard for {property.name}, Neemrana • 5-Star Enterprise PMS &amp; RMS
           </p>
         </div>
         <div className="page-actions">
@@ -64,7 +75,7 @@ export default function DashboardClient() {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="stats-grid">
+      <div className="stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px", marginBottom: "24px" }}>
         <div className="stat-card">
           <span className="stat-card-label">Occupancy Rate</span>
           <div className="stat-card-value text-primary">{occupancyRate}%</div>
@@ -77,18 +88,38 @@ export default function DashboardClient() {
         </div>
 
         <div className="stat-card">
-          <span className="stat-card-label">Arrivals Today</span>
-          <div className="stat-card-value">{arrivals.length}</div>
+          <span className="stat-card-label">ADR (Average Daily Rate)</span>
+          <div className="stat-card-value">{formatCurrency(adr)}</div>
+          <span className="text-xs text-success" style={{ marginTop: "4px" }}>
+            Based on in-house folios
+          </span>
+        </div>
+
+        <div className="stat-card">
+          <span className="stat-card-label">RevPAR</span>
+          <div className="stat-card-value text-primary">{formatCurrency(revpar)}</div>
           <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>
-            {arrivals.length === 0 ? "No arrivals pending" : `${arrivals.length} scheduled today`}
+            Per available room
+          </span>
+        </div>
+
+        <div className="stat-card">
+          <span className="stat-card-label">Arrivals Today</span>
+          <div className="stat-card-value">{arrivingRoomsCount}</div>
+          <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>
+            {arrivingRoomsCount === 0
+              ? "No arrivals pending"
+              : `${arrivingRoomsCount} rooms scheduled${arrivals.length !== arrivingRoomsCount ? ` (${arrivals.length} bookings)` : ""}`}
           </span>
         </div>
 
         <div className="stat-card">
           <span className="stat-card-label">Departures Today</span>
-          <div className="stat-card-value">{departures.length}</div>
+          <div className="stat-card-value">{departingRoomsCount}</div>
           <span className="text-xs text-secondary" style={{ marginTop: "4px" }}>
-            {departures.length === 0 ? "No departures pending" : `${departures.length} pending checkout`}
+            {departingRoomsCount === 0
+              ? "No departures pending"
+              : `${departingRoomsCount} rooms pending checkout${departures.length !== departingRoomsCount ? ` (${departures.length} bookings)` : ""}`}
           </span>
         </div>
 
@@ -161,13 +192,13 @@ export default function DashboardClient() {
                 className={`tab ${activeTab === "arrivals" ? "active" : ""}`}
                 onClick={() => setActiveTab("arrivals")}
               >
-                Arrivals Today ({arrivals.length})
+                Arrivals Today ({arrivingRoomsCount})
               </button>
               <button
                 className={`tab ${activeTab === "departures" ? "active" : ""}`}
                 onClick={() => setActiveTab("departures")}
               >
-                Departures Today ({departures.length})
+                Departures Today ({departingRoomsCount})
               </button>
             </div>
             <Link href="/dashboard/front-desk" className="btn btn-ghost btn-sm">

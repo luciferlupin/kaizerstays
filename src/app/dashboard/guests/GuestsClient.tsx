@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useAppState } from "@/context/AppStateContext";
-import { formatCurrency, formatDate, getInitials, getAvatarColor } from "@/lib/utils";
+import { formatCurrency, formatDate, getInitials, getAvatarColor, sanitizeGuestName } from "@/lib/utils";
 import {
   Search,
   Users,
@@ -43,17 +43,50 @@ export default function GuestsClient() {
     });
   }, [guests, search]);
 
+  const getGuestMetrics = (g: (typeof guests)[0]) => {
+    const fullName = `${g.firstName} ${g.lastName}`.toLowerCase().trim();
+    const firstName = g.firstName.toLowerCase().trim();
+    const lastName = g.lastName.toLowerCase().trim();
+
+    const matchingRes = reservations.filter((r) => {
+      if (r.guestId === g.id) return true;
+      const resName = (r.guestName || "").toLowerCase().trim();
+      if (resName === fullName) return true;
+      if (g.email && r.guestEmail && r.guestEmail.toLowerCase().trim() === g.email.toLowerCase().trim()) return true;
+      if (g.phone && r.guestPhone && r.guestPhone.includes(g.phone)) return true;
+      if (lastName && resName.includes(firstName) && resName.includes(lastName)) return true;
+      if (firstName.length > 2 && resName.includes(firstName)) return true;
+      return false;
+    });
+
+    if (matchingRes.length === 0) {
+      return {
+        totalStays: Math.max(1, g.totalStays || 1),
+        totalNights: Math.max(1, g.totalNights || 1),
+        totalSpent: g.totalSpent || 0,
+        reservationsList: [],
+      };
+    }
+
+    const roomStaysCount = matchingRes.reduce((sum, r) => {
+      const roomsInRes = (r as any).roomsCount || (r.roomNumber && r.roomNumber.includes(",") ? r.roomNumber.split(",").filter(Boolean).length : 1);
+      return sum + roomsInRes;
+    }, 0);
+
+    const totalNightsCount = matchingRes.reduce((sum, r) => sum + (r.nights || 1), 0);
+    const totalSpentAmt = matchingRes.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+
+    return {
+      totalStays: Math.max(g.totalStays || 0, roomStaysCount),
+      totalNights: Math.max(g.totalNights || 0, totalNightsCount),
+      totalSpent: Math.max(g.totalSpent || 0, totalSpentAmt),
+      reservationsList: matchingRes,
+    };
+  };
+
   const guestReservations = useMemo(() => {
     if (!selectedGuest) return [];
-    const fullName = `${selectedGuest.firstName} ${selectedGuest.lastName}`.toLowerCase().trim();
-    const firstName = selectedGuest.firstName.toLowerCase().trim();
-    return reservations.filter(
-      (r) =>
-        r.guestId === selectedGuest.id ||
-        r.guestName.toLowerCase().trim() === fullName ||
-        r.guestName.toLowerCase().includes(firstName) ||
-        (selectedGuest.email && r.guestEmail && r.guestEmail.toLowerCase() === selectedGuest.email.toLowerCase())
-    );
+    return getGuestMetrics(selectedGuest).reservationsList;
   }, [selectedGuest, reservations]);
 
   const handleOpenGuestCRM = (guest: (typeof guests)[0]) => {
@@ -162,6 +195,12 @@ ${filtered
               </thead>
               <tbody>
                 {filtered.map((g) => {
+                  const metrics = getGuestMetrics(g);
+                  const cleanName = sanitizeGuestName(`${g.firstName} ${g.lastName}`.trim(), g.id);
+                  const nameParts = cleanName.split(" ");
+                  const displayFirstName = nameParts[0] || "Guest";
+                  const displayLastName = nameParts.slice(1).join(" ") || "";
+
                   const locationText =
                     g.city && g.country
                       ? `${g.city}, ${g.country}`
@@ -180,13 +219,13 @@ ${filtered
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                           <div
                             className="avatar avatar-sm"
-                            style={{ background: getAvatarColor(g.firstName), color: "white" }}
+                            style={{ background: getAvatarColor(displayFirstName), color: "white" }}
                           >
-                            {getInitials(g.firstName, g.lastName)}
+                            {getInitials(displayFirstName, displayLastName)}
                           </div>
                           <div>
                             <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
-                              {g.firstName} {g.lastName}
+                              {displayFirstName} {displayLastName}
                               {g.isVip && (
                                 <span className="badge badge-warning" style={{ fontSize: "10px" }}>
                                   <Star size={10} style={{ marginRight: "2px" }} /> VIP
@@ -201,10 +240,10 @@ ${filtered
                         <div className="text-xs text-tertiary">{contactSecondary}</div>
                       </td>
                       <td className="text-sm text-secondary">{locationText}</td>
-                      <td className="font-semibold">{g.totalStays} Stays</td>
-                      <td className="text-secondary">{g.totalNights} Nights</td>
+                      <td className="font-semibold">{metrics.totalStays} Stays</td>
+                      <td className="text-secondary">{metrics.totalNights} Nights</td>
                       <td className="text-right mono font-bold text-success">
-                        {formatCurrency(g.totalSpent)}
+                        {formatCurrency(metrics.totalSpent)}
                       </td>
                       <td className="text-right">
                         <button
@@ -255,35 +294,45 @@ ${filtered
             {/* Modal Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                <div
-                  className="avatar avatar-md"
-                  style={{
-                    background: getAvatarColor(selectedGuest.firstName),
-                    color: "white",
-                    width: "48px",
-                    height: "48px",
-                    fontSize: "18px",
-                    fontWeight: 700,
-                  }}
-                >
-                  {getInitials(selectedGuest.firstName, selectedGuest.lastName)}
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold flex items-center gap-2">
-                    {selectedGuest.firstName} {selectedGuest.lastName}
-                    {selectedGuest.isVip && (
-                      <span className="badge badge-warning text-xs">
-                        <Star size={12} style={{ marginRight: 2 }} /> VIP Guest
-                      </span>
-                    )}
-                  </h3>
-                  <div className="text-xs text-secondary flex items-center gap-3 mt-1">
-                    <span className="flex items-center gap-1">
-                      <MapPin size={12} />
-                      {selectedGuest.city || "Delhi"}, {selectedGuest.country || "IN"}
-                    </span>
-                  </div>
-                </div>
+                {(() => {
+                  const modalCleanName = sanitizeGuestName(`${selectedGuest.firstName} ${selectedGuest.lastName}`.trim(), selectedGuest.id);
+                  const modalParts = modalCleanName.split(" ");
+                  const modalFirst = modalParts[0] || "Guest";
+                  const modalLast = modalParts.slice(1).join(" ") || "";
+                  return (
+                    <>
+                      <div
+                        className="avatar avatar-md"
+                        style={{
+                          background: getAvatarColor(modalFirst),
+                          color: "white",
+                          width: "48px",
+                          height: "48px",
+                          fontSize: "18px",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {getInitials(modalFirst, modalLast)}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold flex items-center gap-2">
+                          {modalFirst} {modalLast}
+                          {selectedGuest.isVip && (
+                            <span className="badge badge-warning text-xs">
+                              <Star size={12} style={{ marginRight: 2 }} /> VIP Guest
+                            </span>
+                          )}
+                        </h3>
+                        <div className="text-xs text-secondary flex items-center gap-3 mt-1">
+                          <span className="flex items-center gap-1">
+                            <MapPin size={12} />
+                            {selectedGuest.city || "Delhi"}, {selectedGuest.country || "IN"}
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
               <button
                 type="button"
@@ -295,33 +344,38 @@ ${filtered
             </div>
 
             {/* Lifetime Metrics Bar */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: "12px",
-                background: "var(--color-surface, rgba(255,255,255,0.03))",
-                padding: "16px",
-                borderRadius: "10px",
-                border: "1px solid var(--color-border, rgba(255,255,255,0.08))",
-                marginBottom: "20px",
-              }}
-            >
-              <div>
-                <span className="text-xs text-secondary block uppercase">Lifetime Spend</span>
-                <span className="mono text-success font-bold text-lg">
-                  {formatCurrency(selectedGuest.totalSpent)}
-                </span>
-              </div>
-              <div>
-                <span className="text-xs text-secondary block uppercase">Total Stays</span>
-                <span className="font-bold text-lg">{selectedGuest.totalStays} Stays</span>
-              </div>
-              <div>
-                <span className="text-xs text-secondary block uppercase">Total Nights</span>
-                <span className="font-bold text-lg text-primary">{selectedGuest.totalNights} Nights</span>
-              </div>
-            </div>
+            {(() => {
+              const selectedMetrics = getGuestMetrics(selectedGuest);
+              return (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(3, 1fr)",
+                    gap: "12px",
+                    background: "var(--color-surface, rgba(255,255,255,0.03))",
+                    padding: "16px",
+                    borderRadius: "10px",
+                    border: "1px solid var(--color-border, rgba(255,255,255,0.08))",
+                    marginBottom: "20px",
+                  }}
+                >
+                  <div>
+                    <span className="text-xs text-secondary block uppercase">Lifetime Spend</span>
+                    <span className="mono text-success font-bold text-lg">
+                      {formatCurrency(selectedMetrics.totalSpent)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-secondary block uppercase">Total Stays</span>
+                    <span className="font-bold text-lg">{selectedMetrics.totalStays} Stays</span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-secondary block uppercase">Total Nights</span>
+                    <span className="font-bold text-lg text-primary">{selectedMetrics.totalNights} Nights</span>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Contact Details Grid */}
             <div className="grid grid-cols-2 gap-4 mb-5">

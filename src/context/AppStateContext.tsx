@@ -19,6 +19,7 @@ import { posTables, activeKOTs, KitchenOrder } from "@/lib/pos-data";
 import { otaChannels, nightAuditHistory, NightAuditRecord } from "@/lib/channels-data";
 import type { NormalizedOTAReservation } from "@/lib/ota-fallback";
 import { calculateInclusiveHotelGST } from "@/lib/gst";
+import { sanitizeGuestName } from "@/lib/utils";
 
 export interface FolioItem {
   id: string;
@@ -38,6 +39,7 @@ export interface ExtendedReservation {
   checkOut: Date;
   nights: number;
   roomNumber: string;
+  roomsCount?: number;
   roomType: string;
   adults: number;
   children: number;
@@ -232,8 +234,28 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
             }))
           );
         }
-        if (parsed.reservations?.length) setReservations(parsed.reservations);
-        if (parsed.guests?.length) setGuests(parsed.guests);
+        if (parsed.reservations?.length) {
+          setReservations(
+            parsed.reservations.map((r: any) => ({
+              ...r,
+              guestName: sanitizeGuestName(r.guestName, r.id || r.confirmationNumber),
+            }))
+          );
+        }
+        if (parsed.guests?.length) {
+          setGuests(
+            parsed.guests.map((g: any) => {
+              const fullName = `${g.firstName || ""} ${g.lastName || ""}`.trim();
+              const cleanFullName = sanitizeGuestName(fullName, g.id);
+              const parts = cleanFullName.split(" ");
+              return {
+                ...g,
+                firstName: parts[0] || "Guest",
+                lastName: parts.slice(1).join(" ") || "",
+              };
+            })
+          );
+        }
         if (parsed.housekeepingTasks?.length) setHousekeepingTasks(parsed.housekeepingTasks);
         if (parsed.guestRequests?.length) setGuestRequests(parsed.guestRequests);
         if (parsed.payments?.length) setPayments(parsed.payments);
@@ -397,12 +419,14 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Check if guest exists in CRM or create new
+    const roomsAdded = resData.roomsCount || (resData.roomNumber && resData.roomNumber.includes(",") ? resData.roomNumber.split(",").filter(Boolean).length : 1);
+
     setGuests((prev) => {
       const existing = prev.find((g) => g.id === resData.guestId || g.firstName + " " + g.lastName === resData.guestName);
       if (existing) {
         return prev.map((g) =>
           g.id === existing.id
-            ? { ...g, totalStays: g.totalStays + 1, totalSpent: g.totalSpent + resData.totalAmount, totalNights: g.totalNights + resData.nights }
+            ? { ...g, totalStays: g.totalStays + roomsAdded, totalSpent: g.totalSpent + resData.totalAmount, totalNights: g.totalNights + resData.nights }
             : g
         );
       } else {
@@ -416,7 +440,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           city: "New Delhi",
           country: "IN",
           isVip: false,
-          totalStays: 1,
+          totalStays: roomsAdded,
           totalSpent: resData.totalAmount,
           totalNights: resData.nights,
         };
@@ -551,11 +575,13 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         effectiveRoomNumber = availableCandidate ? availableCandidate.number : "";
       }
 
+      const cleanGuestName = sanitizeGuestName(record.guestName, extId);
+
       const imported: ExtendedReservation = {
         id: existing?.id || `res_ota_${rawProvider}_${extId}`,
         confirmationNumber: extId,
         guestId: existing?.guestId || `guest_ota_${rawProvider}_${extId}`,
-        guestName: record.guestName,
+        guestName: cleanGuestName,
         status: preservedStatus,
         checkIn,
         checkOut,
@@ -602,12 +628,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         existingByKey.set(extIdLower, imported);
         existingByKey.set(lookupKeyPrefixed, imported);
         summary.imported += 1;
-        if (record.source !== "ICAL" && record.guestName !== "OTA Guest") {
-          const nameParts = record.guestName.trim().split(/\s+/);
+        if (record.source !== "ICAL") {
+          const nameParts = cleanGuestName.trim().split(/\s+/);
           guestAdditions.push({
             id: imported.guestId,
-            firstName: nameParts[0] || record.guestName,
-            lastName: nameParts.slice(1).join(" "),
+            firstName: nameParts[0] || cleanGuestName,
+            lastName: nameParts.slice(1).join(" ") || "",
             email: "",
             phone: "",
             city: "",

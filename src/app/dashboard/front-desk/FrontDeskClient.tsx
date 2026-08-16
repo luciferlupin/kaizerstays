@@ -47,6 +47,13 @@ export default function FrontDeskClient() {
   // In-House: Currently checked-in guests
   const inHouse = reservations.filter((r) => r.status === "CHECKED_IN");
 
+  const getResRoomCount = (r: (typeof reservations)[0]) =>
+    (r as any).roomsCount || (r.roomNumber && r.roomNumber.includes(",") ? r.roomNumber.split(",").filter(Boolean).length : 1);
+
+  const totalArrivingRooms = arrivals.reduce((sum, r) => sum + getResRoomCount(r), 0);
+  const totalDepartingRooms = departures.reduce((sum, r) => sum + getResRoomCount(r), 0);
+  const totalInHouseRooms = inHouse.reduce((sum, r) => sum + getResRoomCount(r), 0);
+
   const getEffectiveRoomDetails = (r: (typeof reservations)[0]) => {
     let roomNum = r.roomNumber;
     let typeName = r.roomType;
@@ -161,15 +168,15 @@ export default function FrontDeskClient() {
       <div className="tabs">
         <button className={`tab ${activeTab === "arrivals" ? "active" : ""}`} onClick={() => setActiveTab("arrivals")}>
           Arrivals Today
-          <span className="tab-count">{arrivals.length}</span>
+          <span className="tab-count">{totalArrivingRooms}</span>
         </button>
         <button className={`tab ${activeTab === "departures" ? "active" : ""}`} onClick={() => setActiveTab("departures")}>
           Departures Today
-          <span className="tab-count">{departures.length}</span>
+          <span className="tab-count">{totalDepartingRooms}</span>
         </button>
         <button className={`tab ${activeTab === "in_house" ? "active" : ""}`} onClick={() => setActiveTab("in_house")}>
           In House Guests
-          <span className="tab-count">{inHouse.length}</span>
+          <span className="tab-count">{totalInHouseRooms}</span>
         </button>
       </div>
 
@@ -289,14 +296,21 @@ export default function FrontDeskClient() {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Assign Room Number</label>
-                    <input
-                      type="text"
-                      className="form-input"
+                    <label className="form-label" style={{ fontWeight: 600 }}>Assign Physical Room</label>
+                    <select
+                      className="form-select"
                       value={assignedRoomNumber}
                       onChange={(e) => setAssignedRoomNumber(e.target.value)}
-                      placeholder="e.g. 301"
-                    />
+                    >
+                      <option value="">-- Select Physical Room --</option>
+                      {rooms
+                        .filter((room) => room.isActive)
+                        .map((room) => (
+                          <option key={room.id} value={room.number}>
+                            Room #{room.number} — {room.typeName} ({room.status === "AVAILABLE" ? "Clean & Ready" : room.status})
+                          </option>
+                        ))}
+                    </select>
                   </div>
 
                   {checkInModal.balanceAmount > 0 ? (
