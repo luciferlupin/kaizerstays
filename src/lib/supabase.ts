@@ -50,28 +50,38 @@ export async function fetchSupabaseReservations() {
   }
 }
 
+function safeDateStr(val: any): string {
+  if (!val) return new Date().toISOString().split("T")[0];
+  if (typeof val === "string") return val.slice(0, 10);
+  if (val instanceof Date) return val.toISOString().split("T")[0];
+  return String(val).slice(0, 10);
+}
+
 export async function upsertSupabaseReservation(res: any) {
   try {
     const client = getSupabaseClient();
+    const checkIn = safeDateStr(res.checkIn);
+    const checkOut = safeDateStr(res.checkOut);
+
     const payload = {
-      confirmation_number: res.confirmationNumber,
-      guest_name: res.guestName,
+      confirmation_number: String(res.confirmationNumber || res.id),
+      guest_name: res.guestName || "Guest",
       guest_email: res.guestEmail || "",
       guest_phone: res.guestPhone || "",
       room_number: res.roomNumber || "",
       room_type: res.roomType || "Deluxe Room",
       status: res.status || "CONFIRMED",
-      check_in: new Date(res.checkIn).toISOString().split("T")[0],
-      check_out: new Date(res.checkOut).toISOString().split("T")[0],
-      nights: res.nights || 1,
-      adults: res.adults || 2,
-      children: res.children || 0,
+      check_in: checkIn,
+      check_out: checkOut,
+      nights: Number(res.nights) || 1,
+      adults: Number(res.adults) || 2,
+      children: Number(res.children) || 0,
       booking_source: res.bookingSource || "DIRECT",
-      room_rate: res.roomRate || 2800,
-      total_amount: res.totalAmount || 2800,
-      tax_amount: res.taxAmount || 0,
-      paid_amount: res.paidAmount || 0,
-      balance_amount: res.balanceAmount || 0,
+      room_rate: Number(res.roomRate) || 2800,
+      total_amount: Number(res.totalAmount) || 2800,
+      tax_amount: Number(res.taxAmount) || 0,
+      paid_amount: Number(res.paidAmount) || 0,
+      balance_amount: Number(res.balanceAmount) || 0,
       notes: res.notes || null,
     };
 
@@ -80,23 +90,23 @@ export async function upsertSupabaseReservation(res: any) {
       .upsert(payload, { onConflict: "confirmation_number" })
       .select();
 
-    if (error && error.code === "PGRST204") {
-      // Fallback payload with core standard columns if optional columns are missing
+    if (error) {
+      // Fallback payload with core standard columns if optional columns or schema constraints fail
       const corePayload = {
-        confirmation_number: res.confirmationNumber,
-        guest_name: res.guestName,
+        confirmation_number: String(res.confirmationNumber || res.id),
+        guest_name: res.guestName || "Guest",
         room_number: res.roomNumber || "",
         room_type: res.roomType || "Deluxe Room",
         status: res.status || "CONFIRMED",
-        check_in: new Date(res.checkIn).toISOString().split("T")[0],
-        check_out: new Date(res.checkOut).toISOString().split("T")[0],
-        nights: res.nights || 1,
+        check_in: checkIn,
+        check_out: checkOut,
+        nights: Number(res.nights) || 1,
         booking_source: res.bookingSource || "DIRECT",
-        room_rate: res.roomRate || 2800,
-        total_amount: res.totalAmount || 2800,
-        tax_amount: res.taxAmount || 0,
-        paid_amount: res.paidAmount || 0,
-        balance_amount: res.balanceAmount || 0,
+        room_rate: Number(res.roomRate) || 2800,
+        total_amount: Number(res.totalAmount) || 2800,
+        tax_amount: Number(res.taxAmount) || 0,
+        paid_amount: Number(res.paidAmount) || 0,
+        balance_amount: Number(res.balanceAmount) || 0,
       };
 
       const retryRes = await client
@@ -109,7 +119,7 @@ export async function upsertSupabaseReservation(res: any) {
     }
 
     if (error) {
-      console.warn("[supabase] Upsert error:", error.message);
+      console.warn("[supabase] Upsert warning:", error.message);
     }
     return { success: !error, data, error };
   } catch (err: any) {
