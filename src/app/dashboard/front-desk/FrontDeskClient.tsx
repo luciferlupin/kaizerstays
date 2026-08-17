@@ -147,28 +147,74 @@ export default function FrontDeskClient() {
     }, 1200);
   };
 
+  // Upcoming Confirmed Arrivals (Future Check-Ins)
+  const upcomingArrivals = reservations.filter(
+    (r) => !["CHECKED_OUT", "CANCELLED", "CHECKED_IN"].includes(r.status) && r.status === "CONFIRMED"
+  );
+
   return (
     <div className="page-content">
       {/* Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Front Desk Workspace</h1>
+          <h1 className="page-title flex items-center gap-2">
+            <UserCheck className="text-primary" size={24} />
+            Front Desk Workspace
+          </h1>
           <p className="page-description">
             Reception operational desk for arrivals, check-ins, departures, and walk-ins.
           </p>
         </div>
-        <div className="page-actions">
+        <div className="page-actions flex items-center gap-2">
+          <Link href="/dashboard/channels" className="btn btn-secondary btn-sm">
+            <Check size={14} className="text-success" /> Live Aiosell Synced
+          </Link>
           <Link href="/dashboard/reservations/new" className="btn btn-primary">
             <Plus size={16} /> Walk-In Booking
           </Link>
         </div>
       </div>
 
+      {/* Operations Metric Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="card" style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "6px" }}>
+          <span className="text-xs text-secondary font-semibold uppercase tracking-wider">Today's Arrivals</span>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
+            <span className="text-2xl font-extrabold text-primary">{totalArrivingRooms}</span>
+            <span className="text-xs text-secondary">Guests Expected</span>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "6px" }}>
+          <span className="text-xs text-secondary font-semibold uppercase tracking-wider">Today's Departures</span>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
+            <span className="text-2xl font-extrabold text-warning">{totalDepartingRooms}</span>
+            <span className="text-xs text-secondary">Guests Check-Out</span>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "6px" }}>
+          <span className="text-xs text-secondary font-semibold uppercase tracking-wider">In-House Guests</span>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
+            <span className="text-2xl font-extrabold text-success">{totalInHouseRooms}</span>
+            <span className="text-xs text-secondary">Rooms Occupied</span>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "6px" }}>
+          <span className="text-xs text-secondary font-semibold uppercase tracking-wider">Upcoming Bookings</span>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
+            <span className="text-2xl font-extrabold">{upcomingArrivals.length}</span>
+            <span className="text-xs text-secondary">Future Arrivals</span>
+          </div>
+        </div>
+      </div>
+
       {/* Front Desk Tabs */}
       <div className="tabs">
         <button className={`tab ${activeTab === "arrivals" ? "active" : ""}`} onClick={() => setActiveTab("arrivals")}>
-          Arrivals Today
-          <span className="tab-count">{totalArrivingRooms}</span>
+          Arrivals &amp; Upcoming
+          <span className="tab-count">{arrivals.length > 0 ? arrivals.length : upcomingArrivals.length}</span>
         </button>
         <button className={`tab ${activeTab === "departures" ? "active" : ""}`} onClick={() => setActiveTab("departures")}>
           Departures Today
@@ -183,87 +229,105 @@ export default function FrontDeskClient() {
       {/* Main Table Content */}
       <div className="card">
         <div className="card-body" style={{ padding: 0 }}>
-          {(activeTab === "arrivals" ? arrivals : activeTab === "departures" ? departures : inHouse).length === 0 ? (
-            <div style={{ padding: "48px 20px", textAlign: "center" }}>
-              <UserCheck size={36} className="text-tertiary" style={{ margin: "0 auto 12px auto" }} />
-              <h3 style={{ fontSize: "16px", fontWeight: 700 }}>
-                {activeTab === "arrivals" ? "No Expected Arrivals" : activeTab === "departures" ? "No Expected Departures" : "No In-House Guests"}
-              </h3>
-              <p className="text-xs text-secondary" style={{ marginTop: "4px" }}>
-                {activeTab === "arrivals" ? "New bookings from OTA channels or direct walk-ins will appear here." : "All guest checkouts and stays will update here."}
-              </p>
-            </div>
-          ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Guest Name</th>
-                  <th>Confirmation #</th>
-                  <th>Room Type & Number</th>
-                  <th>Stay Dates</th>
-                  <th>Source</th>
-                  <th>Payment Status</th>
-                  <th className="text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(activeTab === "arrivals"
+          {(() => {
+            const listToDisplay =
+              activeTab === "arrivals"
+                ? arrivals.length > 0
                   ? arrivals
-                  : activeTab === "departures"
-                  ? departures
-                  : inHouse
-                ).map((r) => {
-                  const { roomNum, typeName } = getEffectiveRoomDetails(r);
-                  return (
-                    <tr key={r.id}>
-                      <td className="font-semibold">{r.guestName}</td>
-                      <td className="mono text-xs">{r.confirmationNumber}</td>
-                      <td>
-                        <div style={{ fontWeight: 600 }}>{typeName}</div>
-                        <div className="text-xs text-primary" style={{ fontWeight: 700 }}>
-                          {roomNum ? `Room #${roomNum}` : "Unassigned"}
-                        </div>
-                      </td>
-                      <td className="text-sm">
-                        {formatDate(r.checkIn, "dd MMM")} → {formatDate(r.checkOut, "dd MMM")} ({r.nights}n)
-                      </td>
-                      <td>
-                        <span className="badge badge-default">{r.bookingSource}</span>
-                      </td>
-                      <td>
-                        {r.balanceAmount === 0 ? (
-                          <span className="badge badge-success font-bold">Paid (₹0)</span>
-                        ) : (
-                          <span className="badge badge-warning font-bold">
-                            Due: {formatCurrency(r.balanceAmount)}
-                          </span>
-                        )}
-                      </td>
-                      <td className="text-right">
-                        {activeTab === "arrivals" && (
-                          <button
-                            className="btn btn-primary btn-sm"
-                            onClick={() => handleOpenCheckInModal(r)}
-                          >
-                            <LogIn size={14} /> Check In
-                          </button>
-                        )}
+                  : upcomingArrivals
+                : activeTab === "departures"
+                ? departures
+                : inHouse;
 
-                        {(activeTab === "departures" || activeTab === "in_house") && (
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            onClick={() => setCheckOutModal(r)}
-                          >
-                            <LogOut size={14} /> Check Out
-                          </button>
-                        )}
-                      </td>
+            if (listToDisplay.length === 0) {
+              return (
+                <div style={{ padding: "48px 20px", textAlign: "center" }}>
+                  <UserCheck size={36} className="text-tertiary" style={{ margin: "0 auto 12px auto" }} />
+                  <h3 style={{ fontSize: "16px", fontWeight: 700 }}>
+                    {activeTab === "arrivals"
+                      ? "No Arrivals Pending"
+                      : activeTab === "departures"
+                      ? "No Expected Departures"
+                      : "No In-House Guests"}
+                  </h3>
+                  <p className="text-xs text-secondary" style={{ marginTop: "4px" }}>
+                    {activeTab === "arrivals"
+                      ? "All arrivals for today are checked in or synced with Aiosell."
+                      : "All guest checkouts and stays will update here."}
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <div style={{ overflowX: "auto", width: "100%", WebkitOverflowScrolling: "touch" }}>
+                <table className="data-table" style={{ minWidth: "850px" }}>
+                  <thead>
+                    <tr>
+                      <th>Guest Name</th>
+                      <th>Confirmation #</th>
+                      <th>Room Type &amp; Number</th>
+                      <th>Stay Dates</th>
+                      <th>Source</th>
+                      <th>Payment Status</th>
+                      <th className="text-right">Action</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
+                  </thead>
+                  <tbody>
+                    {listToDisplay.map((r) => {
+                      const { roomNum, typeName } = getEffectiveRoomDetails(r);
+                      return (
+                        <tr key={r.id}>
+                          <td className="font-semibold">{r.guestName}</td>
+                          <td className="mono text-xs">{r.confirmationNumber}</td>
+                          <td>
+                            <div style={{ fontWeight: 600 }}>{typeName}</div>
+                            <div className="text-xs text-primary" style={{ fontWeight: 700 }}>
+                              {roomNum ? `Room #${roomNum}` : "Unassigned"}
+                            </div>
+                          </td>
+                          <td className="text-sm">
+                            {formatDate(r.checkIn, "dd MMM")} → {formatDate(r.checkOut, "dd MMM")} ({r.nights}n)
+                          </td>
+                          <td>
+                            <span className="badge badge-default">{r.bookingSource}</span>
+                          </td>
+                          <td>
+                            {r.balanceAmount === 0 ? (
+                              <span className="badge badge-success font-bold">Paid (₹0)</span>
+                            ) : (
+                              <span className="badge badge-warning font-bold">
+                                Due: {formatCurrency(r.balanceAmount)}
+                              </span>
+                            )}
+                          </td>
+                          <td className="text-right">
+                            {activeTab === "arrivals" && (
+                              <button
+                                className="btn btn-primary btn-sm"
+                                onClick={() => handleOpenCheckInModal(r)}
+                              >
+                                <LogIn size={14} /> Check In
+                              </button>
+                            )}
+
+                            {(activeTab === "departures" || activeTab === "in_house") && (
+                              <button
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => setCheckOutModal(r)}
+                              >
+                                <LogOut size={14} /> Check Out
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
