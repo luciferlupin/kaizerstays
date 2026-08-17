@@ -6,6 +6,7 @@ import {
 } from "@/lib/server-store";
 import { prisma } from "@/lib/prisma";
 import { calculateInclusiveHotelGST } from "@/lib/gst";
+import { getNormalizedBookingKey } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -35,21 +36,24 @@ export async function GET() {
     const mergedMap = new Map<string, any>();
 
     // Priority 1: Stored local server reservations
-    stored.forEach((r) => mergedMap.set((r.id || r.confirmationNumber).trim().toLowerCase(), r));
+    stored.forEach((r) => {
+      const normKey = getNormalizedBookingKey(r.confirmationNumber || r.id);
+      if (normKey) mergedMap.set(normKey, r);
+    });
 
     // Priority 2: Supabase database reservations
     supabaseReservations.forEach((r: any) => {
-      const key = (r.id || r.confirmationNumber).trim().toLowerCase();
-      if (!mergedMap.has(key)) {
-        mergedMap.set(key, r);
+      const normKey = getNormalizedBookingKey(r.confirmationNumber || r.id);
+      if (normKey && !mergedMap.has(normKey)) {
+        mergedMap.set(normKey, r);
       }
     });
 
     // Priority 3: Prisma database reservations
     dbReservations.forEach((r: any) => {
-      const key = (r.id || r.confirmationNumber).trim().toLowerCase();
-      if (!mergedMap.has(key)) {
-        mergedMap.set(key, {
+      const normKey = getNormalizedBookingKey(r.confirmationNumber || r.id);
+      if (normKey && !mergedMap.has(normKey)) {
+        mergedMap.set(normKey, {
           ...r,
           guestName: r.guestName || "Guest",
           roomType: r.roomType || "Deluxe Room",

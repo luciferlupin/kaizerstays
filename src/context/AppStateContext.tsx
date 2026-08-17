@@ -19,7 +19,7 @@ import { posTables, activeKOTs, KitchenOrder } from "@/lib/pos-data";
 import { otaChannels, nightAuditHistory, NightAuditRecord } from "@/lib/channels-data";
 import type { NormalizedOTAReservation } from "@/lib/ota-fallback";
 import { calculateInclusiveHotelGST } from "@/lib/gst";
-import { sanitizeGuestName } from "@/lib/utils";
+import { sanitizeGuestName, getNormalizedBookingKey } from "@/lib/utils";
 
 export interface FolioItem {
   id: string;
@@ -315,9 +315,13 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         if (data?.success && Array.isArray(data.data) && data.data.length > 0) {
           setReservations((current) => {
             const map = new Map<string, ExtendedReservation>();
-            current.forEach((r) => map.set((r.confirmationNumber || r.id).trim().toLowerCase(), r));
+            current.forEach((r) => {
+              const k = getNormalizedBookingKey(r.confirmationNumber || r.id);
+              if (k) map.set(k, r);
+            });
             data.data.forEach((r: any) => {
-              const key = (r.confirmationNumber || r.id).trim().toLowerCase();
+              const key = getNormalizedBookingKey(r.confirmationNumber || r.id);
+              if (!key) return;
               const existing = map.get(key);
               map.set(key, {
                 ...r,

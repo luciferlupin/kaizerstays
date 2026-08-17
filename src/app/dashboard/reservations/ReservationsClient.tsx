@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useAppState } from "@/context/AppStateContext";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, formatStayDateRange } from "@/lib/utils";
 import {
   Search,
   Plus,
@@ -306,8 +306,8 @@ ${filtered
                         )}
                       </td>
                       <td>
-                        <div className="font-medium text-sm">
-                          {formatDate(res.checkIn, "dd MMM")} → {formatDate(res.checkOut, "dd MMM yyyy")}
+                        <div className="font-semibold text-sm text-primary">
+                          {formatStayDateRange(res.checkIn, res.checkOut)}
                         </div>
                         <div className="text-xs text-tertiary">
                           {res.nights} {res.nights === 1 ? "Night" : "Nights"} • {res.adults} Adults

@@ -34,6 +34,39 @@ export function formatDate(date: Date | string, pattern: string = "dd MMM yyyy")
   return format(d, pattern);
 }
 
+export function formatStayDateRange(checkIn: Date | string, checkOut: Date | string): string {
+  try {
+    const ci = typeof checkIn === "string" ? parseISO(String(checkIn).slice(0, 10)) : checkIn;
+    const co = typeof checkOut === "string" ? parseISO(String(checkOut).slice(0, 10)) : checkOut;
+
+    const ciDay = format(ci, "dd");
+    const coDay = format(co, "dd");
+    const ciMonth = format(ci, "MMM");
+    const coMonth = format(co, "MMM");
+    const ciYear = format(ci, "yyyy");
+    const coYear = format(co, "yyyy");
+
+    if (ciMonth === coMonth && ciYear === coYear) {
+      return `${ciDay}–${coDay} ${ciMonth} ${ciYear}`;
+    } else if (ciYear === coYear) {
+      return `${ciDay} ${ciMonth} – ${coDay} ${coMonth} ${ciYear}`;
+    }
+    return `${ciDay} ${ciMonth} ${ciYear} – ${coDay} ${coMonth} ${coYear}`;
+  } catch {
+    return `${formatDate(checkIn, "dd MMM")} – ${formatDate(checkOut, "dd MMM yyyy")}`;
+  }
+}
+
+export function getNormalizedBookingKey(rawKey?: string): string {
+  if (!rawKey) return "";
+  return String(rawKey)
+    .trim()
+    .toLowerCase()
+    .replace(/^res_ota_aiosell_/, "")
+    .replace(/^res_/, "")
+    .replace(/^guest_ota_aiosell_/, "");
+}
+
 export function formatDateTime(date: Date | string): string {
   const d = typeof date === "string" ? parseISO(date) : date;
   return format(d, "dd MMM yyyy, hh:mm a");
