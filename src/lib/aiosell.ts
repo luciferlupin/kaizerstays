@@ -748,39 +748,6 @@ export class AiosellClient {
       } catch {
         // Continue
       }
-
-      // 5. Query live RMS demand forecast engine for active bookings on book (BOB)
-      try {
-        const forecast = await this.fetchDemandForecast(targetHotelId, todayStr, futureDateStr);
-        if (forecast?.datewise_data) {
-          Object.entries(forecast.datewise_data).forEach(([dStr, item]: [string, any], idx) => {
-            if ((item.revenue > 0 || item.bob_rooms > 0 || item.bob_occ > 0) && (item.curr_bar || item.revenue)) {
-              const checkIn = dStr;
-              const nextDay = new Date(dStr);
-              nextDay.setDate(nextDay.getDate() + 1);
-              const checkOut = nextDay.toISOString().split("T")[0];
-              const totalAmount = Number(item.revenue || item.curr_bar || 2800);
-              const bobId = `AIO-RMS-BOB-${dStr.replace(/-/g, "")}-${idx + 1}`;
-              
-              if (!fetchedResults.some((existing) => existing.checkIn === checkIn || existing.bookingId === bobId)) {
-                fetchedResults.push({
-                  bookingId: bobId,
-                  guestName: sanitizeGuestName("", bobId),
-                  checkIn,
-                  checkOut,
-                  roomCode: "deluxe-room",
-                  roomTypeName: "Deluxe Room",
-                  totalAmount,
-                  channel: "Aiosell Channel Manager (OTA)",
-                  status: "CONFIRMED",
-                });
-              }
-            }
-          });
-        }
-      } catch {
-        // Continue
-      }
     } catch {
       // Return accumulated list if error
     }
