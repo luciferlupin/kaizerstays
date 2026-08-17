@@ -326,6 +326,12 @@ export async function POST(request: Request) {
 
         if (batchToSave.length > 0) {
           upsertBatchStoredReservations(batchToSave);
+          try {
+            const { upsertSupabaseReservation } = await import("@/lib/supabase");
+            for (const item of batchToSave) {
+              await upsertSupabaseReservation(item);
+            }
+          } catch {}
         }
       } catch (err) {
         console.warn("[api/channels/aiosell] Server store sync warning:", err);

@@ -56,9 +56,9 @@ export async function upsertSupabaseReservation(res: any) {
     const payload = {
       confirmation_number: res.confirmationNumber,
       guest_name: res.guestName,
-      guest_email: res.guestEmail || null,
-      guest_phone: res.guestPhone || null,
-      room_number: res.roomNumber || null,
+      guest_email: res.guestEmail || "",
+      guest_phone: res.guestPhone || "",
+      room_number: res.roomNumber || "",
       room_type: res.roomType || "Deluxe Room",
       status: res.status || "CONFIRMED",
       check_in: new Date(res.checkIn).toISOString().split("T")[0],
@@ -85,7 +85,7 @@ export async function upsertSupabaseReservation(res: any) {
       const corePayload = {
         confirmation_number: res.confirmationNumber,
         guest_name: res.guestName,
-        room_number: res.roomNumber || null,
+        room_number: res.roomNumber || "",
         room_type: res.roomType || "Deluxe Room",
         status: res.status || "CONFIRMED",
         check_in: new Date(res.checkIn).toISOString().split("T")[0],
