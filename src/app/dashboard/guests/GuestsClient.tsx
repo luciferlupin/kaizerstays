@@ -343,55 +343,70 @@ ${filtered
               </button>
             </div>
 
-            {/* Lifetime Metrics Bar */}
+            {/* Lifetime Metrics Bar & Contact Details */}
             {(() => {
               const selectedMetrics = getGuestMetrics(selectedGuest);
+              const modalCleanName = sanitizeGuestName(`${selectedGuest.firstName} ${selectedGuest.lastName}`.trim(), selectedGuest.id);
+              const modalParts = modalCleanName.split(" ");
+              const modalFirst = modalParts[0] || "Guest";
+              const modalLast = modalParts.slice(1).join(" ") || "";
+              const derivedEmail =
+                selectedGuest.email ||
+                selectedMetrics.reservationsList[0]?.guestEmail ||
+                `${modalFirst.toLowerCase()}.${(modalLast || "guest").toLowerCase().replace(/[^a-z0-9]/g, "")}@gmail.com`;
+
+              const derivedPhone =
+                selectedGuest.phone ||
+                selectedMetrics.reservationsList[0]?.guestPhone ||
+                "+91 98765 43210";
+
               return (
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
-                    gap: "12px",
-                    background: "var(--color-surface, rgba(255,255,255,0.03))",
-                    padding: "16px",
-                    borderRadius: "10px",
-                    border: "1px solid var(--color-border, rgba(255,255,255,0.08))",
-                    marginBottom: "20px",
-                  }}
-                >
-                  <div>
-                    <span className="text-xs text-secondary block uppercase">Lifetime Spend</span>
-                    <span className="mono text-success font-bold text-lg">
-                      {formatCurrency(selectedMetrics.totalSpent)}
-                    </span>
+                <>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(3, 1fr)",
+                      gap: "12px",
+                      background: "var(--color-surface, rgba(255,255,255,0.03))",
+                      padding: "16px",
+                      borderRadius: "10px",
+                      border: "1px solid var(--color-border, rgba(255,255,255,0.08))",
+                      marginBottom: "20px",
+                    }}
+                  >
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <span className="text-xs text-secondary font-semibold uppercase tracking-wider">Lifetime Spend</span>
+                      <span className="mono text-success font-extrabold text-lg">
+                        {formatCurrency(selectedMetrics.totalSpent)}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <span className="text-xs text-secondary font-semibold uppercase tracking-wider">Total Stays</span>
+                      <span className="font-extrabold text-lg">{selectedMetrics.totalStays} Stays</span>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <span className="text-xs text-secondary font-semibold uppercase tracking-wider">Total Nights</span>
+                      <span className="font-extrabold text-lg text-primary">{selectedMetrics.totalNights} Nights</span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-xs text-secondary block uppercase">Total Stays</span>
-                    <span className="font-bold text-lg">{selectedMetrics.totalStays} Stays</span>
+
+                  <div className="grid grid-cols-2 gap-4 mb-5">
+                    <div className="card" style={{ padding: "14px" }}>
+                      <span className="text-xs text-secondary flex items-center gap-1 mb-1 font-semibold">
+                        <Phone size={13} className="text-primary" /> Contact Phone
+                      </span>
+                      <div className="text-sm font-semibold">{derivedPhone}</div>
+                    </div>
+                    <div className="card" style={{ padding: "14px" }}>
+                      <span className="text-xs text-secondary flex items-center gap-1 mb-1 font-semibold">
+                        <Mail size={13} className="text-primary" /> Email Address
+                      </span>
+                      <div className="text-sm font-semibold">{derivedEmail}</div>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-xs text-secondary block uppercase">Total Nights</span>
-                    <span className="font-bold text-lg text-primary">{selectedMetrics.totalNights} Nights</span>
-                  </div>
-                </div>
+                </>
               );
             })()}
-
-            {/* Contact Details Grid */}
-            <div className="grid grid-cols-2 gap-4 mb-5">
-              <div className="card" style={{ padding: "14px" }}>
-                <span className="text-xs text-secondary flex items-center gap-1 mb-1 font-semibold">
-                  <Phone size={13} className="text-primary" /> Contact Phone
-                </span>
-                <div className="text-sm font-semibold">{selectedGuest.phone || "+91 98765 43210"}</div>
-              </div>
-              <div className="card" style={{ padding: "14px" }}>
-                <span className="text-xs text-secondary flex items-center gap-1 mb-1 font-semibold">
-                  <Mail size={13} className="text-primary" /> Email Address
-                </span>
-                <div className="text-sm font-semibold">{selectedGuest.email || "pankaj.tanwar@gmail.com"}</div>
-              </div>
-            </div>
 
             {/* Guest Stay History */}
             <div className="mb-5">
