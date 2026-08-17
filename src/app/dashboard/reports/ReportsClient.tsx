@@ -192,96 +192,102 @@ export default function ReportsClient() {
         </div>
       </div>
 
-      {/* Featured Live Hotel MIS Summary Card */}
-      <div className="card mb-6" style={{ padding: "24px", background: "linear-gradient(135deg, rgba(0, 113, 227, 0.04) 0%, rgba(13, 14, 18, 0.98) 100%)", border: "1px solid var(--color-border)" }}>
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+      {/* Featured Live Hotel MIS Summary Card — Apple SF Pro Design */}
+      <div
+        className="card mb-6"
+        style={{
+          padding: "28px",
+          background: "var(--color-bg-secondary, #FFFFFF)",
+          border: "1px solid var(--color-border, rgba(0,0,0,0.08))",
+          borderRadius: "20px",
+          boxShadow: "0 12px 36px rgba(0, 0, 0, 0.06)",
+        }}
+      >
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div>
-            <span className="badge badge-primary text-xs font-bold uppercase tracking-wider mb-1">
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(0, 113, 227, 0.1)", color: "#0071E3", padding: "4px 12px", borderRadius: "20px", fontSize: "11px", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "6px" }}>
+              <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#0071E3" }} />
               Live Executive Dashboard
-            </span>
-            <h2 className="text-xl font-bold">A-to-Z Hotel MIS Performance Report</h2>
+            </div>
+            <h2 style={{ fontSize: "20px", fontWeight: 800, letterSpacing: "-0.02em" }}>A-to-Z Hotel MIS Performance Report</h2>
             <p className="text-xs text-secondary mt-1">
               Tracking performance from Software Start Date to Today ({formatDate(new Date(), "dd MMM yyyy")}) across all OTA channels &amp; direct stays.
             </p>
           </div>
-          <button className="btn btn-secondary btn-sm" onClick={downloadMISReportCSV}>
+          <button className="btn btn-secondary btn-sm" onClick={downloadMISReportCSV} style={{ borderRadius: "10px", fontWeight: 600 }}>
             <FileSpreadsheet size={14} /> Download Full MIS CSV
           </button>
         </div>
 
         {/* MIS Key Metrics Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="card" style={{ padding: "16px", background: "var(--color-surface, rgba(255,255,255,0.03))" }}>
-            <span className="text-xs text-secondary font-semibold uppercase tracking-wider block mb-1">Total Gross Revenue</span>
-            <span className="mono text-success font-extrabold text-xl">{formatCurrency(totalGrossRevenue)}</span>
-            <span className="text-xs text-tertiary block mt-1">Net Tariff: {formatCurrency(totalTaxableTariff)}</span>
+          <div className="card" style={{ padding: "18px", borderRadius: "14px", background: "rgba(0, 113, 227, 0.03)", border: "1px solid rgba(0, 113, 227, 0.1)" }}>
+            <span className="text-xs text-secondary font-bold uppercase tracking-wider block mb-1">Total Gross Revenue</span>
+            <span className="mono text-success font-extrabold text-2xl">{formatCurrency(totalGrossRevenue)}</span>
+            <span className="text-xs text-secondary block mt-1">Net Tariff: {formatCurrency(totalTaxableTariff)}</span>
           </div>
 
-          <div className="card" style={{ padding: "16px", background: "var(--color-surface, rgba(255,255,255,0.03))" }}>
-            <span className="text-xs text-secondary font-semibold uppercase tracking-wider block mb-1">GST Tax Collected (5%)</span>
-            <span className="mono text-primary font-extrabold text-xl">{formatCurrency(totalGSTTax)}</span>
-            <span className="text-xs text-tertiary block mt-1">CGST 2.5% + SGST 2.5%</span>
+          <div className="card" style={{ padding: "18px", borderRadius: "14px", background: "rgba(0, 113, 227, 0.03)", border: "1px solid rgba(0, 113, 227, 0.1)" }}>
+            <span className="text-xs text-secondary font-bold uppercase tracking-wider block mb-1">GST Tax Collected (5%)</span>
+            <span className="mono text-primary font-extrabold text-2xl">{formatCurrency(totalGSTTax)}</span>
+            <span className="text-xs text-secondary block mt-1">CGST 2.5% + SGST 2.5%</span>
           </div>
 
-          <div className="card" style={{ padding: "16px", background: "var(--color-surface, rgba(255,255,255,0.03))" }}>
-            <span className="text-xs text-secondary font-semibold uppercase tracking-wider block mb-1">Settled Collections</span>
-            <span className="mono text-success font-extrabold text-xl">{formatCurrency(totalPaidCollections)}</span>
-            <span className="text-xs text-warning block mt-1">Due: {formatCurrency(totalPendingCollections)}</span>
+          <div className="card" style={{ padding: "18px", borderRadius: "14px", background: "rgba(52, 199, 89, 0.03)", border: "1px solid rgba(52, 199, 89, 0.12)" }}>
+            <span className="text-xs text-secondary font-bold uppercase tracking-wider block mb-1">Settled Collections</span>
+            <span className="mono text-success font-extrabold text-2xl">{formatCurrency(totalPaidCollections)}</span>
+            <span className="text-xs text-warning font-semibold block mt-1">Due: {formatCurrency(totalPendingCollections)}</span>
           </div>
 
-          <div className="card" style={{ padding: "16px", background: "var(--color-surface, rgba(255,255,255,0.03))" }}>
-            <span className="text-xs text-secondary font-semibold uppercase tracking-wider block mb-1">Average Daily Rate (ADR)</span>
-            <span className="mono font-extrabold text-xl">{formatCurrency(adr)}</span>
+          <div className="card" style={{ padding: "18px", borderRadius: "14px", background: "rgba(0, 113, 227, 0.03)", border: "1px solid rgba(0, 113, 227, 0.1)" }}>
+            <span className="text-xs text-secondary font-bold uppercase tracking-wider block mb-1">Average Daily Rate (ADR)</span>
+            <span className="mono font-extrabold text-2xl">{formatCurrency(adr)}</span>
             <span className="text-xs text-secondary block mt-1">{totalRoomNights} Total Booked Nights</span>
           </div>
         </div>
 
         {/* Live A-to-Z Master Table */}
-        <div style={{ overflowX: "auto", width: "100%", WebkitOverflowScrolling: "touch" }}>
+        <div style={{ overflowX: "auto", width: "100%", WebkitOverflowScrolling: "touch", borderRadius: "12px", border: "1px solid var(--color-border-light)" }}>
           <table className="data-table" style={{ minWidth: "950px", width: "100%" }}>
             <thead>
-              <tr>
-                <th>Confirmation #</th>
-                <th>Guest Name</th>
-                <th>OTA Source</th>
-                <th>Stay Dates</th>
-                <th>Room &amp; Category</th>
-                <th className="text-right">Gross Tariff</th>
-                <th className="text-right">GST (5%)</th>
-                <th className="text-right">Folio Balance</th>
-                <th>Status</th>
+              <tr style={{ background: "var(--color-bg-tertiary)" }}>
+                <th style={{ padding: "12px 14px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Confirmation #</th>
+                <th style={{ padding: "12px 14px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Guest Name</th>
+                <th style={{ padding: "12px 14px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>OTA Source</th>
+                <th style={{ padding: "12px 14px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Stay Dates</th>
+                <th style={{ padding: "12px 14px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Room &amp; Category</th>
+                <th className="text-right" style={{ padding: "12px 14px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Gross Tariff</th>
+                <th className="text-right" style={{ padding: "12px 14px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>GST (5%)</th>
+                <th className="text-right" style={{ padding: "12px 14px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Paid Amount</th>
+                <th className="text-right" style={{ padding: "12px 14px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Folio Status</th>
               </tr>
             </thead>
             <tbody>
               {nonCancelledRes.map((r) => {
                 const gst = calculateInclusiveHotelGST(r.totalAmount);
                 return (
-                  <tr key={r.id}>
-                    <td className="mono text-xs font-bold text-primary">{r.confirmationNumber}</td>
-                    <td className="font-bold text-sm">{r.guestName}</td>
-                    <td>
-                      <span className="badge badge-default text-xs">{r.bookingSource.replace(/_/g, " ")}</span>
+                  <tr key={r.id} style={{ borderBottom: "1px solid var(--color-border-light)" }}>
+                    <td className="mono text-xs font-bold text-primary" style={{ padding: "12px 14px" }}>{r.confirmationNumber}</td>
+                    <td className="font-bold text-sm" style={{ padding: "12px 14px" }}>{r.guestName}</td>
+                    <td style={{ padding: "12px 14px" }}>
+                      <span className="badge badge-default text-xs" style={{ fontWeight: 600 }}>{r.bookingSource.replace(/_/g, " ")}</span>
                     </td>
-                    <td className="text-xs">
+                    <td className="text-xs" style={{ padding: "12px 14px" }}>
                       {formatDate(r.checkIn, "dd MMM yyyy")} → {formatDate(r.checkOut, "dd MMM yyyy")} ({r.nights}n)
                     </td>
-                    <td>
+                    <td style={{ padding: "12px 14px" }}>
                       <div className="font-semibold text-xs">{r.roomType}</div>
                       <div className="text-xs text-primary font-bold">{r.roomNumber ? `Room #${r.roomNumber}` : "Unassigned"}</div>
                     </td>
-                    <td className="text-right mono font-bold text-sm">{formatCurrency(r.totalAmount)}</td>
-                    <td className="text-right mono text-xs text-secondary">{formatCurrency(gst.totalTax)}</td>
-                    <td className="text-right mono font-bold text-sm">
+                    <td className="text-right mono font-bold text-sm" style={{ padding: "12px 14px" }}>{formatCurrency(r.totalAmount)}</td>
+                    <td className="text-right mono text-xs text-secondary" style={{ padding: "12px 14px" }}>{formatCurrency(gst.totalTax)}</td>
+                    <td className="text-right mono font-bold text-sm text-success" style={{ padding: "12px 14px" }}>{formatCurrency(r.paidAmount)}</td>
+                    <td className="text-right" style={{ padding: "12px 14px" }}>
                       {r.balanceAmount === 0 ? (
                         <span className="badge badge-success text-xs font-bold">Settled (₹0)</span>
                       ) : (
-                        <span className="text-warning font-bold">{formatCurrency(r.balanceAmount)}</span>
+                        <span className="badge badge-warning text-xs font-bold">Due {formatCurrency(r.balanceAmount)}</span>
                       )}
-                    </td>
-                    <td>
-                      <span className={`badge text-xs ${r.status === "CHECKED_IN" ? "badge-success font-bold" : r.status === "CONFIRMED" ? "badge-primary" : "badge-secondary"}`}>
-                        {r.status.replace("_", " ")}
-                      </span>
                     </td>
                   </tr>
                 );
