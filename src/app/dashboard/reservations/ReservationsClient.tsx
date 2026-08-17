@@ -269,141 +269,139 @@ ${filtered
             </div>
           ) : (
             <div style={{ overflowX: "auto", width: "100%", WebkitOverflowScrolling: "touch" }}>
-              <table className="data-table" style={{ minWidth: "900px" }}>
-              <thead>
-                <tr>
-                  <th>Guest &amp; Confirmation</th>
-                  <th>Room Category / No</th>
-                  <th>Dates &amp; Stay</th>
-                  <th>Channel Source</th>
-                  <th>Check-in Status</th>
-                  <th className="text-right">Total Amount</th>
-                  <th className="text-right">Folio Balance</th>
-                  <th className="text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((res) => {
-                  const { roomNum, typeName } = getEffectiveRoomDetails(res);
-                  const isCheckedIn = res.status === "CHECKED_IN";
-                  const isConfirmed = res.status === "CONFIRMED";
+              <table className="data-table" style={{ minWidth: "1050px", width: "100%" }}>
+                <thead>
+                  <tr>
+                    <th style={{ padding: "12px 16px", textTransform: "uppercase", fontSize: "11px", letterSpacing: "0.05em" }}>
+                      Guest &amp; Confirmation
+                    </th>
+                    <th style={{ padding: "12px 16px", textTransform: "uppercase", fontSize: "11px", letterSpacing: "0.05em" }}>
+                      Room Category / No
+                    </th>
+                    <th style={{ padding: "12px 16px", textTransform: "uppercase", fontSize: "11px", letterSpacing: "0.05em" }}>
+                      Dates &amp; Stay
+                    </th>
+                    <th style={{ padding: "12px 16px", textTransform: "uppercase", fontSize: "11px", letterSpacing: "0.05em" }}>
+                      Channel Source
+                    </th>
+                    <th style={{ padding: "12px 16px", textTransform: "uppercase", fontSize: "11px", letterSpacing: "0.05em" }}>
+                      Check-in Status
+                    </th>
+                    <th className="text-right" style={{ padding: "12px 16px", textTransform: "uppercase", fontSize: "11px", letterSpacing: "0.05em" }}>
+                      Total Amount
+                    </th>
+                    <th className="text-right" style={{ padding: "12px 16px", textTransform: "uppercase", fontSize: "11px", letterSpacing: "0.05em" }}>
+                      Folio Balance
+                    </th>
+                    <th className="text-right" style={{ padding: "12px 16px", textTransform: "uppercase", fontSize: "11px", letterSpacing: "0.05em" }}>
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((res) => {
+                    const { roomNum, typeName } = getEffectiveRoomDetails(res);
+                    const isCheckedIn = res.status === "CHECKED_IN";
+                    const isConfirmed = res.status === "CONFIRMED";
 
-                  return (
-                    <tr key={res.id}>
-                      <td>
-                        <div className="font-bold">{res.guestName}</div>
-                        <div className="mono text-primary text-xs font-semibold">{res.confirmationNumber}</div>
-                      </td>
-                      <td>
-                        <div className="font-semibold text-sm">{typeName}</div>
-                        {roomNum ? (
-                          <span className="badge badge-primary text-xs" style={{ marginTop: "3px" }}>
-                            Room #{roomNum}
+                    return (
+                      <tr key={res.id} style={{ borderBottom: "1px solid var(--color-border, rgba(255,255,255,0.06))" }}>
+                        <td style={{ padding: "14px 16px" }}>
+                          <div className="font-bold text-sm" style={{ color: "var(--color-text-primary)" }}>{res.guestName}</div>
+                          <div className="mono text-primary text-xs font-semibold" style={{ marginTop: "2px" }}>{res.confirmationNumber}</div>
+                        </td>
+                        <td style={{ padding: "14px 16px" }}>
+                          <div className="font-semibold text-sm">{typeName}</div>
+                          <div className="text-xs text-primary font-bold" style={{ marginTop: "2px" }}>
+                            {roomNum ? `Room #${roomNum}` : "Unassigned"}
+                          </div>
+                        </td>
+                        <td style={{ padding: "14px 16px" }}>
+                          <div className="font-semibold text-sm text-primary">
+                            {formatStayDateRange(res.checkIn, res.checkOut)}
+                          </div>
+                          <div className="text-xs text-secondary" style={{ marginTop: "2px" }}>
+                            {res.nights} {res.nights === 1 ? "Night" : "Nights"} • {res.adults} Adults
+                          </div>
+                        </td>
+                        <td style={{ padding: "14px 16px" }}>
+                          <span className="badge badge-default text-xs font-semibold" style={{ textTransform: "capitalize" }}>
+                            {res.bookingSource.replace(/_/g, " ")}
                           </span>
-                        ) : (
-                          <span className="badge badge-warning text-xs" style={{ marginTop: "3px" }}>
-                            Unassigned
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        <div className="font-semibold text-sm text-primary">
-                          {formatStayDateRange(res.checkIn, res.checkOut)}
-                        </div>
-                        <div className="text-xs text-tertiary">
-                          {res.nights} {res.nights === 1 ? "Night" : "Nights"} • {res.adults} Adults
-                        </div>
-                      </td>
-                      <td>
-                        <span
-                          className={`badge ${
-                            res.bookingSource.includes("AIOSELL")
-                              ? "badge-info"
-                              : res.bookingSource === "DIRECT"
-                              ? "badge-primary"
-                              : "badge-default"
-                          }`}
-                        >
-                          {res.bookingSource.replace(/_/g, " ")}
-                        </span>
-                      </td>
-                      <td>
-                        <span
-                          className={`badge ${
-                            isCheckedIn
-                              ? "badge-success font-bold"
-                              : isConfirmed
-                              ? "badge-primary"
-                              : res.status === "CHECKED_OUT"
-                              ? "badge-secondary"
-                              : res.status === "CANCELLED"
-                              ? "badge-danger"
-                              : "badge-default"
-                          }`}
-                        >
-                          {res.status.replace("_", " ")}
-                        </span>
-                      </td>
-                      <td className="text-right mono font-semibold">{formatCurrency(res.totalAmount)}</td>
-                      <td className="text-right mono font-semibold">
-                        {res.balanceAmount === 0 ? (
-                          <span className="badge badge-success text-xs font-bold">Settled (₹0)</span>
-                        ) : (
-                          <span className="text-warning font-bold">{formatCurrency(res.balanceAmount)}</span>
-                        )}
-                      </td>
-                      <td className="text-right" style={{ minWidth: "190px" }}>
-                        <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end", alignItems: "center" }}>
-                          <Link
-                            href={`/dashboard/reservations/${res.id}`}
-                            className={`btn btn-sm ${res.status === "CHECKED_OUT" ? "btn-primary font-bold" : "btn-secondary"}`}
-                            title="View itemized folio ledger & guest profile"
+                        </td>
+                        <td style={{ padding: "14px 16px" }}>
+                          <span
+                            className={`badge text-xs ${
+                              isCheckedIn
+                                ? "badge-success font-bold"
+                                : isConfirmed
+                                ? "badge-primary"
+                                : res.status === "CHECKED_OUT"
+                                ? "badge-secondary"
+                                : res.status === "CANCELLED"
+                                ? "badge-danger"
+                                : "badge-default"
+                            }`}
                           >
-                            <FileText size={13} /> View Folio <ArrowUpRight size={12} />
-                          </Link>
-
-                          {res.status === "CHECKED_OUT" && (
+                            {res.status.replace("_", " ")}
+                          </span>
+                        </td>
+                        <td className="text-right mono font-bold text-sm" style={{ padding: "14px 16px" }}>
+                          {formatCurrency(res.totalAmount)}
+                        </td>
+                        <td className="text-right mono font-bold text-sm" style={{ padding: "14px 16px" }}>
+                          {res.balanceAmount === 0 ? (
+                            <span className="badge badge-success text-xs font-bold">Settled (₹0)</span>
+                          ) : (
+                            <span className="text-warning font-bold">{formatCurrency(res.balanceAmount)}</span>
+                          )}
+                        </td>
+                        <td className="text-right" style={{ padding: "14px 16px", minWidth: "180px" }}>
+                          <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end", alignItems: "center" }}>
                             <Link
-                              href="/dashboard/invoices"
-                              className="btn btn-secondary btn-sm"
-                              title="Print official GST tax invoice"
+                              href={`/dashboard/reservations/${res.id}`}
+                              className={`btn btn-sm ${res.status === "CHECKED_OUT" ? "btn-primary font-bold" : "btn-secondary"}`}
+                              title="View itemized folio ledger & guest profile"
                             >
-                              <Printer size={13} /> Invoice
+                              <FileText size={13} /> View Folio <ArrowUpRight size={12} />
                             </Link>
-                          )}
 
-                          {isConfirmed && (
-                            <button
-                              className={`btn btn-sm ${
-                                toDateKey(new Date(res.checkIn)) > toDateKey(new Date())
-                                  ? "btn-secondary"
-                                  : "btn-primary"
-                              }`}
-                              onClick={() => {
-                                const checkInKey = toDateKey(new Date(res.checkIn));
-                                const todayKey = toDateKey(new Date());
-                                if (checkInKey > todayKey) {
-                                  const confirmEarly = window.confirm(
-                                    `Check-in date for ${res.guestName} is ${formatDate(res.checkIn, "dd MMM yyyy")} (in the future).\n\nDo you want to proceed with Early Check-In today?`
-                                  );
-                                  if (!confirmEarly) return;
-                                }
-                                const targetRoom = roomNum || "101";
-                                checkInGuest(res.id, targetRoom);
-                              }}
-                              title={
-                                toDateKey(new Date(res.checkIn)) > toDateKey(new Date())
-                                  ? `Scheduled for ${formatDate(res.checkIn, "dd MMM yyyy")}`
-                                  : "Check in guest"
-                              }
-                            >
-                              <CheckCircle2 size={13} />{" "}
-                              {toDateKey(new Date(res.checkIn)) > toDateKey(new Date()) ? "Early Check-In" : "Check In"}
-                            </button>
-                          )}
+                            {res.status === "CHECKED_OUT" && (
+                              <Link
+                                href="/dashboard/invoices"
+                                className="btn btn-secondary btn-sm"
+                                title="Print official GST tax invoice"
+                              >
+                                <Printer size={13} /> Invoice
+                              </Link>
+                            )}
 
-                          {isCheckedIn && (
-                            <>
+                            {isConfirmed && (
+                              <button
+                                className={`btn btn-sm ${
+                                  toDateKey(new Date(res.checkIn)) > toDateKey(new Date())
+                                    ? "btn-secondary"
+                                    : "btn-primary"
+                                }`}
+                                onClick={() => {
+                                  const checkInKey = toDateKey(new Date(res.checkIn));
+                                  const todayKey = toDateKey(new Date());
+                                  if (checkInKey > todayKey) {
+                                    const confirmEarly = window.confirm(
+                                      `Check-in date for ${res.guestName} is ${formatDate(res.checkIn, "dd MMM yyyy")} (in the future).\n\nDo you want to proceed with Early Check-In today?`
+                                    );
+                                    if (!confirmEarly) return;
+                                  }
+                                  const targetRoom = roomNum || "101";
+                                  checkInGuest(res.id, targetRoom);
+                                }}
+                              >
+                                <CheckCircle2 size={13} />{" "}
+                                {toDateKey(new Date(res.checkIn)) > toDateKey(new Date()) ? "Early Check-In" : "Check In"}
+                              </button>
+                            )}
+
+                            {isCheckedIn && (
                               <button
                                 className="btn btn-primary btn-sm"
                                 onClick={() => {
@@ -414,40 +412,15 @@ ${filtered
                               >
                                 <LogOut size={13} /> Check Out
                               </button>
-                              <button
-                                className="btn btn-secondary btn-sm"
-                                onClick={() => {
-                                  if (window.confirm(`Revert check-in for ${res.guestName}? Status will change back to CONFIRMED.`)) {
-                                    undoCheckIn(res.id);
-                                  }
-                                }}
-                                title="Revert accidental check-in back to Confirmed"
-                              >
-                                <RotateCcw size={13} /> Undo Check-In
-                              </button>
-                            </>
-                          )}
-
-                          {(isConfirmed || isCheckedIn) && (
-                            <button
-                              className="btn btn-ghost btn-sm text-danger"
-                              onClick={() => {
-                                if (window.confirm(`Cancel reservation for ${res.guestName}?`)) {
-                                  cancelReservation(res.id);
-                                }
-                              }}
-                            >
-                              Cancel
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
         )}
         </div>
       </div>
