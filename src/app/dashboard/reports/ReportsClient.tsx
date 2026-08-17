@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAppState } from "@/context/AppStateContext";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatCurrency } from "@/lib/utils";
 import {
   HOTEL_ACCOMMODATION_CGST_RATE,
   HOTEL_ACCOMMODATION_GST_RATE,
