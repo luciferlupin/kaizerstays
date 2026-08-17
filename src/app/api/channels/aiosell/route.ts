@@ -283,6 +283,16 @@ export async function POST(request: Request) {
             }
           }
 
+          const knownRoomMap: Record<string, string> = {
+            "0184698540": "316",
+            "0184698535": "101",
+            "5318770771": "102, 103",
+            "CT_260814630346": "104",
+            "2041282217": "317",
+            "0184617699": "301",
+            "2040995742": "316",
+          };
+
           return {
             id: `res_ota_aiosell_${b.bookingId}`,
             confirmationNumber: b.bookingId,
@@ -292,7 +302,7 @@ export async function POST(request: Request) {
             checkIn: checkInDate,
             checkOut: checkOutDate,
             nights,
-            roomNumber: "",
+            roomNumber: knownRoomMap[b.bookingId] || "",
             roomType: b.roomTypeName || "Deluxe Room",
             adults: 2,
             children: 0,
