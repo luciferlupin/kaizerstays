@@ -112,15 +112,182 @@ export default function ReportsClient() {
     return true;
   });
 
+  // Live Hotel MIS Executive Report Computations (Software Start Date to Today)
+  const nonCancelledRes = reservations.filter((r) => r.status !== "CANCELLED");
+  const totalGrossRevenue = nonCancelledRes.reduce((sum, r) => sum + r.totalAmount, 0);
+  const totalPaidCollections = nonCancelledRes.reduce((sum, r) => sum + r.paidAmount, 0);
+  const totalPendingCollections = nonCancelledRes.reduce((sum, r) => sum + r.balanceAmount, 0);
+  const totalRoomNights = nonCancelledRes.reduce((sum, r) => sum + (r.nights || 1), 0);
+  const adr = nonCancelledRes.length > 0 ? Math.round(totalGrossRevenue / Math.max(1, totalRoomNights)) : 2800;
+
+  const totalGSTTax = nonCancelledRes.reduce((sum, r) => {
+    const gst = calculateInclusiveHotelGST(r.totalAmount);
+    return sum + gst.totalTax;
+  }, 0);
+  const totalTaxableTariff = totalGrossRevenue - totalGSTTax;
+
+  const downloadMISReportCSV = () => {
+    const csvLines = [
+      `Hotel Shemron — Management Information System (MIS) Executive Report`,
+      `Period: Software Ingestion Start Date to Today (${formatDate(new Date(), "dd MMM yyyy")})`,
+      `Property: Hotel Shemron Neemrana (62a25484e5)`,
+      `Owner & GM: Ninaad Khera`,
+      ``,
+      `=== FINANCIAL & OPERATIONAL MIS SUMMARY ===`,
+      `Total Gross Revenue,₹${totalGrossRevenue.toFixed(2)}`,
+      `Net Taxable Tariff,₹${totalTaxableTariff.toFixed(2)}`,
+      `Total GST Collected (5%),₹${totalGSTTax.toFixed(2)}`,
+      `Total Settled Collections,₹${totalPaidCollections.toFixed(2)}`,
+      `Pending Front Desk Collections,₹${totalPendingCollections.toFixed(2)}`,
+      `Average Daily Rate (ADR),₹${adr.toFixed(2)}`,
+      `Total Booked Room Nights,${totalRoomNights}`,
+      `Total Active Live Bookings,${nonCancelledRes.length}`,
+      ``,
+      `=== A-TO-Z MASTER RESERVATION LEDGER ===`,
+      `Confirmation #,Guest Name,Channel Source,Stay Dates,Room Category,Room #,Nights,Total Amount (INR),GST Tax (INR),Paid (INR),Balance (INR),Status`,
+      ...nonCancelledRes.map((r) => {
+        const gst = calculateInclusiveHotelGST(r.totalAmount);
+        return [
+          r.confirmationNumber,
+          `"${r.guestName.replaceAll('"', '""')}"`,
+          `"${r.bookingSource.replace(/_/g, " ")}"`,
+          `"${formatDate(r.checkIn, "dd MMM yyyy")} to ${formatDate(r.checkOut, "dd MMM yyyy")}"`,
+          `"${r.roomType}"`,
+          `"${r.roomNumber || "Unassigned"}"`,
+          r.nights,
+          r.totalAmount,
+          gst.totalTax,
+          r.paidAmount,
+          r.balanceAmount,
+          r.status,
+        ].join(",");
+      }),
+    ];
+
+    const blob = new Blob([csvLines.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Hotel_Shemron_MIS_Report_${formatDate(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+  };
+
   return (
     <div className="page-content">
       {/* Header */}
-      <div className="page-header">
+      <div className="page-header flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="page-title">Operational, GST & Financial Reports</h1>
+          <h1 className="page-title flex items-center gap-2">
+            <ClipboardList className="text-primary" size={24} />
+            Hotel Management Information System (MIS) Reports
+          </h1>
           <p className="page-description">
-            StayFlexi-grade GST filing registers, Manager&apos;s Flash Reports, GSTR-1, GSTR-3B, RevPAR metrics, and timing-specific audit statements.
+            Software start date to today&apos;s date A-to-Z financial, operational, guest, and GST tax MIS executive summary for Hotel Shemron.
           </p>
+        </div>
+        <div className="page-actions">
+          <button className="btn btn-primary" onClick={downloadMISReportCSV}>
+            <Download size={16} /> Export A-to-Z MIS Report (CSV)
+          </button>
+        </div>
+      </div>
+
+      {/* Featured Live Hotel MIS Summary Card */}
+      <div className="card mb-6" style={{ padding: "24px", background: "linear-gradient(135deg, rgba(0, 113, 227, 0.04) 0%, rgba(13, 14, 18, 0.98) 100%)", border: "1px solid var(--color-border)" }}>
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div>
+            <span className="badge badge-primary text-xs font-bold uppercase tracking-wider mb-1">
+              Live Executive Dashboard
+            </span>
+            <h2 className="text-xl font-bold">A-to-Z Hotel MIS Performance Report</h2>
+            <p className="text-xs text-secondary mt-1">
+              Tracking performance from Software Start Date to Today ({formatDate(new Date(), "dd MMM yyyy")}) across all OTA channels &amp; direct stays.
+            </p>
+          </div>
+          <button className="btn btn-secondary btn-sm" onClick={downloadMISReportCSV}>
+            <FileSpreadsheet size={14} /> Download Full MIS CSV
+          </button>
+        </div>
+
+        {/* MIS Key Metrics Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="card" style={{ padding: "16px", background: "var(--color-surface, rgba(255,255,255,0.03))" }}>
+            <span className="text-xs text-secondary font-semibold uppercase tracking-wider block mb-1">Total Gross Revenue</span>
+            <span className="mono text-success font-extrabold text-xl">{formatCurrency(totalGrossRevenue)}</span>
+            <span className="text-xs text-tertiary block mt-1">Net Tariff: {formatCurrency(totalTaxableTariff)}</span>
+          </div>
+
+          <div className="card" style={{ padding: "16px", background: "var(--color-surface, rgba(255,255,255,0.03))" }}>
+            <span className="text-xs text-secondary font-semibold uppercase tracking-wider block mb-1">GST Tax Collected (5%)</span>
+            <span className="mono text-primary font-extrabold text-xl">{formatCurrency(totalGSTTax)}</span>
+            <span className="text-xs text-tertiary block mt-1">CGST 2.5% + SGST 2.5%</span>
+          </div>
+
+          <div className="card" style={{ padding: "16px", background: "var(--color-surface, rgba(255,255,255,0.03))" }}>
+            <span className="text-xs text-secondary font-semibold uppercase tracking-wider block mb-1">Settled Collections</span>
+            <span className="mono text-success font-extrabold text-xl">{formatCurrency(totalPaidCollections)}</span>
+            <span className="text-xs text-warning block mt-1">Due: {formatCurrency(totalPendingCollections)}</span>
+          </div>
+
+          <div className="card" style={{ padding: "16px", background: "var(--color-surface, rgba(255,255,255,0.03))" }}>
+            <span className="text-xs text-secondary font-semibold uppercase tracking-wider block mb-1">Average Daily Rate (ADR)</span>
+            <span className="mono font-extrabold text-xl">{formatCurrency(adr)}</span>
+            <span className="text-xs text-secondary block mt-1">{totalRoomNights} Total Booked Nights</span>
+          </div>
+        </div>
+
+        {/* Live A-to-Z Master Table */}
+        <div style={{ overflowX: "auto", width: "100%", WebkitOverflowScrolling: "touch" }}>
+          <table className="data-table" style={{ minWidth: "950px", width: "100%" }}>
+            <thead>
+              <tr>
+                <th>Confirmation #</th>
+                <th>Guest Name</th>
+                <th>OTA Source</th>
+                <th>Stay Dates</th>
+                <th>Room &amp; Category</th>
+                <th className="text-right">Gross Tariff</th>
+                <th className="text-right">GST (5%)</th>
+                <th className="text-right">Folio Balance</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {nonCancelledRes.map((r) => {
+                const gst = calculateInclusiveHotelGST(r.totalAmount);
+                return (
+                  <tr key={r.id}>
+                    <td className="mono text-xs font-bold text-primary">{r.confirmationNumber}</td>
+                    <td className="font-bold text-sm">{r.guestName}</td>
+                    <td>
+                      <span className="badge badge-default text-xs">{r.bookingSource.replace(/_/g, " ")}</span>
+                    </td>
+                    <td className="text-xs">
+                      {formatDate(r.checkIn, "dd MMM yyyy")} → {formatDate(r.checkOut, "dd MMM yyyy")} ({r.nights}n)
+                    </td>
+                    <td>
+                      <div className="font-semibold text-xs">{r.roomType}</div>
+                      <div className="text-xs text-primary font-bold">{r.roomNumber ? `Room #${r.roomNumber}` : "Unassigned"}</div>
+                    </td>
+                    <td className="text-right mono font-bold text-sm">{formatCurrency(r.totalAmount)}</td>
+                    <td className="text-right mono text-xs text-secondary">{formatCurrency(gst.totalTax)}</td>
+                    <td className="text-right mono font-bold text-sm">
+                      {r.balanceAmount === 0 ? (
+                        <span className="badge badge-success text-xs font-bold">Settled (₹0)</span>
+                      ) : (
+                        <span className="text-warning font-bold">{formatCurrency(r.balanceAmount)}</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`badge text-xs ${r.status === "CHECKED_IN" ? "badge-success font-bold" : r.status === "CONFIRMED" ? "badge-primary" : "badge-secondary"}`}>
+                        {r.status.replace("_", " ")}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
 
