@@ -61,7 +61,7 @@ export default function DashboardClient() {
         <div>
           <h1 className="page-title">{greeting}, {currentUser ? currentUser.name : "Ninaad Khera"}</h1>
           <p className="page-description">
-            Live operational dashboard for {property.name}, Neemrana • 5-Star Enterprise PMS &amp; RMS
+            Live operational dashboard for {property.name} • Enterprise PMS &amp; Channel Manager
           </p>
         </div>
         <div className="page-actions">
