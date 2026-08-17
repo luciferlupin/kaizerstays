@@ -11,10 +11,11 @@ export function formatCurrency(
   amount: number,
   currency: string = "INR"
 ): string {
+  const hasDecimals = amount % 1 !== 0;
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency,
-    minimumFractionDigits: 0,
+    minimumFractionDigits: hasDecimals ? 2 : 0,
     maximumFractionDigits: 2,
   }).format(amount);
 }

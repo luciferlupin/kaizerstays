@@ -268,7 +268,8 @@ ${filtered
               </div>
             </div>
           ) : (
-            <table className="data-table">
+            <div style={{ overflowX: "auto", width: "100%", WebkitOverflowScrolling: "touch" }}>
+              <table className="data-table" style={{ minWidth: "900px" }}>
               <thead>
                 <tr>
                   <th>Guest &amp; Confirmation</th>
@@ -446,7 +447,8 @@ ${filtered
                 })}
               </tbody>
             </table>
-          )}
+          </div>
+        )}
         </div>
       </div>
     </div>

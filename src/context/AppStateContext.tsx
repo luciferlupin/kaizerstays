@@ -235,10 +235,15 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           );
         }
         if (parsed.reservations?.length) {
-          const loadedRes = parsed.reservations.map((r: any) => ({
-            ...r,
-            guestName: sanitizeGuestName(r.guestName, r.id || r.confirmationNumber),
-          }));
+          const loadedRes = parsed.reservations
+            .filter((r: any) => {
+              const conf = (r.confirmationNumber || r.id || "").toUpperCase();
+              return !conf.includes("BOB") && !conf.includes("TEST");
+            })
+            .map((r: any) => ({
+              ...r,
+              guestName: sanitizeGuestName(r.guestName, r.id || r.confirmationNumber),
+            }));
           const initialDefaultRes: ExtendedReservation[] = demoReservations.map((r) => {
             const gst = calculateInclusiveHotelGST(r.totalAmount);
             return {
