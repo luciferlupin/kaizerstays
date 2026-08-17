@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Always keep the software, PMS database models, room categories, rate plans, and API routes strictly aligned with the live Channel Manager (Aiosell) configuration:
 - **Active Property:** Hotel Shemron, Neemrana (`62a25484e5`)
-- **Aiosell Auth / Account:** `ninaad.khera19@gmail.com`
+- **Aiosell Auth / Account:** `ninaad.khera18@gmail.com` (Password: `aiosell`)
 - **Room Categories & Physical Room Counts:**
   - `deluxe-room` (Deluxe Room) — 28 Rooms (Base Rate: ₹2,800)
   - `twin-room` (Twin Room) — 2 Rooms (Base Rate: ₹2,800)

@@ -10,10 +10,12 @@ export const AIOSELL_V2_CONFIG = {
   partnerName: "kaizerstays",
   ratesUrl: "https://live.aiosell.com/api/v2/cm/update-rates/kaizerstays",
   inventoryUrl: "https://live.aiosell.com/api/v2/cm/update/kaizerstays",
-  username: "ninaad.khera19@gmail.com",
-  password: "aiosell",
+  username: process.env.AIOSELL_EMAIL || "ninaad.khera18@gmail.com",
+  password: process.env.AIOSELL_PASSWORD || "aiosell",
   get basicAuthHeader() {
-    return "Basic " + (typeof btoa !== "undefined" ? btoa("ninaad.khera19@gmail.com:aiosell") : Buffer.from("ninaad.khera19@gmail.com:aiosell").toString("base64"));
+    const user = process.env.AIOSELL_EMAIL || "ninaad.khera18@gmail.com";
+    const pass = process.env.AIOSELL_PASSWORD || "aiosell";
+    return "Basic " + (typeof btoa !== "undefined" ? btoa(`${user}:${pass}`) : Buffer.from(`${user}:${pass}`).toString("base64"));
   },
 };
 
@@ -229,7 +231,7 @@ export class AiosellClient {
   /**
    * Authenticate against Aiosell RMS API
    */
-  async login(username = "ninaad.khera19@gmail.com", password = "aiosell"): Promise<{
+  async login(username = process.env.AIOSELL_EMAIL || "ninaad.khera18@gmail.com", password = process.env.AIOSELL_PASSWORD || "aiosell"): Promise<{
     success: boolean;
     token?: string;
     hotelId?: string;
