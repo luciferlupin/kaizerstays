@@ -94,6 +94,42 @@ export default function Header({ onToggleMobileMenu }: HeaderProps) {
       </div>
 
       <div className="main-header-right" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        {/* StayFlexi Enterprise Quick Actions Bar */}
+        <div className="stayflexi-header-actions" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span
+            className="badge badge-success text-xs font-bold"
+            style={{
+              padding: "4px 10px",
+              borderRadius: "12px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "11px",
+              background: "rgba(52, 199, 89, 0.12)",
+              color: "#1E8E38",
+              border: "1px solid rgba(52, 199, 89, 0.3)",
+            }}
+          >
+            <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#34C759" }} />
+            Aiosell Live 🟢
+          </span>
+
+          <button
+            className="btn btn-primary btn-sm hide-on-mobile"
+            style={{ fontSize: "12px", fontWeight: 600, height: "32px", padding: "0 12px" }}
+            onClick={() => router.push("/dashboard/reservations/new")}
+          >
+            + Walk-In
+          </button>
+
+          <button
+            className="btn btn-secondary btn-sm hide-on-mobile"
+            style={{ fontSize: "12px", fontWeight: 600, height: "32px", padding: "0 12px" }}
+            onClick={() => router.push("/dashboard/calendar")}
+          >
+            Tape Chart
+          </button>
+        </div>
         {/* Notifications */}
         <div style={{ position: "relative" }}>
           <button className="btn btn-ghost btn-icon notification-bell" title="Notifications" aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((open) => !open)}>
