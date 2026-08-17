@@ -52,7 +52,6 @@ CREATE TABLE IF NOT EXISTS public.organizations (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Ensure property_id column exists on pre-existing organizations table
 ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS property_id VARCHAR(100) DEFAULT '62a25484e5';
 
 -- 4. Staff & Owner Users
@@ -145,6 +144,23 @@ CREATE TABLE IF NOT EXISTS public.reservations (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Ensure all reservation columns exist on pre-existing tables
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS guest_email VARCHAR(255);
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS guest_phone VARCHAR(50);
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS room_number VARCHAR(20);
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS room_type VARCHAR(100) DEFAULT 'Deluxe Room';
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS status reservation_status DEFAULT 'CONFIRMED';
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS nights INT DEFAULT 1;
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS adults INT DEFAULT 2;
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS children INT DEFAULT 0;
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS booking_source VARCHAR(100) DEFAULT 'AIOSELL_CHANNEL_MANAGER';
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS room_rate NUMERIC(10, 2) DEFAULT 2800.00;
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS total_amount NUMERIC(10, 2) DEFAULT 2800.00;
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS tax_amount NUMERIC(10, 2) DEFAULT 0.00;
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS paid_amount NUMERIC(10, 2) DEFAULT 0.00;
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS balance_amount NUMERIC(10, 2) DEFAULT 2800.00;
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS notes TEXT;
+
 -- 9. Folio Charges
 CREATE TABLE IF NOT EXISTS public.folio_items (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -197,7 +213,7 @@ CREATE TABLE IF NOT EXISTS public.housekeeping_tasks (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 13. Front Desk & Guest Requests (QR Code / Phone Call)
+-- 13. Guest Service Requests
 CREATE TABLE IF NOT EXISTS public.guest_requests (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     room_number VARCHAR(20) NOT NULL,
@@ -236,7 +252,61 @@ CREATE TABLE IF NOT EXISTS public.night_audits (
     completed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 16. System Audit & Activity Logs
+-- 16. Inventory Items Store
+CREATE TABLE IF NOT EXISTS public.inventory_items (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    code VARCHAR(50) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    department VARCHAR(100) NOT NULL,
+    quantity INT NOT NULL DEFAULT 0,
+    unit VARCHAR(50) DEFAULT 'Pcs',
+    min_threshold INT DEFAULT 10,
+    unit_price NUMERIC(10, 2) DEFAULT 0.00,
+    location VARCHAR(255),
+    supplier VARCHAR(255),
+    last_restocked TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 17. Stock Requisitions
+CREATE TABLE IF NOT EXISTS public.stock_requisitions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    req_number VARCHAR(100) UNIQUE NOT NULL,
+    department VARCHAR(100) NOT NULL,
+    requested_by VARCHAR(255) NOT NULL,
+    item VARCHAR(255) NOT NULL,
+    quantity INT NOT NULL DEFAULT 1,
+    unit VARCHAR(50) DEFAULT 'Pcs',
+    priority VARCHAR(50) DEFAULT 'NORMAL',
+    status VARCHAR(50) DEFAULT 'PENDING_APPROVAL',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 18. Restaurant POS Orders
+CREATE TABLE IF NOT EXISTS public.pos_orders (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    kot_number VARCHAR(100) UNIQUE NOT NULL,
+    table_number VARCHAR(50),
+    room_number VARCHAR(20),
+    guest_name VARCHAR(255),
+    total_amount NUMERIC(10, 2) NOT NULL,
+    status VARCHAR(50) DEFAULT 'SERVED',
+    items JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 19. Room Rate Overrides & Aiosell Sync Rates
+CREATE TABLE IF NOT EXISTS public.room_rate_overrides (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    room_type_code VARCHAR(50) NOT NULL,
+    rate NUMERIC(10, 2) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 20. System Audit Logs
 CREATE TABLE IF NOT EXISTS public.activity_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     action VARCHAR(255) NOT NULL,
@@ -248,7 +318,7 @@ CREATE TABLE IF NOT EXISTS public.activity_logs (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 17. Aiosell API Audit Trail Logs
+-- 21. Aiosell API Audit Trail Logs
 CREATE TABLE IF NOT EXISTS public.aiosell_api_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -261,10 +331,9 @@ CREATE TABLE IF NOT EXISTS public.aiosell_api_logs (
 );
 
 -- =====================================================================
--- PRE-SEEDED PROD DATA FOR HOTEL SHEMRON NEEMRANA (32 ROOMS)
+-- SEED PROD DATA FOR HOTEL SHEMRON NEEMRANA (32 ROOMS)
 -- =====================================================================
 
--- 1. Seed Organization
 INSERT INTO public.organizations (id, name, property_id, address, email, gstin)
 VALUES (
     'a0000000-0000-0000-0000-000000000001',
@@ -279,7 +348,6 @@ VALUES (
     address = EXCLUDED.address,
     email = EXCLUDED.email;
 
--- 2. Seed Owner Account (Ninaad Khera / ninaad.khera19@gmail.com / Passcode: 12345)
 INSERT INTO public.staff_users (staff_id, organization_id, first_name, last_name, email, phone, role, password_hash)
 VALUES (
     'OWNER-001',
@@ -294,7 +362,6 @@ VALUES (
     email = EXCLUDED.email,
     password_hash = EXCLUDED.password_hash;
 
--- 3. Seed Room Categories (Deluxe ₹2,800, Twin ₹2,800, Suite ₹5,500)
 INSERT INTO public.room_types (id, name, code, base_rate, total_count, max_occupancy, description) VALUES
 ('b0000000-0000-0000-0000-000000000001', 'Deluxe Room', 'deluxe-room', 2800.00, 28, 2, 'Spacious king-bed deluxe room with high-speed WiFi, work desk, and ensuite bath.'),
 ('b0000000-0000-0000-0000-000000000002', 'Twin Room', 'twin-room', 2800.00, 2, 2, 'Comfortable room with two individual twin beds, premium linens, LED TV, and modern amenities.'),
@@ -305,8 +372,7 @@ ON CONFLICT (id) DO UPDATE SET
     base_rate = EXCLUDED.base_rate,
     total_count = EXCLUDED.total_count;
 
--- 4. Seed 32 Physical Rooms for Hotel Shemron (Neemrana)
--- Floor 1 Deluxe Rooms (14 rooms: 101 to 114)
+-- Seed 32 Physical Rooms
 INSERT INTO public.rooms (room_number, room_type_id, room_type_code, floor, status, is_clean) VALUES
 ('101', 'b0000000-0000-0000-0000-000000000001', 'deluxe-room', 1, 'AVAILABLE', TRUE),
 ('102', 'b0000000-0000-0000-0000-000000000001', 'deluxe-room', 1, 'AVAILABLE', TRUE),
@@ -323,7 +389,6 @@ INSERT INTO public.rooms (room_number, room_type_id, room_type_code, floor, stat
 ('113', 'b0000000-0000-0000-0000-000000000001', 'deluxe-room', 1, 'AVAILABLE', TRUE),
 ('114', 'b0000000-0000-0000-0000-000000000001', 'deluxe-room', 1, 'AVAILABLE', TRUE),
 
--- Floor 3 Deluxe Rooms (14 rooms: 301 to 315, skipping 313)
 ('301', 'b0000000-0000-0000-0000-000000000001', 'deluxe-room', 3, 'AVAILABLE', TRUE),
 ('302', 'b0000000-0000-0000-0000-000000000001', 'deluxe-room', 3, 'AVAILABLE', TRUE),
 ('303', 'b0000000-0000-0000-0000-000000000001', 'deluxe-room', 3, 'AVAILABLE', TRUE),
@@ -339,20 +404,15 @@ INSERT INTO public.rooms (room_number, room_type_id, room_type_code, floor, stat
 ('314', 'b0000000-0000-0000-0000-000000000001', 'deluxe-room', 3, 'AVAILABLE', TRUE),
 ('315', 'b0000000-0000-0000-0000-000000000001', 'deluxe-room', 3, 'AVAILABLE', TRUE),
 
--- Floor 3 Twin Rooms (2 rooms: 316 to 317)
 ('316', 'b0000000-0000-0000-0000-000000000002', 'twin-room', 3, 'AVAILABLE', TRUE),
 ('317', 'b0000000-0000-0000-0000-000000000002', 'twin-room', 3, 'AVAILABLE', TRUE),
-
--- Floor 3 Suite Rooms (2 rooms: 318 to 319)
 ('318', 'b0000000-0000-0000-0000-000000000003', 'suite-room', 3, 'AVAILABLE', TRUE),
 ('319', 'b0000000-0000-0000-0000-000000000003', 'suite-room', 3, 'AVAILABLE', TRUE)
 ON CONFLICT (room_number) DO UPDATE SET
     room_type_id = EXCLUDED.room_type_id,
     room_type_code = EXCLUDED.room_type_code;
 
--- =====================================================================
--- ROW LEVEL SECURITY (RLS) POLICIES FOR SUPABASE
--- =====================================================================
+-- RLS POLICIES FOR SUPABASE
 ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.staff_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.room_types ENABLE ROW LEVEL SECURITY;
@@ -366,10 +426,14 @@ ALTER TABLE public.housekeeping_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.guest_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.night_audits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.inventory_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.stock_requisitions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pos_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.room_rate_overrides ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.aiosell_api_logs ENABLE ROW LEVEL SECURITY;
 
--- Allow Public/Anon/Authenticated Access Policies across all tables
+-- Permissive policies for client/API access
 DROP POLICY IF EXISTS "Allow all on organizations" ON public.organizations;
 CREATE POLICY "Allow all on organizations" ON public.organizations FOR ALL USING (true);
 
@@ -409,10 +473,20 @@ CREATE POLICY "Allow all on expenses" ON public.expenses FOR ALL USING (true);
 DROP POLICY IF EXISTS "Allow all on night_audits" ON public.night_audits;
 CREATE POLICY "Allow all on night_audits" ON public.night_audits FOR ALL USING (true);
 
+DROP POLICY IF EXISTS "Allow all on inventory_items" ON public.inventory_items;
+CREATE POLICY "Allow all on inventory_items" ON public.inventory_items FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow all on stock_requisitions" ON public.stock_requisitions;
+CREATE POLICY "Allow all on stock_requisitions" ON public.stock_requisitions FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow all on pos_orders" ON public.pos_orders;
+CREATE POLICY "Allow all on pos_orders" ON public.pos_orders FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow all on room_rate_overrides" ON public.room_rate_overrides;
+CREATE POLICY "Allow all on room_rate_overrides" ON public.room_rate_overrides FOR ALL USING (true);
+
 DROP POLICY IF EXISTS "Allow all on activity_logs" ON public.activity_logs;
 CREATE POLICY "Allow all on activity_logs" ON public.activity_logs FOR ALL USING (true);
 
 DROP POLICY IF EXISTS "Allow all on aiosell_api_logs" ON public.aiosell_api_logs;
 CREATE POLICY "Allow all on aiosell_api_logs" ON public.aiosell_api_logs FOR ALL USING (true);
-
--- Schema Complete & Ready for Production Deployment!

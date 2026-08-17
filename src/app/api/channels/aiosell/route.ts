@@ -258,6 +258,79 @@ export async function POST(request: Request) {
 
       const importedBookings = await client.fetchLiveReservations(targetHotelId);
 
+      // Persist imported Aiosell reservations into server-store
+      try {
+        const { upsertBatchStoredReservations } = await import("@/lib/server-store");
+        const { calculateInclusiveHotelGST } = await import("@/lib/gst");
+        const todayKey = new Date().toISOString().split("T")[0];
+
+        const batchToSave = importedBookings.map((b) => {
+          const checkInDate = new Date(b.checkIn);
+          const checkOutDate = new Date(b.checkOut);
+          const nights = Math.max(1, Math.round((checkOutDate.getTime() - checkInDate.getTime()) / 86400000));
+          const gst = calculateInclusiveHotelGST(b.totalAmount || 2800);
+          const checkInKey = b.checkIn;
+          const checkOutKey = b.checkOut;
+
+          let status: "CONFIRMED" | "CHECKED_IN" | "CHECKED_OUT" | "CANCELLED" = b.status === "CANCELLED" ? "CANCELLED" : "CONFIRMED";
+          if (b.status !== "CANCELLED") {
+            if (checkOutKey < todayKey) {
+              status = "CHECKED_OUT";
+            } else if (checkInKey <= todayKey && checkOutKey >= todayKey) {
+              status = "CHECKED_IN";
+            } else {
+              status = "CONFIRMED";
+            }
+          }
+
+          return {
+            id: `res_ota_aiosell_${b.bookingId}`,
+            confirmationNumber: b.bookingId,
+            guestId: `guest_ota_aiosell_${b.bookingId}`,
+            guestName: b.guestName,
+            status,
+            checkIn: checkInDate,
+            checkOut: checkOutDate,
+            nights,
+            roomNumber: "",
+            roomType: b.roomTypeName || "Deluxe Room",
+            adults: 2,
+            children: 0,
+            bookingSource: b.channel || "AIOSELL_CHANNEL_MANAGER",
+            roomRate: b.totalAmount > 0 ? b.totalAmount / nights : 2800,
+            totalAmount: gst.totalInclusive,
+            taxAmount: gst.totalTax,
+            paidAmount: 0,
+            balanceAmount: gst.totalInclusive,
+            guestEmail: b.guestEmail || "",
+            guestPhone: b.guestPhone || "",
+            notes: `Synced from Aiosell Channel Manager (${b.channel}).`,
+            folio: [
+              {
+                id: `f_ota_rm_${b.bookingId}`,
+                description: `${b.roomTypeName || "Deluxe Room"} (${nights} Nights)`,
+                category: "ROOM_CHARGE" as const,
+                amount: gst.taxableValue,
+                date: checkInDate,
+              },
+              {
+                id: `f_ota_tx_${b.bookingId}`,
+                description: "GST Tax (5% included)",
+                category: "TAX" as const,
+                amount: gst.totalTax,
+                date: checkInDate,
+              },
+            ],
+          };
+        });
+
+        if (batchToSave.length > 0) {
+          upsertBatchStoredReservations(batchToSave);
+        }
+      } catch (err) {
+        console.warn("[api/channels/aiosell] Server store sync warning:", err);
+      }
+
       return NextResponse.json({
         success: true,
         syncedAt: new Date().toISOString(),

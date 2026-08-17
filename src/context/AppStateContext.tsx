@@ -235,30 +235,52 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           );
         }
         if (parsed.reservations?.length) {
-          setReservations(
-            parsed.reservations.map((r: any) => ({
+          const loadedRes = parsed.reservations.map((r: any) => ({
+            ...r,
+            guestName: sanitizeGuestName(r.guestName, r.id || r.confirmationNumber),
+          }));
+          const initialDefaultRes: ExtendedReservation[] = demoReservations.map((r) => {
+            const gst = calculateInclusiveHotelGST(r.totalAmount);
+            return {
               ...r,
-              guestName: sanitizeGuestName(r.guestName, r.id || r.confirmationNumber),
-            }))
-          );
+              taxAmount: gst.totalTax,
+              status: r.status as any,
+              folio: [
+                { id: `f_rm_${r.id}`, description: `${r.roomType} (${r.nights} Nights)`, category: "ROOM_CHARGE", amount: gst.taxableValue, date: r.checkIn },
+                { id: `f_tx_${r.id}`, description: "GST Tax (5% included)", category: "TAX", amount: gst.totalTax, date: r.checkIn },
+                ...(r.paidAmount > 0 ? [{ id: `f_py_${r.id}`, description: "Payment Received", category: "PAYMENT" as const, amount: -r.paidAmount, date: r.checkIn }] : []),
+              ],
+            };
+          });
+          const mergedMap = new Map<string, ExtendedReservation>();
+          initialDefaultRes.forEach((r) => mergedMap.set(r.id, r));
+          loadedRes.forEach((r: ExtendedReservation) => mergedMap.set(r.id, r));
+          setReservations(Array.from(mergedMap.values()));
         }
         if (parsed.guests?.length) {
-          setGuests(
-            parsed.guests.map((g: any) => {
-              const fullName = `${g.firstName || ""} ${g.lastName || ""}`.trim();
-              const cleanFullName = sanitizeGuestName(fullName, g.id);
-              const parts = cleanFullName.split(" ");
-              return {
-                ...g,
-                firstName: parts[0] || "Guest",
-                lastName: parts.slice(1).join(" ") || "",
-              };
-            })
-          );
+          const loadedGuests = parsed.guests.map((g: any) => {
+            const fullName = `${g.firstName || ""} ${g.lastName || ""}`.trim();
+            const cleanFullName = sanitizeGuestName(fullName, g.id);
+            const parts = cleanFullName.split(" ");
+            return {
+              ...g,
+              firstName: parts[0] || "Guest",
+              lastName: parts.slice(1).join(" ") || "",
+            };
+          });
+          const guestMap = new Map();
+          demoGuests.forEach((g) => guestMap.set(g.id, g));
+          loadedGuests.forEach((g: any) => guestMap.set(g.id, g));
+          setGuests(Array.from(guestMap.values()));
+        }
+        if (parsed.payments?.length) {
+          const payMap = new Map();
+          demoPayments.forEach((p) => payMap.set(p.id, p));
+          parsed.payments.forEach((p: any) => payMap.set(p.id, p));
+          setPayments(Array.from(payMap.values()));
         }
         if (parsed.housekeepingTasks?.length) setHousekeepingTasks(parsed.housekeepingTasks);
         if (parsed.guestRequests?.length) setGuestRequests(parsed.guestRequests);
-        if (parsed.payments?.length) setPayments(parsed.payments);
         if (parsed.expenses?.length) setExpenses(parsed.expenses);
         if (parsed.staff?.length) setStaff(parsed.staff);
         if (parsed.inventoryItems?.length) setInventoryItems(parsed.inventoryItems);
@@ -285,6 +307,31 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setHasHydrated(true);
     }
+
+    // Fetch persistent reservations from server store
+    fetch("/api/reservations")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.success && Array.isArray(data.data) && data.data.length > 0) {
+          setReservations((current) => {
+            const map = new Map<string, ExtendedReservation>();
+            current.forEach((r) => map.set((r.confirmationNumber || r.id).trim().toLowerCase(), r));
+            data.data.forEach((r: any) => {
+              const key = (r.confirmationNumber || r.id).trim().toLowerCase();
+              const existing = map.get(key);
+              map.set(key, {
+                ...r,
+                checkIn: new Date(r.checkIn),
+                checkOut: new Date(r.checkOut),
+                guestName: sanitizeGuestName(r.guestName, r.id || r.confirmationNumber),
+                status: existing ? (existing.status === "CHECKED_IN" || existing.status === "CHECKED_OUT" ? existing.status : r.status) : r.status,
+              });
+            });
+            return Array.from(map.values());
+          });
+        }
+      })
+      .catch((err) => console.warn("Server reservation fetch warning:", err));
   }, []);
 
   useEffect(() => {
@@ -410,6 +457,15 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     };
 
     setReservations((prev) => [newRes, ...prev]);
+
+    // Persist to server store
+    try {
+      fetch("/api/reservations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newRes),
+      }).catch((e) => console.warn("Failed to persist reservation to server:", e));
+    } catch {}
 
     // Update Room status to RESERVED if room number assigned
     if (resData.roomNumber) {
@@ -814,6 +870,14 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       )
     );
 
+    try {
+      fetch("/api/reservations", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: reservationId, status: "CHECKED_IN", roomNumber }),
+      }).catch(() => {});
+    } catch {}
+
     if (roomNumber) {
       setRooms((prev) =>
         prev.map((r) => (r.number === roomNumber ? { ...r, status: "OCCUPIED", housekeepingStatus: "CLEAN" } : r))
@@ -832,6 +896,14 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     setReservations((prev) =>
       prev.map((r) => (r.id === res.id ? { ...r, status: "CONFIRMED" } : r))
     );
+
+    try {
+      fetch("/api/reservations", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: res.id, status: "CONFIRMED" }),
+      }).catch(() => {});
+    } catch {}
 
     if (res.roomNumber) {
       setRooms((prev) =>
@@ -880,6 +952,14 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       prev.map((r) => (r.id === reservationId ? { ...r, status: "CHECKED_OUT" } : r))
     );
 
+    try {
+      fetch("/api/reservations", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: reservationId, status: "CHECKED_OUT" }),
+      }).catch(() => {});
+    } catch {}
+
     // Mark room as DIRTY
     if (res.roomNumber) {
       setRooms((prev) =>
@@ -909,6 +989,15 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     setReservations((prev) =>
       prev.map((r) => (r.id === reservationId ? { ...r, status: "CANCELLED" } : r))
     );
+
+    try {
+      fetch("/api/reservations", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: reservationId, status: "CANCELLED" }),
+      }).catch(() => {});
+    } catch {}
+
     if (res?.roomNumber) {
       setRooms((prev) =>
         prev.map((r) => (r.number === res.roomNumber ? { ...r, status: "AVAILABLE" } : r))

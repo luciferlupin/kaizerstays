@@ -131,6 +131,69 @@ ${filtered
         </div>
       )}
 
+      {/* KPI Metrics Overview */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "12px", marginBottom: "20px" }}>
+        <div
+          className="card"
+          style={{ padding: "14px", cursor: "pointer", border: statusFilter === "ALL" ? "2px solid var(--primary, #3b82f6)" : undefined }}
+          onClick={() => setStatusFilter("ALL")}
+        >
+          <div className="text-xs text-tertiary font-semibold">TOTAL MASTER LEDGER</div>
+          <div className="text-2xl font-bold text-primary" style={{ marginTop: "4px" }}>
+            {reservations.length}
+          </div>
+          <div className="text-xs text-secondary" style={{ marginTop: "2px" }}>All reservations stored</div>
+        </div>
+
+        <div
+          className="card"
+          style={{ padding: "14px", cursor: "pointer", border: statusFilter === "CHECKED_IN" ? "2px solid #10b981" : undefined }}
+          onClick={() => setStatusFilter("CHECKED_IN")}
+        >
+          <div className="text-xs text-tertiary font-semibold">IN-HOUSE GUESTS</div>
+          <div className="text-2xl font-bold text-success" style={{ marginTop: "4px" }}>
+            {reservations.filter((r) => r.status === "CHECKED_IN").length}
+          </div>
+          <div className="text-xs text-secondary" style={{ marginTop: "2px" }}>Currently checked in</div>
+        </div>
+
+        <div
+          className="card"
+          style={{ padding: "14px", cursor: "pointer", border: statusFilter === "CONFIRMED" ? "2px solid #3b82f6" : undefined }}
+          onClick={() => setStatusFilter("CONFIRMED")}
+        >
+          <div className="text-xs text-tertiary font-semibold">UPCOMING CONFIRMED</div>
+          <div className="text-2xl font-bold text-info" style={{ marginTop: "4px" }}>
+            {reservations.filter((r) => r.status === "CONFIRMED").length}
+          </div>
+          <div className="text-xs text-secondary" style={{ marginTop: "2px" }}>Future arrival stays</div>
+        </div>
+
+        <div
+          className="card"
+          style={{ padding: "14px", cursor: "pointer", border: statusFilter === "CHECKED_OUT" ? "2px solid #6b7280" : undefined }}
+          onClick={() => setStatusFilter("CHECKED_OUT")}
+        >
+          <div className="text-xs text-tertiary font-semibold">HISTORICAL PAST STAYS</div>
+          <div className="text-2xl font-bold" style={{ marginTop: "4px", color: "var(--text-secondary, #9ca3af)" }}>
+            {reservations.filter((r) => r.status === "CHECKED_OUT").length}
+          </div>
+          <div className="text-xs text-secondary" style={{ marginTop: "2px" }}>Checked out history</div>
+        </div>
+
+        <div
+          className="card"
+          style={{ padding: "14px", cursor: "pointer", border: statusFilter === "CANCELLED" ? "2px solid #ef4444" : undefined }}
+          onClick={() => setStatusFilter("CANCELLED")}
+        >
+          <div className="text-xs text-tertiary font-semibold">CANCELLED BOOKINGS</div>
+          <div className="text-2xl font-bold text-danger" style={{ marginTop: "4px" }}>
+            {reservations.filter((r) => r.status === "CANCELLED").length}
+          </div>
+          <div className="text-xs text-secondary" style={{ marginTop: "2px" }}>Cancelled stays</div>
+        </div>
+      </div>
+
       {/* Filter Toolbar */}
       <div className="card" style={{ padding: "16px", marginBottom: "20px" }}>
         <div
