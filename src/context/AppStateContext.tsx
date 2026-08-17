@@ -858,12 +858,34 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, []);
 
-  // ─── Check-In Guest (connected to Room Status OCCUPIED) ───
+  // ─── Check-In Guest (connected to Room Status OCCUPIED with Overlap Prevention) ───
   const checkInGuest = (reservationId: string, roomNumber: string) => {
+    const targetRes = reservations.find((r) => r.id === reservationId || r.confirmationNumber === reservationId);
+    if (targetRes && roomNumber) {
+      const curIn = new Date(targetRes.checkIn).getTime();
+      const curOut = new Date(targetRes.checkOut).getTime();
+
+      const conflict = reservations.find((r) => {
+        if (r.id === targetRes.id || r.confirmationNumber === targetRes.confirmationNumber) return false;
+        if (r.status === "CANCELLED" || r.status === "CHECKED_OUT") return false;
+        if (!r.roomNumber || !r.roomNumber.split(",").map((s) => s.trim()).includes(roomNumber)) return false;
+        const rIn = new Date(r.checkIn).getTime();
+        const rOut = new Date(r.checkOut).getTime();
+        return curIn < rOut && curOut > rIn;
+      });
+
+      if (conflict) {
+        if (typeof window !== "undefined") {
+          alert(`Room #${roomNumber} is already allocated to guest "${conflict.guestName}" for overlapping dates. Please select an unallocated free room.`);
+        }
+        return;
+      }
+    }
+
     const assignedRoom = rooms.find((room) => room.number === roomNumber);
     setReservations((prev) =>
       prev.map((r) =>
-        r.id === reservationId
+        r.id === reservationId || r.confirmationNumber === reservationId
           ? {
               ...r,
               status: "CHECKED_IN",
@@ -888,7 +910,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       );
     }
 
-    const res = reservations.find((r) => r.id === reservationId);
+    const res = reservations.find((r) => r.id === reservationId || r.confirmationNumber === reservationId);
     addActivity("Guest Checked In", "checkin", reservationId, `${res?.guestName || "Guest"} checked into Room #${roomNumber}`);
   };
 
