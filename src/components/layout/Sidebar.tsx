@@ -183,20 +183,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         )}
       </div>
 
-      {/* Property Switcher */}
+      {/* Property Display */}
       <div className="sidebar-property">
-        <button className="sidebar-property-name" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px", width: "100%", padding: "8px 10px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-            <span style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 700, fontSize: "13px" }}>
-              <Hotel size={15} style={{ color: "#0071E3" }} />
-              Hotel Shemron
-            </span>
-            <ChevronDown size={13} style={{ color: "var(--color-text-tertiary)" }} />
-          </div>
-          <span style={{ fontSize: "10px", color: "#0071E3", fontWeight: 600, paddingLeft: "23px", letterSpacing: "0.02em" }}>
-            Neemrana • 5-Star Luxury Resort
-          </span>
-        </button>
+        <div className="sidebar-property-name" style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "8px 10px", fontWeight: 700, fontSize: "13px" }}>
+          <Hotel size={15} style={{ color: "#0071E3" }} />
+          Hotel Shemron
+        </div>
       </div>
 
       {/* Navigation */}
